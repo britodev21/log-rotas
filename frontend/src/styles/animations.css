@@ -115,18 +115,18 @@
 /* --- Classes utilitárias de entrada ------------------------------------ */
 
 .anima-surgir {
-  animation: surgir var(--tempo-normal) var(--curva) both;
+  animation: surgir var(--tempo-normal) var(--curva) backwards;
 }
 
 .anima-subir {
-  animation: subir var(--tempo-normal) var(--curva) both;
+  animation: subir var(--tempo-normal) var(--curva) backwards;
 }
 
 /* Entrada escalonada de lista: cada item entra logo depois do anterior.
    O atraso é curto de propósito — o efeito deve ser percebido como fluidez,
    nunca como espera. */
 .anima-lista > * {
-  animation: subir-curto var(--tempo-normal) var(--curva) both;
+  animation: subir-curto var(--tempo-normal) var(--curva) backwards;
 }
 
 .anima-lista > *:nth-child(1) { animation-delay: 0ms; }

@@ -90,7 +90,9 @@
 }
 
 .nav-item:hover {
-  background: var(--superficie-ativa);
+  /* Tom proprio da lateral, nao --superficie-ativa: esta passou a coincidir
+     com o fundo da barra no tema claro, e o hover ficaria invisivel. */
+  background: var(--lateral-hover);
   color: var(--texto);
   text-decoration: none;
 }
@@ -131,7 +133,7 @@
   border-radius: var(--r-total);
   background: var(--primaria);
   transform: translateY(-50%);
-  animation: surgir var(--tempo-normal) var(--curva) both;
+  animation: surgir var(--tempo-normal) var(--curva) backwards;
 }
 
 .nav-item--ativo svg {
@@ -157,8 +159,10 @@
   font-size: 10px;
   font-weight: var(--p-600);
   letter-spacing: var(--tr-rotulo);
-  color: var(--texto-4);
-  background: var(--superficie-3);
+  /* texto-3, nao texto-4: sobre o fundo da etiqueta o nivel mais apagado
+     daria 4.36:1, abaixo do minimo de 4.5:1. */
+  color: var(--texto-3);
+  background: var(--lateral-hover);
   border: 1px solid var(--borda-suave);
   padding: 0 5px;
   border-radius: var(--r-xs);
@@ -217,11 +221,13 @@
   gap: var(--e-4);
   height: var(--topo-altura);
   padding: 0 var(--e-6);
-  background: color-mix(in srgb, var(--fundo) 82%, transparent);
+  /* Mesmo tom da lateral: as duas formam uma moldura continua em volta do
+     conteudo, que fica sendo a superficie clara da frente. */
+  background: var(--topo-fundo);
   /* Vidro fosco: o conteúdo passa por baixo e continua perceptível, sem
      borrar o texto da própria barra. */
   backdrop-filter: blur(10px) saturate(1.4);
-  border-bottom: 1px solid var(--borda-suave);
+  border-bottom: 1px solid var(--lateral-borda);
 }
 
 .topo__menu {
@@ -362,7 +368,7 @@
     inset: 0;
     z-index: var(--z-cobertura);
     background: var(--cobertura);
-    animation: surgir var(--tempo-rapido) var(--curva) both;
+    animation: surgir var(--tempo-rapido) var(--curva) backwards;
   }
 
   .lateral {

@@ -10,7 +10,7 @@
   flex-direction: column;
   align-items: center;
   gap: var(--e-3);
-  animation: surgir var(--tempo-lento) var(--curva) both;
+  animation: surgir var(--tempo-lento) var(--curva) backwards;
 }
 
 .abertura__nome {

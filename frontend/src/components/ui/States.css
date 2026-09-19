@@ -5,7 +5,7 @@
   gap: var(--e-3);
   padding: var(--e-12) var(--e-5);
   text-align: center;
-  animation: subir var(--tempo-normal) var(--curva) both;
+  animation: subir var(--tempo-normal) var(--curva) backwards;
 }
 
 .estado--compacto {

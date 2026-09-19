@@ -136,7 +136,7 @@
 .campo__erro {
   color: var(--perigo);
   font-weight: var(--p-500);
-  animation: subir-curto var(--tempo-rapido) var(--curva) both;
+  animation: subir-curto var(--tempo-rapido) var(--curva) backwards;
 }
 
 /* Abaixo de 16px o iOS dá zoom sozinho ao focar o campo e desalinha a tela

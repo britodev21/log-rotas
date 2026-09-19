@@ -79,10 +79,22 @@
   --superficie-ativa: var(--cinza-100);
   --superficie-inversa: var(--cinza-900);
 
-  /* Barra lateral: levemente mais funda que o conteúdo, para o conteúdo
-     parecer a camada de cima. */
-  --lateral-fundo: var(--cinza-25);
+  /* Cromo da aplicação — barra lateral e topo.
+
+     Eles ficam MAIS FUNDOS que a página, e a página mais funda que o cartão:
+
+         lateral #f0f2f6  <  página #f7f8fa  <  cartão #ffffff
+
+     Essa ordem é o que faz o conteúdo parecer a camada da frente. A versão
+     anterior usava #fcfcfd na lateral — mais claro que a própria página, o
+     que achatava a hierarquia e deixava tudo parecendo a mesma folha branca.
+
+     O topo usa o mesmo tom da lateral, formando uma moldura contínua em
+     volta do conteúdo. */
+  --lateral-fundo: var(--cinza-100);
+  --lateral-hover: var(--cinza-150);
   --lateral-borda: var(--cinza-200);
+  --topo-fundo: color-mix(in srgb, var(--cinza-100) 84%, transparent);
 
   /* Bordas. */
   --borda: var(--cinza-200);
@@ -169,8 +181,12 @@
   --superficie-ativa: #232b3c;
   --superficie-inversa: var(--cinza-100);
 
-  --lateral-fundo: #10141f;
-  --lateral-borda: #222a3a;
+  /* Mesma ordem do tema claro: a lateral recua, o cartão avança.
+     lateral #090d15  <  página #0d111b  <  cartão #141926 */
+  --lateral-fundo: #090d15;
+  --lateral-hover: #151b28;
+  --lateral-borda: #1d2432;
+  --topo-fundo: color-mix(in srgb, #090d15 84%, transparent);
 
   --borda: #262f41;
   --borda-suave: #1e2533;

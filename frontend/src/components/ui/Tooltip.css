@@ -15,7 +15,7 @@
   border-radius: var(--r-sm);
   box-shadow: var(--sombra-md);
   pointer-events: none;
-  animation: subir-curto var(--tempo-instantaneo) var(--curva) both;
+  animation: subir-curto var(--tempo-instantaneo) var(--curva) backwards;
 }
 
 .dica--cima {

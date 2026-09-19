@@ -13,7 +13,7 @@
   border: 1px solid var(--borda);
   border-radius: var(--r-lg);
   box-shadow: var(--sombra-lg);
-  animation: escalar var(--tempo-rapido) var(--curva) both;
+  animation: escalar var(--tempo-rapido) var(--curva) backwards;
 }
 
 /* Ancora a animacao no canto de onde o menu nasce: ele parece sair do

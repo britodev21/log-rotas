@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 import { Button } from "./Button";
@@ -18,7 +19,16 @@ const DURACAO_SAIDA = 160;
  * - devolve o foco ao elemento que abriu, para quem usa teclado não ser
  *   jogado de volta ao topo da página;
  * - trava a rolagem do fundo compensando a largura da barra, senão a página
- *   inteira desloca alguns pixels ao abrir.
+ *   inteira desloca alguns pixels ao abrir;
+ * - é renderizado num portal no `body`.
+ *
+ * O portal não é preferência de estilo, é correção de um defeito real:
+ * `position: fixed` deixa de ser relativo à janela quando QUALQUER ancestral
+ * tem `transform`, `filter` ou `backdrop-filter` — esse ancestral vira o
+ * bloco contentor. O modal ficava dentro de `.transicao`, que retinha um
+ * `transform` da animação de entrada da página, e por isso se centralizava
+ * na coluna de conteúdo em vez da tela, com o fundo escuro sem cobrir a
+ * barra lateral. No `body` não há ancestral que possa causar isso.
  */
 export function Modal({
   aberto,
@@ -101,7 +111,7 @@ export function Modal({
 
   if (!montado) return null;
 
-  return (
+  return createPortal(
     <div
       className={`modal-fundo ${saindo ? "modal-fundo--saindo" : ""}`}
       onMouseDown={(e) => e.target === e.currentTarget && onFechar?.()}
@@ -133,6 +143,7 @@ export function Modal({
 
         {rodape && <footer className="modal__rodape">{rodape}</footer>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

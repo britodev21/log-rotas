@@ -10,7 +10,7 @@
   /* Desfoque leve no fundo: separa as camadas sem escurecer demais, e o
      contexto atrás continua reconhecível. */
   backdrop-filter: blur(3px);
-  animation: surgir var(--tempo-rapido) var(--curva) both;
+  animation: surgir var(--tempo-rapido) var(--curva) backwards;
 }
 
 .modal-fundo--saindo {
@@ -26,7 +26,7 @@
   border: 1px solid var(--borda);
   border-radius: var(--r-xl);
   box-shadow: var(--sombra-xl);
-  animation: escalar var(--tempo-normal) var(--curva) both;
+  animation: escalar var(--tempo-normal) var(--curva) backwards;
 }
 
 .modal--saindo {
@@ -92,7 +92,7 @@
     max-height: 90dvh;
     border-radius: var(--r-2xl) var(--r-2xl) 0 0;
     border-bottom: none;
-    animation: subir var(--tempo-normal) var(--curva) both;
+    animation: subir var(--tempo-normal) var(--curva) backwards;
     padding-bottom: env(safe-area-inset-bottom);
   }
 

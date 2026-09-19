@@ -23,7 +23,7 @@
   border-left: 3px solid var(--toast-cor, var(--borda-forte));
   border-radius: var(--r-md);
   box-shadow: var(--sombra-lg);
-  animation: deslizar-direita var(--tempo-normal) var(--curva) both;
+  animation: deslizar-direita var(--tempo-normal) var(--curva) backwards;
 }
 
 .toast__icone {
@@ -84,6 +84,6 @@
   }
 
   .toast {
-    animation: subir var(--tempo-normal) var(--curva) both;
+    animation: subir var(--tempo-normal) var(--curva) backwards;
   }
 }

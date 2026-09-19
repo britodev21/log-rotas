@@ -54,7 +54,7 @@
   backdrop-filter: blur(8px) saturate(1.3);
   border: 1px solid var(--borda);
   box-shadow: var(--sombra-sm);
-  animation: subir-curto var(--tempo-normal) var(--curva) both;
+  animation: subir-curto var(--tempo-normal) var(--curva) backwards;
 }
 
 .mapa-resumo__valor {
