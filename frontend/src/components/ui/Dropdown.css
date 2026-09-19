@@ -1,11 +1,12 @@
-.menu-area {
-  position: relative;
+.menu-gatilho {
   display: inline-flex;
 }
 
+/* O menu vive num portal no <body>, fora da arvore que o recortava.
+   Por isso e `fixed`, posicionado por coordenadas de tela, e nao `absolute`
+   relativo ao gatilho. */
 .menu {
-  position: absolute;
-  top: calc(100% + 6px);
+  position: fixed;
   z-index: var(--z-dropdown);
   padding: var(--e-1);
   background: var(--superficie);
@@ -13,19 +14,15 @@
   border-radius: var(--r-lg);
   box-shadow: var(--sombra-lg);
   animation: escalar var(--tempo-rapido) var(--curva) both;
-  /* Ancora a animacao no canto de onde o menu nasce, em vez do centro:
-     o menu parece sair do botao, nao aparecer solto no ar. */
-  transform-origin: top right;
 }
 
-.menu--esquerda {
-  left: 0;
-  transform-origin: top left;
-}
+/* Ancora a animacao no canto de onde o menu nasce: ele parece sair do
+   botao, em vez de aparecer solto no ar. */
+.menu--direita { transform-origin: top right; }
+.menu--esquerda { transform-origin: top left; }
 
-.menu--direita {
-  right: 0;
-}
+.menu--acima.menu--direita { transform-origin: bottom right; }
+.menu--acima.menu--esquerda { transform-origin: bottom left; }
 
 .menu__item {
   display: flex;
@@ -42,19 +39,24 @@
     color var(--tempo-instantaneo) var(--curva);
 }
 
-.menu__item:hover,
-.menu__item:focus-visible {
+.menu__item:hover:not(:disabled),
+.menu__item:focus-visible:not(:disabled) {
   background: var(--superficie-3);
   color: var(--texto);
   outline: none;
+}
+
+.menu__item:disabled {
+  color: var(--texto-4);
+  cursor: not-allowed;
 }
 
 .menu__item--perigo {
   color: var(--perigo);
 }
 
-.menu__item--perigo:hover,
-.menu__item--perigo:focus-visible {
+.menu__item--perigo:hover:not(:disabled),
+.menu__item--perigo:focus-visible:not(:disabled) {
   background: var(--perigo-suave);
   color: var(--perigo);
 }
@@ -66,6 +68,8 @@
   text-transform: uppercase;
   letter-spacing: var(--tr-maiuscula);
   color: var(--texto-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .menu__separador {
