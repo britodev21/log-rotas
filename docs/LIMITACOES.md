@@ -7,166 +7,152 @@ A regra do projeto: quando houver limitação, ela aparece aqui, no código e na
 número estimado é apresentado como medido, e nenhuma ordenação simples é chamada de
 "otimização".
 
-Última atualização: **Fase 3** (cadastros).
+**O fluxo completo funciona.** O que segue é o que precisa ser resolvido antes de a empresa
+depender do sistema no dia a dia.
 
 ---
 
-## 1. O que ainda não existe
+## 1. Antes de colocar em produção
 
-| Funcionalidade | Fase prevista |
-|---|---|
-| Cadastro de entregas | 3 |
-| Geocodificação de endereços | 4 |
-| Mapa da operação (Leaflet + OpenStreetMap) | 4 |
-| Distância e duração reais entre paradas | 5 |
-| Agrupamento de entregas em paradas | 6 |
-| Otimização de rotas (OR-Tools) | 6 |
-| Planejador: calcular, revisar, confirmar | 7 |
-| Indicadores operacionais no painel | 8 |
-| Aplicação do motorista no celular | 9 |
+Em ordem de urgência.
 
-O painel administrativo mostra o andamento da implantação em vez de indicadores, e a tela do
-motorista diz que não há rota atribuída. Isso é intencional: uma tela com números de exemplo
-ensina a equipe a confiar em dado que não existe.
+### 1.1 Provedores externos gratuitos não cobrem uso comercial
 
-**Sobre os endereços já cadastrados:** base e cliente aceitam endereço, mas ele ainda **não é
-convertido em coordenada** — isso é a Fase 4. Por isso cada registro exibe a etiqueta "Sem
-coordenada" na listagem, em vez de o sistema dar a entender que já sabe onde as coisas ficam.
-Quem quiser marcar a posição agora pode informar latitude e longitude direto pela API, e ela
-é respeitada como pino manual.
+| Serviço | Para quê | Limite | O que fazer |
+|---|---|---|---|
+| **Nominatim** | Geocodificação | 1 requisição/s, uso pesado proibido | Plano pago, LocationIQ ou Google |
+| **OSRM público** | Distância e tempo | Servidor de demonstração, sem garantia | OSRM próprio na VPS com extrato de MS |
+| **CARTO** | Ladrilhos do mapa | Plano gratuito | Plano pago, MapTiler ou Stadia |
 
----
+Nenhum deles custa nada hoje e todos funcionam para desenvolvimento. Todos são trocáveis por
+configuração: o código fala com `GeocodingProvider` e `MatrixProvider`, nunca com o serviço.
 
-## 2. Decisões tomadas sobre suposições, não sobre dados
+**Quando o OSRM sai do ar**, o sistema cai para estimativa em linha reta e **avisa na tela** —
+o planejamento continua possível, mas os quilômetros deixam de ser de estrada.
 
-Estes valores entraram no sistema como **estimativa** e precisam ser calibrados com a
-operação real da Britto. Enquanto não forem, qualquer cálculo que dependa deles é aproximado.
+### 1.2 Geolocalização do motorista exige HTTPS
 
-| Parâmetro | Valor atual | Situação |
-|---|---|---|
-| Tempo padrão por parada | 60 min | **Chute.** Editável em Configurações |
-| Restrição principal de carga | comprimento (suposto) | Não confirmado |
-| Entrega inclui instalação | provavelmente sim | Não confirmado |
-| Equipe por entrega | até 4 pessoas | Informado, ainda não modelado |
-| Volume diário de entregas | desconhecido | Sistema dimensionado para dezenas/dia |
-| Vínculo com pedido / nota fiscal | desconhecido | Campos opcionais previstos |
+`navigator.geolocation` só funciona em contexto seguro. `http://localhost` conta;
+`http://192.168.x.x` **não**. Abrir a aplicação no celular pela rede local, por IP, não dá
+acesso à localização.
 
-O cadastro de veículos da Fase 3 já reflete essa incerteza: peso, volume, comprimento e número
-máximo de paradas são **todos opcionais**, e a tela diz para preencher apenas o que realmente
-limita a carga. Custo de estar errado sobre qual deles importa: uma coluna vazia.
+O sistema não trava por isso — a coordenada é opcional em todo registro, e o motorista
+consegue trabalhar sem ela. Mas o registro fica sem a prova de onde ele estava.
 
-**Por que o tempo de parada importa tanto:** a operação é dentro de Campo Grande, com
-deslocamentos de 10 a 25 minutos entre paradas. Se a instalação leva 90 minutos, o tempo de
-serviço domina o tempo de estrada em ordem de grandeza — e o que limita o dia da equipe não é
-a distância, é quantos serviços cabem nele. Por isso a dimensão principal do otimizador será
-**tempo**, não quilometragem.
+Resolver com HTTPS na VPS, ou túnel durante o desenvolvimento.
 
-Perguntas a levar a quem carrega o caminhão estão registradas no histórico do projeto e devem
-ser respondidas antes da Fase 6.
-
----
-
-## 3. Segurança: riscos aceitos conscientemente
-
-### 3.1 Tokens em `localStorage`
-
-Os tokens ficam em `localStorage`, o que os expõe a XSS. A alternativa (cookie `httpOnly`)
-dificultaria o aplicativo nativo previsto mais adiante.
-
-Mitigações em vigor: token de acesso curto (60 min), revogação imediata por `token_version`
-no backend (troca de senha, desativação de usuário e redefinição de senha derrubam todas as
-sessões), e nenhum HTML injetado sem escape no frontend.
-
-### 3.2 Verificação de e-mail desligada
-
-A coluna `users.email_verified` existe desde a primeira migration, mas a verificação não é
-exigida. Exigir confirmação por e-mail sem servidor SMTP configurado travaria o primeiro
-acesso, e montar SMTP agora seria infraestrutura desnecessária para uso interno.
-
-Como o sistema não tem cadastro público, o risco é baixo: só o administrador cria usuários.
-**Precisa ser reavaliado** se o sistema um dia for exposto para fora da empresa.
-
-### 3.3 Acessibilidade verificada por medição
-
-A escala de texto da interface foi calibrada calculando a razão de contraste de cada nível
-contra a superfície mais clara em que ele aparece, nos dois temas. Os quatro níveis atingem
-4.5:1 (mínimo da WCAG AA para texto pequeno). O nível mais apagado, usado em e-mail de
-tabela e contexto de indicador, reprovava com 2.6:1 na primeira versão da paleta e foi
-escurecido.
-
-A hierarquia entre os níveis passou a se apoiar também em tamanho e peso, não apenas em
-cor — empilhar cinzas cada vez mais claros termina com o último ilegível.
-
-### 3.4 Sem limite de tentativas de login
+### 1.3 Sem limite de tentativas de login
 
 Não há bloqueio por tentativas repetidas nem CAPTCHA. Em rede interna o risco é baixo; ao
-publicar o sistema na internet, isso precisa entrar — preferencialmente no nginx, não na
-aplicação.
+publicar na internet isso precisa entrar — preferencialmente no nginx, não na aplicação.
 
 O login já não revela quais e-mails existem: senha errada e e-mail inexistente devolvem a
-mesma mensagem, no mesmo tempo (há um cálculo de hash descartável para igualar a duração da
-resposta).
+mesma mensagem, no mesmo tempo.
+
+### 1.4 Verificação de e-mail desligada
+
+A coluna `users.email_verified` existe, mas não é exigida — montar SMTP travaria o primeiro
+acesso. Como não há cadastro público, o risco é baixo. Reavaliar se o sistema for exposto
+para fora da empresa.
+
+### 1.5 Tokens em `localStorage`
+
+Expõe a XSS. A alternativa (cookie `httpOnly`) dificultaria o aplicativo nativo previsto.
+Mitigações: token de 60 min, revogação imediata por `token_version`, nenhum HTML injetado sem
+escape.
 
 ---
 
-## 4. Limitações técnicas do ambiente
+## 2. Números que ainda são estimativa
 
-### 4.1 Geolocalização no celular exige HTTPS
+Estes valores entraram como suposição e precisam ser calibrados com a operação real.
 
-`navigator.geolocation` só funciona em contexto seguro. `http://localhost` conta como seguro;
-`http://192.168.x.x` **não**. Ou seja: abrir a aplicação no celular pela rede local, por IP,
-**não vai** dar acesso à localização do motorista.
-
-Isso precisa ser resolvido antes da Fase 9. Opções: túnel HTTPS durante o desenvolvimento, ou
-subir o sistema em uma VPS com certificado.
-
-### 4.2 Provedores externos gratuitos têm limite (Fases 4 e 5)
-
-- **Nominatim** (geocodificação): 1 requisição por segundo, `User-Agent` obrigatório, uso
-  pesado proibido. Mitigação planejada: cache em banco e fila serializada.
-- **OSRM público** (distância/tempo): servidor de demonstração, sem garantia de
-  disponibilidade e proibido para uso comercial de volume. Mitigação planejada: OSRM próprio
-  na VPS, com o extrato de Mato Grosso do Sul.
-- **Base cartográfica (CARTO)**: o painel usa os ladrilhos gratuitos `light_all` /
-  `dark_all` da CARTO, servidos sobre dados do OpenStreetMap. São adequados a
-  desenvolvimento e uso leve, mas a política do serviço não cobre aplicação comercial de
-  volume. Antes de a empresa depender do sistema, trocar por um plano pago da CARTO, por
-  MapTiler ou por Stadia — é uma URL no componente `MapPanel`, nada além disso.
-  A atribuição ao OpenStreetMap e à CARTO já é exibida no mapa, como a licença exige.
-
-Nada disso impede o desenvolvimento local nem custa dinheiro agora, mas todos precisam ser
-trocados antes de a empresa depender do sistema no dia a dia.
-
-### 4.3 Cobertura de endereços em Campo Grande
-
-O Nominatim tem cobertura irregular em loteamento novo, chácara e endereço sem número. A
-operação ser numa cidade só ajuda: os endereços se repetem entre pedidos e o cache acerta com
-o tempo, e o administrador poderá corrigir o pino no mapa uma vez para sempre.
-
-Primeira evolução prevista: aceitar CEP + número via ViaCEP, bem mais confiável no Brasil do
-que endereço por extenso.
-
----
-
-## 5. Escolhas de arquitetura que restringem o futuro
-
-| Escolha | Consequência | Custo para reverter |
+| Parâmetro | Valor | Onde muda |
 |---|---|---|
-| Aplicação de empresa única (sem multi-tenancy) | Não atende duas empresas | Migration mecânica: adicionar `company_id`, preencher com 1, criar índices, ajustar repositórios — 1 a 2 dias |
-| Chaves primárias `BIGINT` sequenciais | IDs previsíveis em URL | Aceitável: o sistema é interno e autenticado |
-| SQLAlchemy síncrono | Menor throughput teórico | Irrelevante neste volume; reversível |
-| Polling em vez de WebSocket | Painel atualiza a cada ~10s | Suficiente para 4 motoristas; vira SSE quando houver GPS contínuo |
+| Tempo padrão por parada | 60 min | Configurações, na interface |
+| Tempo fixo de estacionar | 5 min | `stop_grouping.TEMPO_BASE_PARADA_S` |
+| Fator de correção da linha reta | 1,35 | `haversine.FATOR_RUA` |
+| Velocidade média urbana | 28 km/h | `haversine.VELOCIDADE_KMH` |
+| Jornada padrão | 8 h | `contracts.VeiculoDisponivel` |
+
+Os três últimos só entram em jogo quando o OSRM está fora — com ele, distância e tempo são
+medidos na malha viária.
+
+**O tempo de parada é o que mais pesa.** A operação é dentro de Campo Grande, com
+deslocamentos de 10 a 25 minutos. Se a entrega inclui instalação, o tempo de serviço domina o
+de estrada em ordem de grandeza — e o que limita o dia da equipe é quantos serviços cabem
+nele, não quanto ela roda. É por isso que o otimizador minimiza **tempo**, não quilometragem.
+
+### Perguntas ainda abertas sobre a operação
+
+O sistema foi construído para que errar essas respostas custe barato: todo campo de medida é
+opcional e só vira restrição quando preenchido dos dois lados — na entrega e no veículo.
+
+1. O que limita a carga: peso, volume ou comprimento?
+2. A entrega inclui instalação? Quanto tempo leva, do mais rápido ao mais demorado?
+3. Quantas pessoas cada tipo de serviço exige?
+4. Quantas entregas saem num dia normal e num dia cheio?
+5. Existe compromisso de horário com o cliente?
+6. O endereço chega junto com um número de pedido ou nota?
 
 ---
 
-## 6. O que este documento promete
+## 3. Decisões de escopo
 
-Toda funcionalidade que for entregue com limitação relevante entra aqui **e** aparece na
-interface. Especificamente, quando a otimização existir:
+### 3.1 Uma viagem por rota
 
-- se a matriz de distância vier do fallback em linha reta, a tela dirá
-  **"distância estimada em linha reta — não é distância de estrada"**;
-- se o solver não encontrar solução, o sistema dirá o motivo (ex.: demanda acima da
-  capacidade disponível) em vez de devolver uma ordenação qualquer;
-- entregas que não couberem na frota voltam como não atribuídas e continuam pendentes,
-  visíveis na tela.
+O MVP gera `BASE_SAIDA → ENTREGA* → BASE_RETORNO`. Voltar à base no meio do dia para
+recarregar **não** está implementado.
+
+O modelo já comporta: `route_stops` tem `stop_type` (com `BASE_RECARGA`) e `trip_number`.
+Implementar é trabalho no solver, não migração destrutiva na tabela que mais terá linhas.
+
+### 3.2 Janela de horário
+
+Respeitada pelo solver quando preenchida. Não é obrigatória, e a maioria das entregas não vai
+ter — o que é o comportamento certo enquanto não se sabe se a Britto agenda horário.
+
+### 3.3 Prioridade influencia, não determina
+
+A prioridade vira penalidade de dispensa: o solver sacrifica uma entrega `BAIXA` antes de uma
+`URGENTE` quando não cabe tudo. Ela **não** força uma entrega a ser a primeira da rota.
+
+### 3.4 Aplicação de empresa única
+
+Sem multi-tenancy. Reverter é migration mecânica (adicionar `company_id`, preencher com 1,
+criar índices, ajustar repositórios) — um a dois dias.
+
+### 3.5 Polling, não WebSocket
+
+O painel atualiza a cada 15 segundos. Suficiente para poucos motoristas; vira SSE quando
+houver GPS contínuo.
+
+### 3.6 Limitador de taxa em memória
+
+O limite de 1 req/s do Nominatim é respeitado por um lock de processo. Com vários workers isso
+deixa de valer, e o controle passa a ser assunto de fila externa.
+
+---
+
+## 4. O que o sistema se recusa a fazer
+
+Estas recusas são deliberadas. Cada uma protege contra um erro que só apareceria tarde demais.
+
+| Situação | O sistema faz | Em vez de |
+|---|---|---|
+| Endereço com vários resultados possíveis | Manda para revisão humana | Escolher o primeiro |
+| Entrega sem coordenada no planejamento | Recusa o cálculo, com a lista | Ignorar em silêncio |
+| Carga acima da capacidade | Deixa de fora e reporta | Espremer no veículo |
+| Solver sem solução | Diz o motivo | Devolver ordenação por proximidade |
+| Rota finalizada com entrega sem registro | Marca como **não entregue** | Dar por entregue |
+| Endereço alterado | Descarta a coordenada antiga | Manter o pino no lugar anterior |
+| Confirmar planejamento duas vezes | Recusa a segunda | Gravar tudo de novo |
+| Matriz vinda do fallback | Avisa na tela que é estimativa | Apresentar como distância real |
+| Entrega já em rota | Trava peso, endereço e data | Deixar alterar e invalidar a rota |
+
+### Acessibilidade verificada por medição
+
+A escala de texto foi calibrada calculando a razão de contraste de cada nível contra a
+superfície mais clara em que aparece, nos dois temas. Os quatro níveis atingem 4.5:1 (WCAG AA
+para texto pequeno). O nível mais apagado reprovava com 2.6:1 na primeira versão e foi
+escurecido.

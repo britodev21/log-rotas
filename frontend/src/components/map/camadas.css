@@ -1,0 +1,78 @@
+/* Marcadores do mapa.
+
+   Sao HTML estilizado (divIcon), nao imagens: herdam as cores de status do
+   sistema, acompanham o tema claro/escuro e nao exigem nenhum arquivo de
+   imagem para carregar. */
+
+.pino {
+  display: block;
+  border-radius: 50%;
+  box-sizing: border-box;
+  transition:
+    transform var(--tempo-rapido) var(--curva),
+    box-shadow var(--tempo-rapido) var(--curva);
+}
+
+/* A base e um quadrado girado: distingue de entrega a distancia, sem
+   precisar de legenda nem de cor diferente. */
+.pino--base {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-xs);
+  background: var(--primaria);
+  border: 3px solid var(--superficie);
+  box-shadow: var(--sombra-md);
+  transform: rotate(45deg);
+}
+
+.pino--entrega {
+  width: 16px;
+  height: 16px;
+  background: var(--pino-cor, var(--neutro));
+  border: 2.5px solid var(--superficie);
+  box-shadow: var(--sombra-sm);
+}
+
+.pino--destacado {
+  transform: scale(1.25);
+  box-shadow: var(--sombra-md);
+}
+
+/* Parada numerada: a sequencia da rota lida direto no mapa, sem precisar
+   cruzar com a lista lateral. */
+.pino-ordem {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--pino-cor, var(--primaria));
+  border: 2.5px solid var(--superficie);
+  box-shadow: var(--sombra-sm);
+  color: #fff;
+  font-family: var(--fonte);
+  font-size: 11px;
+  font-weight: var(--p-700);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transition: transform var(--tempo-rapido) var(--curva);
+}
+
+.pino-ordem--destacado {
+  transform: scale(1.12);
+}
+
+.popup__linha {
+  margin-top: 2px;
+  font-size: var(--t-12);
+  color: var(--texto-3);
+}
+
+/* O Leaflet injeta o proprio estilo no popup; estes seletores realinham
+   com a tipografia do sistema. */
+.leaflet-popup-content {
+  margin: var(--e-3) var(--e-4);
+  font-family: var(--fonte);
+  font-size: var(--t-13);
+  line-height: var(--lh-normal);
+}

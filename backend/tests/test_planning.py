@@ -136,6 +136,56 @@ def test_entregas_no_mesmo_lugar_viram_uma_parada(db) -> None:
     assert paradas[0].peso_kg == 300
 
 
+def test_mesma_coordenada_agrupa_mesmo_com_enderecos_diferentes(db) -> None:
+    """Quem estaciona uma vez estaciona uma vez.
+
+    "Rua X, 100" e "Rua X, 100 apto 2" sao a mesma porta; o mesmo cliente
+    com duas compras e a mesma visita. Com coordenada confiavel (MANUAL ou
+    EXATO), o criterio e a posicao — nao o texto digitado.
+    """
+    for sufixo in ("", " - apto 2", " - 2a carga"):
+        db.add(
+            Delivery(
+                address=f"Rua 14 de Julho, 500{sufixo}",
+                latitude=-20.4697,
+                longitude=-54.6201,
+                geocode_status="MANUAL",
+                scheduled_date=HOJE,
+            )
+        )
+    db.commit()
+
+    paradas = agrupar(db.query(Delivery).all())
+
+    assert len(paradas) == 1
+    assert len(paradas[0].entregas) == 3
+
+
+def test_coordenada_grosseira_nao_agrupa_por_posicao(db) -> None:
+    """Precisao de rua ou bairro poe enderecos distintos no mesmo ponto.
+
+    Errar para menos custa uma parada a mais na rota; errar para mais
+    juntaria entregas a quarteiroes de distancia — e o motorista descobriria
+    isso na rua.
+    """
+    for numero in (100, 780, 1500):
+        db.add(
+            Delivery(
+                address=f"Avenida Afonso Pena, {numero}",
+                latitude=-20.4697,
+                longitude=-54.6201,
+                geocode_status="OK",
+                geocode_precision="RUA",
+                scheduled_date=HOJE,
+            )
+        )
+    db.commit()
+
+    paradas = agrupar(db.query(Delivery).all())
+
+    assert len(paradas) == 3
+
+
 def test_tempo_da_parada_nao_e_soma_ingenua(db) -> None:
     """Quem estaciona uma vez nao paga o tempo de estacionar tres vezes.
     Somar superestimaria a rota e faria caber menos servicos do que o dia

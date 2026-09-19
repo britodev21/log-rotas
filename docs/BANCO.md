@@ -105,10 +105,9 @@ geocodificação automática.
 
 ---
 
-## Modelo planejado (Fases 3 a 7)
+## Planejamento e execução — Fases 3 a 9
 
-Ainda não implementado. Registrado aqui porque as decisões abaixo foram tomadas e precisam ser
-respeitadas quando as tabelas forem criadas.
+**Implementado.** As decisões abaixo explicam por que cada tabela tem a forma que tem.
 
 ### `deliveries`
 

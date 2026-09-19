@@ -263,13 +263,152 @@ Status possíveis: `PENDENTE`, `OK`, `AMBIGUO`, `FALHOU`, `MANUAL`.
 
 ---
 
+## Entregas — somente `ADMIN`
+
+| Método | Caminho | |
+|---|---|---|
+| `GET` | `/api/v1/entregas` | Filtros: `data`, `data_de`, `data_ate`, `status` (repetível), `priority`, `customer_id`, `sem_coordenada`, `search` |
+| `GET` | `/api/v1/entregas/resumo` | Contagem por status |
+| `POST` | `/api/v1/entregas` | Cria |
+| `GET` | `/api/v1/entregas/{id}` | Detalhe |
+| `GET` | `/api/v1/entregas/{id}/historico` | Registro append-only de cada mudança |
+| `PATCH` | `/api/v1/entregas/{id}` | Altera |
+| `POST` | `/api/v1/entregas/{id}/status` | Muda o status |
+
+**Regras:**
+- endereço **ou** cliente é obrigatório — entrega sem destino não tem para onde ir;
+- selecionar cliente **copia** endereço e coordenada para a entrega. O cliente pode mudar de
+  endereço depois, e a entrega precisa guardar para onde ela foi de fato;
+- peso, volume, comprimento, equipe e tempo de serviço são opcionais;
+- janela de horário invertida responde 422 no cadastro — deixada passar, só apareceria na
+  otimização como "sem solução";
+- entrega em rota **trava** os campos que afetam o planejamento (peso, endereço, data,
+  janela). Responde 422 listando os campos bloqueados;
+- `NAO_ENTREGUE` exige motivo, e o motivo `OUTRO` exige descrição.
+
+Transição impossível responde **409** dizendo quais status eram possíveis.
+
+---
+
+## Geocodificação — somente `ADMIN`
+
+| Método | Caminho | |
+|---|---|---|
+| `GET` | `/api/v1/geocodificacao/pendentes` | Fila de revisão |
+| `POST` | `/api/v1/geocodificacao/testar?endereco=...` | Consulta sem gravar |
+| `POST` | `/api/v1/geocodificacao/{tipo}/{id}` | Geocodifica um registro |
+| `PUT` | `/api/v1/geocodificacao/{tipo}/{id}/coordenada` | Grava o pino manual |
+| `POST` | `/api/v1/geocodificacao/lote` | Processa uma fila |
+
+`tipo` é `entrega`, `cliente` ou `base`.
+
+**Quatro desfechos, e a distinção importa:**
+
+| Status | Significa | Coordenada |
+|---|---|---|
+| `OK` | Resposta confiável | Gravada |
+| `AMBIGUO` | Vários endereços possíveis | **Não gravada** — quem decide é o humano |
+| `FALHOU` | O provedor não achou | Não gravada |
+| `ERRO_PROVEDOR` | Rede, limite, indisponibilidade | Não gravada, e **não entra no cache** |
+
+Endereço não encontrado exige corrigir o endereço; erro de provedor exige tentar de novo. Um
+pino `MANUAL` nunca é sobrescrito sem `forcar=true`.
+
+O lote **demora**: o Nominatim permite uma consulta por segundo.
+
+---
+
+## Planejamento — somente `ADMIN`
+
+| Método | Caminho | |
+|---|---|---|
+| `GET` | `/api/v1/planejamento` | Lista |
+| `POST` | `/api/v1/planejamento/calcular` | Calcula e devolve **rascunho** |
+| `GET` | `/api/v1/planejamento/{id}` | Detalhe com rotas e paradas |
+| `POST` | `/api/v1/planejamento/{id}/confirmar` | Põe em operação |
+| `POST` | `/api/v1/planejamento/{id}/descartar` | Joga fora |
+
+### `POST /calcular`
+
+```json
+{
+  "date": "2026-09-20",
+  "base_id": 1,
+  "delivery_ids": [1, 2, 3],
+  "vehicle_ids": [1, 2],
+  "driver_ids": [1, 2],
+  "inicio_turno": "08:00",
+  "limite_tempo_s": 15
+}
+```
+
+**Calcular não muda a operação.** As entregas continuam `PENDENTE`, nenhuma rota fica
+disponível para motorista.
+
+Por dentro, em ordem: agrupa entregas por lugar (uma parada resolve várias), monta a matriz de
+distâncias e resolve com OR-Tools minimizando **tempo**.
+
+Recusas, todas com o motivo:
+
+| HTTP | Quando |
+|---|---|
+| 422 | Entregas sem coordenada, **com a lista** |
+| 422 | Base sem coordenada, veículo ou motorista inativo |
+| 409 | Entregas que não estão mais pendentes |
+| 409 | O solver não encontrou solução, com as estatísticas |
+
+A resposta traz `matrix_source`, `distancias_estimadas`, `avisos`, `solver_status`,
+`solver_time_ms` e `unassigned` — o que não coube, com o motivo.
+
+### `POST /{id}/confirmar`
+
+Rotas viram `PLANEJADA`, entregas viram `PLANEJADA`. **Toda rota precisa de motorista** — sem
+isso responde 422. Um plano confirmado não volta atrás.
+
+---
+
+## Motorista — somente `MOTORISTA`
+
+| Método | Caminho | |
+|---|---|---|
+| `GET` | `/api/v1/motorista/rotas` | Rotas do dia |
+| `GET` | `/api/v1/motorista/rotas/{id}` | Detalhe com progresso |
+| `POST` | `/api/v1/motorista/rotas/{id}/iniciar` | Sai da base |
+| `POST` | `/api/v1/motorista/paradas/{id}/cheguei` | Registra chegada |
+| `POST` | `/api/v1/motorista/entregas/{id}/entregue` | Conclui **uma** entrega |
+| `POST` | `/api/v1/motorista/entregas/{id}/nao-entregue` | Registra insucesso |
+| `POST` | `/api/v1/motorista/rotas/{id}/finalizar` | Encerra o dia |
+
+**Isolamento:** rota de outro motorista responde **404**, não 403 — dizer "existe, mas não é
+sua" confirmaria a existência de rotas alheias. Planejamento em rascunho não aparece.
+
+**Coordenada é opcional** em todo registro: o navegador só libera geolocalização em contexto
+seguro, e nem sempre há sinal.
+
+**Finalizar não dá por entregue o que ficou sem registro.** Essas entregas viram
+`NAO_ENTREGUE`, com a observação de que a rota foi encerrada sem registro, e voltam para o
+planejamento.
+
+---
+
+## Painel — somente `ADMIN`
+
+### `GET /api/v1/painel?data=...`
+
+Uma chamada devolve indicadores, rotas ativas com geometria e os pontos do mapa. O painel
+atualiza por polling, e quatro requisições por ciclo multiplicariam a carga sem ganho.
+
+`CHEGOU` conta como "em rota": para quem olha o painel, o motorista parado na porta do cliente
+ainda está na rua. Só rotas confirmadas entram no total — rascunho é cenário, não compromisso.
+
+---
+
 ## Ainda não implementado
 
-| Recurso | Fase |
+| Recurso | Observação |
 |---|---|
-| `/entregas` | 3 |
-| `/geocodificacao` | 4 |
-| `/planejamento` (calcular, revisar, confirmar) | 7 |
-| `/rotas` | 7 |
-| `/painel` | 8 |
-| `/motorista` (rota do dia, chegada, entrega, ocorrência) | 9 |
+| Retorno à base para recarregar | O modelo comporta (`stop_type`, `trip_number`); falta no solver |
+| Relatórios e indicadores históricos | O `delivery_events` já guarda tudo que eles precisam |
+| Importação CSV de entregas | — |
+| Foto, assinatura e código de barras | — |
+| GPS contínuo do motorista | Exige HTTPS e troca de polling por SSE |

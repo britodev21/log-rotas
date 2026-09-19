@@ -23,6 +23,7 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 
+from app.core.enums import GeocodePrecision, GeocodeStatus
 from app.models.delivery import Delivery
 
 logger = logging.getLogger(__name__)
@@ -125,15 +126,48 @@ def _normalizar(texto: str | None) -> str:
     return " ".join(re.sub(r"[^\w\s]", " ", t.lower()).split())
 
 
+#: Situacoes em que a coordenada e confiavel o bastante para agrupar por
+#: posicao pura. EXATO veio do numero do predio; MANUAL foi o administrador
+#: que marcou o ponto no mapa.
+PRECISAO_CONFIAVEL = {GeocodePrecision.EXATO.value}
+STATUS_CONFIAVEL = {GeocodeStatus.MANUAL.value}
+
+
+def _chave_de_agrupamento(entrega: Delivery, precisao: int) -> str:
+    """Decide o que significa "mesmo lugar" para esta entrega.
+
+    Quando a coordenada e confiavel — veio do numero do predio (EXATO) ou
+    foi marcada a mao no mapa (MANUAL) — o criterio e a POSICAO, so ela.
+    Duas entregas no mesmo ponto sao uma parada, mesmo que o endereco tenha
+    sido digitado de formas diferentes ("Rua X, 100" e "Rua X, 100 apto 2",
+    ou o mesmo cliente com duas compras). Quem estaciona uma vez estaciona
+    uma vez.
+
+    Quando a coordenada e grosseira — nivel de rua, bairro ou cidade — a
+    posicao deixa de provar que e o mesmo lugar: varios enderecos distintos
+    caem no mesmo ponto. Ai o endereco entra na chave, e o agrupamento fica
+    conservador. Errar para menos aqui custa uma parada a mais na rota;
+    errar para mais juntaria entregas que estao a quarteiroes de distancia.
+    """
+    lat = round(float(entrega.latitude), precisao)
+    lon = round(float(entrega.longitude), precisao)
+
+    confiavel = (
+        entrega.geocode_status in STATUS_CONFIAVEL
+        or entrega.geocode_precision in PRECISAO_CONFIAVEL
+    )
+    if confiavel:
+        return f"{lat}|{lon}"
+    return f"{lat}|{lon}|{_normalizar(entrega.address)[:60]}"
+
+
 def agrupar(
     entregas: list[Delivery], *, precisao: int = PRECISAO_AGRUPAMENTO
 ) -> list[ParadaAgrupada]:
     """Agrupa entregas que acontecem no mesmo lugar.
 
-    Criterio: coordenada arredondada + endereco normalizado. A coordenada
-    sozinha juntaria predios vizinhos que o geocodificador resolveu no mesmo
-    ponto; o endereco sozinho nao juntaria "Rua X, 100" e "Rua X, 100 - apto
-    2", que sao a mesma porta de entrada.
+    O criterio esta em `_chave_de_agrupamento`: posicao quando a coordenada
+    e confiavel, posicao mais endereco quando nao e.
 
     Entregas com janelas de horario incompativeis sao separadas em paradas
     distintas, mesmo no mesmo endereco: juntar criaria uma parada impossivel
@@ -147,7 +181,7 @@ def agrupar(
 
         lat = round(float(entrega.latitude), precisao)
         lon = round(float(entrega.longitude), precisao)
-        chave = f"{lat}|{lon}|{_normalizar(entrega.address)[:60]}"
+        chave = _chave_de_agrupamento(entrega, precisao)
 
         grupo = grupos.get(chave)
         if grupo is None:

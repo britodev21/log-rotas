@@ -79,3 +79,284 @@
   font-size: var(--t-12);
   color: var(--texto-4);
 }
+
+/* =========================================================================
+   Execucao da rota
+   ========================================================================= */
+
+.mot-progresso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+}
+
+.mot-progresso__texto {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  font-size: var(--t-15);
+  color: var(--texto-2);
+}
+
+.mot-progresso__texto .numero {
+  font-size: var(--t-18);
+  font-weight: var(--p-700);
+  color: var(--texto);
+}
+
+.progresso {
+  height: 6px;
+  border-radius: var(--r-total);
+  background: var(--superficie-3);
+  overflow: hidden;
+}
+
+.progresso__barra {
+  height: 100%;
+  border-radius: var(--r-total);
+  transition: width var(--tempo-lento) var(--curva);
+}
+
+/* --- Proxima parada ------------------------------------------------------ */
+
+.mot-parada__titulo {
+  margin-top: var(--e-2);
+  font-size: var(--t-20);
+  font-weight: var(--p-600);
+  letter-spacing: var(--tr-titulo);
+}
+
+/* O endereco e o que o motorista mais le nesta tela: tamanho generoso e
+   selecionavel, para ele poder copiar se precisar. */
+.mot-parada__endereco {
+  margin-top: var(--e-1);
+  font-size: var(--t-16);
+  line-height: var(--lh-normal);
+  color: var(--texto-2);
+  user-select: text;
+}
+
+.mot-parada__previsao {
+  margin-top: var(--e-2);
+  font-size: var(--t-13);
+  color: var(--texto-4);
+}
+
+.mot-navegar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+  margin-top: var(--e-3);
+  padding: var(--e-2) var(--e-3);
+  min-height: var(--toque);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--r-md);
+  font-size: var(--t-14);
+  font-weight: var(--p-500);
+  color: var(--texto-2);
+  text-decoration: none;
+}
+
+.mot-navegar:hover {
+  background: var(--superficie-hover);
+  text-decoration: none;
+}
+
+.mot-acoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  margin-top: var(--e-5);
+}
+
+.mot-aviso {
+  font-size: var(--t-14);
+  color: var(--texto-3);
+  margin-bottom: var(--e-4);
+}
+
+/* --- Entregas da parada --------------------------------------------------- */
+
+.mot-entregas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+}
+
+.mot-entrega {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  padding: var(--e-3);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+}
+
+.mot-entrega__info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+}
+
+.mot-entrega__nome {
+  font-size: var(--t-14);
+  font-weight: var(--p-500);
+}
+
+/* Dois botoes lado a lado, cada um com metade da largura e altura de toque
+   cheia: o motorista acerta sem mirar. */
+.mot-entrega__botoes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--e-2);
+}
+
+.mot-entrega__botoes .bt {
+  width: 100%;
+  font-size: var(--t-14);
+  padding: 0 var(--e-2);
+}
+
+.mot-concluido {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e-2);
+  padding: var(--e-4) 0 var(--e-6);
+  text-align: center;
+  color: var(--sucesso);
+}
+
+.mot-concluido h2 {
+  font-size: var(--t-18);
+  color: var(--texto);
+}
+
+.mot-concluido p {
+  font-size: var(--t-14);
+  color: var(--texto-3);
+}
+
+/* --- Lista de paradas ----------------------------------------------------- */
+
+.mot-lista {
+  display: flex;
+  flex-direction: column;
+}
+
+.mot-lista__item {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-3) 0;
+}
+
+.mot-lista__item + .mot-lista__item {
+  border-top: 1px solid var(--borda-suave);
+}
+
+.mot-lista__ordem {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--borda-forte);
+  font-size: var(--t-12);
+  font-weight: var(--p-600);
+  color: var(--texto-3);
+}
+
+.mot-lista__item--ok .mot-lista__ordem {
+  background: var(--sucesso);
+  border-color: var(--sucesso);
+  color: #fff;
+}
+
+.mot-lista__item--atual .mot-lista__ordem {
+  border-color: var(--primaria);
+  background: var(--primaria-suave);
+  color: var(--primaria);
+}
+
+.mot-lista__texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: var(--t-14);
+}
+
+.mot-lista__texto span {
+  font-size: var(--t-12);
+  color: var(--texto-4);
+}
+
+.mot-lista__item--ok .mot-lista__texto strong {
+  color: var(--texto-3);
+  text-decoration: line-through;
+}
+
+/* --- Cartao de rota na lista inicial -------------------------------------- */
+
+.cartao-rota {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  width: 100%;
+  padding: var(--e-4);
+  padding-right: var(--e-10);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra-xs);
+  text-align: left;
+  transition:
+    border-color var(--tempo-rapido) var(--curva),
+    box-shadow var(--tempo-rapido) var(--curva);
+}
+
+.cartao-rota:hover {
+  border-color: var(--borda-forte);
+  box-shadow: var(--sombra-md);
+}
+
+.cartao-rota__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+}
+
+.cartao-rota__titulo {
+  font-size: var(--t-15);
+  font-weight: var(--p-600);
+}
+
+.cartao-rota__numeros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-4);
+  font-size: var(--t-13);
+  color: var(--texto-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.cartao-rota__base {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+  font-size: var(--t-12);
+  color: var(--texto-4);
+}
+
+.cartao-rota__seta {
+  position: absolute;
+  right: var(--e-4);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--texto-4);
+}

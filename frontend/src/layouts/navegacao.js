@@ -3,6 +3,7 @@ import {
   Building2,
   LayoutDashboard,
   MapPin,
+  MapPinned,
   Package,
   Route,
   Settings,
@@ -25,9 +26,10 @@ export const GRUPOS = [
     titulo: "Operação",
     itens: [
       { para: "/admin", rotulo: "Painel", icone: LayoutDashboard, fim: true },
-      { rotulo: "Entregas", icone: Package, fase: "F3" },
-      { rotulo: "Planejamento", icone: Waypoints, fase: "F7" },
-      { rotulo: "Rotas", icone: Route, fase: "F7" },
+      { para: "/admin/entregas", rotulo: "Entregas", icone: Package },
+      { para: "/admin/planejamento", rotulo: "Planejamento", icone: Waypoints },
+      { para: "/admin/rotas", rotulo: "Rotas", icone: Route },
+      { para: "/admin/enderecos", rotulo: "Endereços", icone: MapPinned },
     ],
   },
   {
@@ -53,6 +55,22 @@ export const GRUPOS = [
 export const CONTEXTO_ROTA = {
   "/admin": { titulo: "Painel", contexto: "Visão geral da operação" },
   "/admin/usuarios": { titulo: "Usuários", contexto: "Quem tem acesso ao sistema" },
+  "/admin/entregas": {
+    titulo: "Entregas",
+    contexto: "O que precisa sair",
+  },
+  "/admin/planejamento": {
+    titulo: "Planejamento",
+    contexto: "Calcular, revisar e confirmar as rotas do dia",
+  },
+  "/admin/rotas": {
+    titulo: "Rotas",
+    contexto: "O que foi planejado e o que aconteceu",
+  },
+  "/admin/enderecos": {
+    titulo: "Endereços",
+    contexto: "Endereços que ainda não viraram coordenada",
+  },
   "/admin/clientes": {
     titulo: "Clientes",
     contexto: "Quem recebe as entregas",

@@ -10,11 +10,16 @@ import { Setup } from "../pages/Setup";
 import { Bases } from "../pages/admin/Bases";
 import { Customers } from "../pages/admin/Customers";
 import { Dashboard } from "../pages/admin/Dashboard";
+import { Deliveries } from "../pages/admin/Deliveries";
+import { GeocodeQueue } from "../pages/admin/GeocodeQueue";
+import { Planner } from "../pages/admin/Planner";
+import { Routes as RoutesPage } from "../pages/admin/Routes";
 import { Drivers } from "../pages/admin/Drivers";
 import { Settings } from "../pages/admin/Settings";
 import { Users } from "../pages/admin/Users";
 import { Vehicles } from "../pages/admin/Vehicles";
 import { DriverHome } from "../pages/driver/DriverHome";
+import { DriverRoute } from "../pages/driver/DriverRoute";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 /** Leva cada perfil para a sua area — a raiz nunca mostra tela de outro papel. */
@@ -41,6 +46,10 @@ export function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="entregas" element={<Deliveries />} />
+        <Route path="planejamento" element={<Planner />} />
+        <Route path="rotas" element={<RoutesPage />} />
+        <Route path="enderecos" element={<GeocodeQueue />} />
         <Route path="clientes" element={<Customers />} />
         <Route path="motoristas" element={<Drivers />} />
         <Route path="veiculos" element={<Vehicles />} />
@@ -58,6 +67,7 @@ export function AppRoutes() {
         }
       >
         <Route index element={<DriverHome />} />
+        <Route path="rota/:id" element={<DriverRoute />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />
