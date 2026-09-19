@@ -1,0 +1,120 @@
+/* Telas administrativas. */
+
+.grade {
+  display: grid;
+  gap: var(--esp-5);
+}
+
+.grade--duas {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+/* --- Tabela de dados --------------------------------------------------- */
+
+.tabela-area {
+  overflow-x: auto;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--texto-base);
+}
+
+.tabela th,
+.tabela td {
+  padding: var(--esp-3) var(--esp-4);
+  text-align: left;
+  border-bottom: 1px solid var(--cor-borda);
+  white-space: nowrap;
+}
+
+.tabela th {
+  font-size: var(--texto-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cor-texto-fraco);
+  font-weight: var(--peso-semi);
+  background: var(--cor-superficie-alt);
+}
+
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabela tbody tr:hover {
+  background: var(--cor-superficie-alt);
+}
+
+.tabela__acoes {
+  display: flex;
+  gap: var(--esp-2);
+  justify-content: flex-end;
+}
+
+.tabela__principal {
+  font-weight: var(--peso-medio);
+}
+
+.tabela__secundario {
+  display: block;
+  font-size: var(--texto-xs);
+  color: var(--cor-texto-fraco);
+  font-weight: var(--peso-normal);
+}
+
+/* --- Filtros ------------------------------------------------------------ */
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-3);
+  align-items: flex-end;
+  margin-bottom: var(--esp-4);
+}
+
+.filtros > * {
+  min-width: 180px;
+}
+
+/* --- Lista de etapas (implantacao) -------------------------------------- */
+
+.etapas {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.etapa {
+  display: flex;
+  align-items: baseline;
+  gap: var(--esp-3);
+  padding: var(--esp-3) 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.etapa:last-child {
+  border-bottom: none;
+}
+
+.etapa__nome {
+  flex: 1;
+}
+
+.etapa--pendente .etapa__nome {
+  color: var(--cor-texto-suave);
+}
+
+.formulario-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-4);
+}
+
+@media (max-width: 720px) {
+  .tabela th,
+  .tabela td {
+    padding: var(--esp-3);
+  }
+}

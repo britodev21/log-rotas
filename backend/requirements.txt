@@ -1,0 +1,26 @@
+# --- Aplicacao ---
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+pydantic==2.13.5
+pydantic-settings==2.15.0
+email-validator==2.3.0
+
+# --- Banco ---
+SQLAlchemy==2.0.54
+alembic==1.20.0
+psycopg[binary]==3.3.6
+
+# --- Seguranca ---
+PyJWT==2.14.0
+argon2-cffi==25.1.0
+
+# --- HTTP externo (geocodificacao / routing — Fases 4 e 5) ---
+httpx==0.28.1
+
+# --- Otimizacao (Fase 6) ---
+# ortools==9.15.6755
+
+# --- Desenvolvimento ---
+pytest==9.1.1
+pytest-cov==7.1.0
+ruff==0.16.8

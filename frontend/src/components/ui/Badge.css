@@ -1,0 +1,31 @@
+.etiqueta {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--esp-2);
+  border-radius: var(--raio-total);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.etiqueta--neutro {
+  background: var(--cor-neutro-suave);
+  color: var(--cor-neutro);
+}
+.etiqueta--info {
+  background: var(--cor-info-suave);
+  color: var(--cor-info);
+}
+.etiqueta--sucesso {
+  background: var(--cor-sucesso-suave);
+  color: var(--cor-sucesso);
+}
+.etiqueta--atencao {
+  background: var(--cor-atencao-suave);
+  color: var(--cor-atencao);
+}
+.etiqueta--erro {
+  background: var(--cor-erro-suave);
+  color: var(--cor-erro);
+}

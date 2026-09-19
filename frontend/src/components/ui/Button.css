@@ -1,0 +1,87 @@
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--esp-2);
+  padding: 0 var(--esp-4);
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: var(--raio);
+  font-size: var(--texto-base);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+  transition:
+    background var(--transicao),
+    border-color var(--transicao),
+    color var(--transicao);
+  white-space: nowrap;
+}
+
+.botao:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.botao--largo {
+  width: 100%;
+}
+
+/* A tela do motorista usa este tamanho: alvo grande, texto grande, para ser
+   usado de pe, com pressa e sem precisar mirar. */
+.botao--grande {
+  min-height: var(--toque-min);
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semi);
+  padding: 0 var(--esp-6);
+  border-radius: var(--raio-lg);
+}
+
+.botao--primario {
+  background: var(--cor-marca);
+  color: var(--cor-texto-invertido);
+}
+.botao--primario:hover:not(:disabled) {
+  background: var(--cor-marca-hover);
+}
+
+.botao--secundario {
+  background: var(--cor-superficie);
+  border-color: var(--cor-borda-forte);
+  color: var(--cor-texto);
+}
+.botao--secundario:hover:not(:disabled) {
+  background: var(--cor-superficie-alt);
+  border-color: var(--cor-texto-fraco);
+}
+
+.botao--perigo {
+  background: var(--cor-erro);
+  color: var(--cor-texto-invertido);
+}
+.botao--perigo:hover:not(:disabled) {
+  background: #9b1616;
+}
+
+.botao--texto {
+  background: transparent;
+  color: var(--cor-info);
+  padding: 0 var(--esp-2);
+}
+.botao--texto:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.botao__girando {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: botao-girar 0.6s linear infinite;
+}
+
+@keyframes botao-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}

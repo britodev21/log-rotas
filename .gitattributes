@@ -1,0 +1,7 @@
+# Normaliza fim de linha no repositorio: LF gravado no git, conversao
+# automatica na copia de trabalho. Evita diff inteiro trocando de maquina.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary

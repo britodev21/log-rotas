@@ -1,0 +1,113 @@
+"""Infraestrutura dos testes.
+
+Os testes rodam contra um Postgres de verdade (log_rotas_test), nao contra
+SQLite. O motivo e direto: o schema usa CHECK constraints, IDENTITY e
+timestamptz, e um teste que passa no SQLite mas quebra no Postgres nao prova
+nada sobre o sistema que vai rodar na empresa.
+
+Cada teste roda dentro de uma transacao que sofre rollback no final. Os
+commits dos services viram SAVEPOINT, entao o banco volta limpo mesmo com a
+camada de servico commitando de verdade.
+"""
+
+from __future__ import annotations
+
+import os
+
+# Precisa vir antes de qualquer import de app.*: get_settings() e cacheado e
+# le o ambiente na primeira chamada. Variavel de ambiente tem prioridade
+# sobre o .env, entao o banco de teste nunca encosta no banco de trabalho.
+os.environ["DATABASE_URL"] = (
+    "postgresql+psycopg://postgres:postgres@localhost:5432/log_rotas_test"
+)
+os.environ.setdefault("JWT_SECRET", "chave-de-teste-com-tamanho-suficiente-para-passar")
+os.environ.setdefault("ENVIRONMENT", "test")
+
+from collections.abc import Iterator
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_db
+from app.core.enums import Role
+from app.core.security import hash_password
+from app.main import app
+from app.models import Base, User
+
+SENHA_PADRAO = "SenhaForte123"
+
+engine = create_engine(os.environ["DATABASE_URL"], future=True)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _schema() -> Iterator[None]:
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+    yield
+    Base.metadata.drop_all(engine)
+
+
+@pytest.fixture
+def db() -> Iterator[Session]:
+    connection = engine.connect()
+    transaction = connection.begin()
+    # create_savepoint faz com que session.commit() dentro dos services vire
+    # RELEASE SAVEPOINT, preservando o rollback externo.
+    session = Session(
+        bind=connection, join_transaction_mode="create_savepoint", expire_on_commit=False
+    )
+    try:
+        yield session
+    finally:
+        session.close()
+        transaction.rollback()
+        connection.close()
+
+
+@pytest.fixture
+def client(db: Session) -> Iterator[TestClient]:
+    app.dependency_overrides[get_db] = lambda: db
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+# --------------------------------------------------------------------------- #
+# Fabricas
+# --------------------------------------------------------------------------- #
+@pytest.fixture
+def criar_usuario(db: Session):
+    def _criar(
+        *,
+        email: str,
+        role: Role = Role.ADMIN,
+        senha: str = SENHA_PADRAO,
+        active: bool = True,
+        name: str = "Usuario de Teste",
+    ) -> User:
+        user = User(
+            name=name,
+            email=email.lower(),
+            password_hash=hash_password(senha),
+            role=role.value,
+            active=active,
+        )
+        db.add(user)
+        db.commit()
+        return user
+
+    return _criar
+
+
+@pytest.fixture
+def autenticar(client: TestClient):
+    """Faz login e devolve o header Authorization pronto."""
+
+    def _autenticar(email: str, senha: str = SENHA_PADRAO) -> dict[str, str]:
+        resposta = client.post("/api/v1/auth/login", json={"email": email, "password": senha})
+        assert resposta.status_code == 200, resposta.text
+        return {"Authorization": f"Bearer {resposta.json()['access_token']}"}
+
+    return _autenticar

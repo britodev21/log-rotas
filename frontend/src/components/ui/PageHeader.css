@@ -1,0 +1,23 @@
+.cabecalho-pagina {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--esp-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--esp-6);
+}
+
+.cabecalho-pagina__titulo {
+  font-size: var(--texto-2xl);
+}
+
+.cabecalho-pagina__descricao {
+  margin-top: var(--esp-1);
+  color: var(--cor-texto-suave);
+  max-width: 68ch;
+}
+
+.cabecalho-pagina__acoes {
+  display: flex;
+  gap: var(--esp-2);
+}

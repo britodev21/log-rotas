@@ -1,0 +1,115 @@
+/* =========================================================================
+   Log Rotas — reset e estilos de elemento
+   ========================================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--fonte);
+  font-size: var(--texto-base);
+  line-height: 1.5;
+  color: var(--cor-texto);
+  background: var(--cor-fundo);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.25;
+  font-weight: var(--peso-semi);
+  color: var(--cor-texto);
+}
+
+h1 { font-size: var(--texto-2xl); }
+h2 { font-size: var(--texto-xl); }
+h3 { font-size: var(--texto-lg); }
+h4 { font-size: var(--texto-md); }
+
+a {
+  color: var(--cor-info);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Foco visivel e obrigatorio: parte da operacao acontece no teclado, e um
+   outline invisivel torna o sistema inutilizavel para quem nao usa mouse. */
+:focus-visible {
+  outline: 2px solid var(--cor-info);
+  outline-offset: 2px;
+}
+
+/* --- Utilitarios minimos ------------------------------------------------ */
+
+/* Visivel para leitor de tela, invisivel na tela. */
+.sr-apenas {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pilha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-4);
+}
+
+.linha {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+}
+
+.texto-suave {
+  color: var(--cor-texto-suave);
+}
+
+.texto-fraco {
+  font-size: var(--texto-sm);
+  color: var(--cor-texto-fraco);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

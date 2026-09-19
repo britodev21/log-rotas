@@ -1,0 +1,90 @@
+/* Telas de entrada (login e primeiro acesso). */
+
+.entrada {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--esp-5);
+  background: var(--cor-marca);
+}
+
+.entrada__caixa {
+  width: 100%;
+  max-width: 420px;
+  background: var(--cor-superficie);
+  border-radius: var(--raio-lg);
+  box-shadow: var(--sombra-lg);
+  padding: var(--esp-8);
+}
+
+.entrada__caixa--larga {
+  max-width: 520px;
+}
+
+.entrada__marca {
+  font-size: var(--texto-2xl);
+  font-weight: var(--peso-forte);
+  color: var(--cor-marca);
+  letter-spacing: -0.02em;
+}
+
+.entrada__subtitulo {
+  margin-top: var(--esp-1);
+  color: var(--cor-texto-suave);
+  font-size: var(--texto-base);
+}
+
+.entrada__formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-4);
+  margin-top: var(--esp-6);
+}
+
+.entrada__separador {
+  border: 0;
+  border-top: 1px solid var(--cor-borda);
+  margin: var(--esp-2) 0;
+}
+
+.entrada__grupo-titulo {
+  font-size: var(--texto-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cor-texto-fraco);
+  font-weight: var(--peso-semi);
+}
+
+.entrada__rodape {
+  margin-top: var(--esp-5);
+  text-align: center;
+  font-size: var(--texto-xs);
+  color: var(--cor-texto-fraco);
+}
+
+.carregando-tela {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cor-texto-suave);
+}
+
+@media (max-width: 480px) {
+  .entrada {
+    padding: 0;
+    align-items: stretch;
+    background: var(--cor-superficie);
+  }
+  .entrada__caixa {
+    max-width: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: var(--esp-6) var(--esp-5);
+    padding-top: max(var(--esp-8), env(safe-area-inset-top));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}

@@ -1,0 +1,52 @@
+.motorista {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--cor-fundo);
+}
+
+.motorista__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  padding: var(--esp-3) var(--esp-4);
+  /* padding-top extra respeita o recorte da tela em celulares com notch. */
+  padding-top: max(var(--esp-3), env(safe-area-inset-top));
+  background: var(--cor-marca);
+  color: var(--cor-texto-invertido);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.motorista__marca {
+  display: block;
+  font-size: var(--texto-md);
+  font-weight: var(--peso-forte);
+}
+
+.motorista__nome {
+  display: block;
+  font-size: var(--texto-sm);
+  opacity: 0.85;
+}
+
+.motorista__conteudo {
+  flex: 1;
+  padding: var(--esp-4);
+  padding-bottom: max(var(--esp-4), env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-4);
+}
+
+/* Em tela grande a interface do motorista nao se espalha: manter a mesma
+   coluna estreita preserva o desenho pensado para o celular. */
+@media (min-width: 640px) {
+  .motorista__conteudo {
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+}

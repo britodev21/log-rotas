@@ -1,0 +1,64 @@
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.campo__rotulo {
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  color: var(--cor-texto-suave);
+}
+
+.campo__obrigatorio {
+  color: var(--cor-erro);
+  margin-left: 2px;
+}
+
+.campo__controle {
+  width: 100%;
+  min-height: 40px;
+  padding: var(--esp-2) var(--esp-3);
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  font-size: var(--texto-base);
+  transition:
+    border-color var(--transicao),
+    box-shadow var(--transicao);
+}
+
+.campo__controle:focus {
+  outline: none;
+  border-color: var(--cor-info);
+  box-shadow: var(--foco);
+}
+
+.campo__controle:disabled {
+  background: var(--cor-neutro-suave);
+  color: var(--cor-texto-fraco);
+}
+
+.campo--erro .campo__controle {
+  border-color: var(--cor-erro);
+}
+
+.campo__ajuda {
+  font-size: var(--texto-xs);
+  color: var(--cor-texto-fraco);
+}
+
+.campo__mensagem-erro {
+  font-size: var(--texto-xs);
+  color: var(--cor-erro);
+  font-weight: var(--peso-medio);
+}
+
+/* No celular, fonte menor que 16px faz o iOS dar zoom sozinho ao focar o
+   campo e desalinha a tela inteira. */
+@media (max-width: 720px) {
+  .campo__controle {
+    font-size: 16px;
+    min-height: var(--toque-min);
+  }
+}

@@ -1,0 +1,96 @@
+/* =========================================================================
+   Log Rotas — tokens de design
+   Fonte unica de cor, espacamento e tipografia. Nenhum componente escreve
+   valor cru: tudo referencia uma variavel daqui. Mudar a identidade visual
+   do sistema inteiro passa a ser mudar este arquivo.
+   ========================================================================= */
+
+:root {
+  /* --- Marca -------------------------------------------------------- */
+  /* Azul-marinho profundo: transmite operacao e logistica sem parecer
+     infantil. O ambar entra apenas como sinal de atencao, nunca decorativo. */
+  --cor-marca: #14284a;
+  --cor-marca-clara: #1f3d6e;
+  --cor-marca-hover: #1b3560;
+  --cor-marca-suave: #eaeff7;
+
+  --cor-acento: #b45309;
+  --cor-acento-suave: #fef3e2;
+
+  /* --- Superficies --------------------------------------------------- */
+  --cor-fundo: #f4f6f9;
+  --cor-superficie: #ffffff;
+  --cor-superficie-alt: #fafbfc;
+  --cor-borda: #dfe3e9;
+  --cor-borda-forte: #c3cad4;
+
+  /* --- Texto ---------------------------------------------------------- */
+  --cor-texto: #16191f;
+  --cor-texto-suave: #5b6270;
+  --cor-texto-fraco: #868d9a;
+  --cor-texto-invertido: #ffffff;
+
+  /* --- Estados operacionais ------------------------------------------ */
+  /* Usados tambem pelos status de entrega e rota, para que a cor signifique
+     a mesma coisa na lista, no mapa e na tela do motorista. */
+  --cor-sucesso: #15803d;
+  --cor-sucesso-suave: #e7f6ec;
+  --cor-atencao: #b45309;
+  --cor-atencao-suave: #fdf3e3;
+  --cor-erro: #b91c1c;
+  --cor-erro-suave: #fdeaea;
+  --cor-info: #1d4ed8;
+  --cor-info-suave: #e8eefd;
+  --cor-neutro: #6b7280;
+  --cor-neutro-suave: #f0f1f4;
+
+  /* --- Tipografia ------------------------------------------------------ */
+  --fonte: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --fonte-mono: "Cascadia Mono", "SF Mono", Consolas, monospace;
+
+  --texto-xs: 0.75rem;
+  --texto-sm: 0.8125rem;
+  --texto-base: 0.9375rem;
+  --texto-md: 1rem;
+  --texto-lg: 1.125rem;
+  --texto-xl: 1.375rem;
+  --texto-2xl: 1.75rem;
+  --texto-3xl: 2.25rem;
+
+  --peso-normal: 400;
+  --peso-medio: 500;
+  --peso-semi: 600;
+  --peso-forte: 700;
+
+  /* --- Espacamento (escala de 4px) -------------------------------------- */
+  --esp-1: 0.25rem;
+  --esp-2: 0.5rem;
+  --esp-3: 0.75rem;
+  --esp-4: 1rem;
+  --esp-5: 1.25rem;
+  --esp-6: 1.5rem;
+  --esp-8: 2rem;
+  --esp-10: 2.5rem;
+  --esp-12: 3rem;
+
+  /* --- Formas e profundidade --------------------------------------------- */
+  --raio-sm: 4px;
+  --raio: 6px;
+  --raio-lg: 10px;
+  --raio-total: 999px;
+
+  --sombra-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --sombra: 0 1px 3px rgba(16, 24, 40, 0.1), 0 1px 2px rgba(16, 24, 40, 0.06);
+  --sombra-lg: 0 8px 24px rgba(16, 24, 40, 0.12);
+
+  --foco: 0 0 0 3px rgba(29, 78, 216, 0.25);
+
+  /* --- Layout ------------------------------------------------------------ */
+  --largura-sidebar: 232px;
+  --altura-topo: 56px;
+  /* Alvo minimo de toque. A interface do motorista respeita isso em todos os
+     botoes: ele opera de pe, com pressa, as vezes de luva. */
+  --toque-min: 48px;
+
+  --transicao: 140ms ease;
+}

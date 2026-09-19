@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Ambiente — NUNCA commitar
+.env
+.env.local
+*.env
+!.env.example
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Editor / SO
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
