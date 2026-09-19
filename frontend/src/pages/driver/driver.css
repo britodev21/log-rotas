@@ -1,0 +1,81 @@
+/* =========================================================================
+   Telas do motorista — pensadas para o celular desde o inicio
+   ========================================================================= */
+
+.mot-cab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+}
+
+.mot-cab__data {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+  font-size: var(--t-12);
+  font-weight: var(--p-500);
+  text-transform: capitalize;
+  color: var(--texto-4);
+}
+
+.mot-cab__titulo {
+  font-size: var(--t-24);
+  font-weight: var(--p-600);
+  letter-spacing: var(--tr-titulo);
+}
+
+.mot-cab__texto {
+  font-size: var(--t-14);
+  color: var(--texto-3);
+}
+
+/* --- Passos do fluxo ----------------------------------------------------- */
+
+.mot-passos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  counter-reset: passo;
+}
+
+.mot-passo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-3);
+}
+
+.mot-passo__numero {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: var(--r-total);
+  background: var(--primaria-suave);
+  border: 1px solid var(--primaria-borda);
+  color: var(--primaria);
+  font-size: var(--t-12);
+  font-weight: var(--p-600);
+}
+
+.mot-passo strong {
+  font-size: var(--t-14);
+  font-weight: var(--p-600);
+}
+
+.mot-passo p {
+  margin-top: 2px;
+  font-size: var(--t-13);
+  line-height: var(--lh-normal);
+  color: var(--texto-3);
+}
+
+.mot-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e-2);
+  padding-top: var(--e-2);
+  font-size: var(--t-12);
+  color: var(--texto-4);
+}

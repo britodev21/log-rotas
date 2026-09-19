@@ -1,90 +1,291 @@
-/* Telas de entrada (login e primeiro acesso). */
+/* =========================================================================
+   Telas de entrada — login e primeiro acesso
+
+   Composição em duas colunas: à esquerda a marca, à direita o formulário.
+   No celular a coluna da marca sai e sobra o formulário, que é o que a
+   pessoa veio fazer.
+   ========================================================================= */
 
 .entrada {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--esp-5);
-  background: var(--cor-marca);
+  background: var(--fundo);
 }
 
-.entrada__caixa {
-  width: 100%;
-  max-width: 420px;
-  background: var(--cor-superficie);
-  border-radius: var(--raio-lg);
-  box-shadow: var(--sombra-lg);
-  padding: var(--esp-8);
-}
+/* --------------------------------------------------------------- Vitrine */
 
-.entrada__caixa--larga {
-  max-width: 520px;
-}
-
-.entrada__marca {
-  font-size: var(--texto-2xl);
-  font-weight: var(--peso-forte);
-  color: var(--cor-marca);
-  letter-spacing: -0.02em;
-}
-
-.entrada__subtitulo {
-  margin-top: var(--esp-1);
-  color: var(--cor-texto-suave);
-  font-size: var(--texto-base);
-}
-
-.entrada__formulario {
+.vitrine {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: var(--esp-4);
-  margin-top: var(--esp-6);
+  justify-content: space-between;
+  padding: var(--e-10);
+  background: var(--cinza-950);
+  color: var(--cinza-100);
 }
 
-.entrada__separador {
-  border: 0;
-  border-top: 1px solid var(--cor-borda);
-  margin: var(--esp-2) 0;
+/* Malha discreta ao fundo: sugere cartografia sem virar ilustração de mapa. */
+.vitrine__malha {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  /* Desvanece nas bordas para a malha não terminar num corte seco. */
+  mask-image: radial-gradient(ellipse at 30% 40%, #000 20%, transparent 78%);
 }
 
-.entrada__grupo-titulo {
-  font-size: var(--texto-xs);
+.vitrine__brilho {
+  position: absolute;
+  width: 620px;
+  height: 620px;
+  top: -180px;
+  right: -220px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--marca-500) 42%, transparent) 0%,
+    transparent 68%
+  );
+  filter: blur(28px);
+  pointer-events: none;
+}
+
+.vitrine__conteudo {
+  position: relative;
+  z-index: 1;
+}
+
+.vitrine__titulo {
+  margin-top: var(--e-10);
+  max-width: 16ch;
+  font-size: var(--t-36);
+  font-weight: var(--p-600);
+  letter-spacing: var(--tr-titulo);
+  line-height: 1.12;
+  color: #fff;
+}
+
+.vitrine__texto {
+  margin-top: var(--e-4);
+  max-width: 42ch;
+  font-size: var(--t-15);
+  line-height: var(--lh-solto);
+  color: var(--cinza-400);
+}
+
+.vitrine__rodape {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-6);
+}
+
+.vitrine__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vitrine__item-rotulo {
+  font-size: var(--t-11);
+  font-weight: var(--p-600);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--cor-texto-fraco);
-  font-weight: var(--peso-semi);
+  letter-spacing: var(--tr-maiuscula);
+  color: var(--cinza-500);
 }
 
-.entrada__rodape {
-  margin-top: var(--esp-5);
-  text-align: center;
-  font-size: var(--texto-xs);
-  color: var(--cor-texto-fraco);
+.vitrine__item-valor {
+  font-size: var(--t-14);
+  color: var(--cinza-300);
 }
 
-.carregando-tela {
-  min-height: 100dvh;
+/* Trajeto desenhando-se: três nós ligados por uma linha. A animação roda
+   uma vez, na entrada — laço infinito numa tela de login vira distração. */
+.vitrine__trajeto {
+  position: relative;
+  z-index: 1;
+  margin-top: var(--e-8);
+  width: 100%;
+  max-width: 340px;
+  color: var(--marca-400);
+}
+
+.vitrine__trajeto path {
+  stroke-dasharray: 260;
+  stroke-dashoffset: 260;
+  animation: tracar 1.6s var(--curva) 200ms forwards;
+}
+
+.vitrine__trajeto circle {
+  animation: surgir var(--tempo-normal) var(--curva) both;
+}
+
+.vitrine__trajeto circle:nth-of-type(1) { animation-delay: 300ms; }
+.vitrine__trajeto circle:nth-of-type(2) { animation-delay: 900ms; }
+.vitrine__trajeto circle:nth-of-type(3) { animation-delay: 1500ms; }
+
+@keyframes tracar {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vitrine__trajeto path {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+  .vitrine__trajeto circle {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------- Painel */
+
+.painel-entrada {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: var(--e-10) var(--e-8);
+}
+
+.painel-entrada__caixa {
+  width: 100%;
+  max-width: 372px;
+  animation: subir var(--tempo-lento) var(--curva) both;
+}
+
+.painel-entrada__caixa--larga {
+  max-width: 420px;
+}
+
+.painel-entrada__marca {
+  display: none;
+  margin-bottom: var(--e-6);
+}
+
+.painel-entrada__titulo {
+  font-size: var(--t-24);
+  font-weight: var(--p-600);
+  letter-spacing: var(--tr-titulo);
+}
+
+.painel-entrada__descricao {
+  margin-top: var(--e-2);
+  font-size: var(--t-14);
+  color: var(--texto-3);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  margin-top: var(--e-7);
+}
+
+.formulario__grupo {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--cor-texto-suave);
+  gap: var(--e-3);
+  margin-top: var(--e-2);
 }
 
-@media (max-width: 480px) {
+.formulario__grupo::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--borda);
+}
+
+.formulario__grupo-titulo {
+  font-size: var(--t-11);
+  font-weight: var(--p-600);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-maiuscula);
+  color: var(--texto-4);
+  white-space: nowrap;
+}
+
+.painel-entrada__nota {
+  margin-top: var(--e-6);
+  padding-top: var(--e-4);
+  border-top: 1px solid var(--borda-suave);
+  font-size: var(--t-12);
+  line-height: var(--lh-normal);
+  color: var(--texto-4);
+}
+
+.painel-entrada__tema {
+  position: absolute;
+  top: var(--e-4);
+  right: var(--e-4);
+}
+
+/* --------------------------------------------------------------- 404 */
+
+.erro-pagina {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--e-6);
+  text-align: center;
+}
+
+.erro-pagina__codigo {
+  font-size: var(--t-36);
+  font-weight: var(--p-700);
+  letter-spacing: var(--tr-titulo);
+  color: var(--texto-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.erro-pagina__titulo {
+  margin-top: var(--e-2);
+  font-size: var(--t-20);
+}
+
+.erro-pagina__texto {
+  margin-top: var(--e-2);
+  max-width: 42ch;
+  color: var(--texto-3);
+}
+
+.erro-pagina__acao {
+  margin-top: var(--e-6);
+}
+
+/* ---------------------------------------------------------- Responsivo */
+
+@media (max-width: 1024px) {
   .entrada {
-    padding: 0;
-    align-items: stretch;
-    background: var(--cor-superficie);
+    grid-template-columns: minmax(0, 1fr);
   }
-  .entrada__caixa {
-    max-width: none;
-    box-shadow: none;
-    border-radius: 0;
-    padding: var(--esp-6) var(--esp-5);
-    padding-top: max(var(--esp-8), env(safe-area-inset-top));
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+
+  .vitrine {
+    display: none;
+  }
+
+  .painel-entrada {
+    position: relative;
+    justify-content: flex-start;
+    padding: var(--e-10) var(--e-5);
+    padding-top: max(var(--e-12), calc(env(safe-area-inset-top) + var(--e-10)));
+  }
+
+  .painel-entrada__marca {
+    display: block;
+  }
+}
+
+@media (max-width: 420px) {
+  .painel-entrada {
+    padding: var(--e-8) var(--e-4);
+    padding-top: max(var(--e-10), calc(env(safe-area-inset-top) + var(--e-8)));
   }
 }
