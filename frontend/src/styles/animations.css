@@ -1,0 +1,138 @@
+/* =========================================================================
+   LOG ROTAS — animações compartilhadas
+
+   Todas usam apenas `transform` e `opacity`, que o navegador resolve na GPU
+   sem recalcular layout. Animar `height`, `top` ou `width` obrigaria a um
+   reflow por quadro e deixaria a interface pesada exatamente nas telas com
+   mais dados — que são as que mais importam aqui.
+   ========================================================================= */
+
+@keyframes surgir {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes subir {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes subir-curto {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes escalar {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes escalar-saida {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0) scale(0.98);
+  }
+}
+
+@keyframes deslizar-direita {
+  from {
+    opacity: 0;
+    transform: translate3d(16px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes deslizar-saida {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(16px, 0, 0);
+  }
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Brilho que percorre o skeleton. Sinaliza "carregando" sem piscar, que é
+   o que torna o pisca-pisca cansativo em tela cheia de dados. */
+@keyframes varrer {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+/* Pulso do passo em execução no acompanhamento de processo. */
+@keyframes pulsar {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.88);
+  }
+}
+
+/* --- Classes utilitárias de entrada ------------------------------------ */
+
+.anima-surgir {
+  animation: surgir var(--tempo-normal) var(--curva) both;
+}
+
+.anima-subir {
+  animation: subir var(--tempo-normal) var(--curva) both;
+}
+
+/* Entrada escalonada de lista: cada item entra logo depois do anterior.
+   O atraso é curto de propósito — o efeito deve ser percebido como fluidez,
+   nunca como espera. */
+.anima-lista > * {
+  animation: subir-curto var(--tempo-normal) var(--curva) both;
+}
+
+.anima-lista > *:nth-child(1) { animation-delay: 0ms; }
+.anima-lista > *:nth-child(2) { animation-delay: 40ms; }
+.anima-lista > *:nth-child(3) { animation-delay: 80ms; }
+.anima-lista > *:nth-child(4) { animation-delay: 120ms; }
+.anima-lista > *:nth-child(5) { animation-delay: 160ms; }
+.anima-lista > *:nth-child(6) { animation-delay: 200ms; }
+.anima-lista > *:nth-child(n + 7) { animation-delay: 240ms; }

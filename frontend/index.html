@@ -3,9 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#14284a" />
-    <meta name="description" content="Log Rotas — planejamento e execucao de rotas de entrega." />
+    <meta name="description" content="Log Rotas — tecnologia para transformar rotas em uma operação mais inteligente." />
+    <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d111b" media="(prefers-color-scheme: dark)" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    />
+
     <title>Log Rotas</title>
+
+    <script>
+      // Aplica o tema antes do primeiro pixel ser pintado. Sem isso, a tela
+      // pisca claro antes do React montar e trocar para escuro — o defeito
+      // mais visível que um tema escuro pode ter.
+      (function () {
+        try {
+          var salvo = localStorage.getItem("logrotas.tema");
+          var tema =
+            salvo ||
+            (window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "escuro"
+              : "claro");
+          document.documentElement.setAttribute("data-tema", tema);
+        } catch (e) {
+          document.documentElement.setAttribute("data-tema", "claro");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

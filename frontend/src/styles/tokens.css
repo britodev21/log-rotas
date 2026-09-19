@@ -1,96 +1,314 @@
 /* =========================================================================
-   Log Rotas — tokens de design
-   Fonte unica de cor, espacamento e tipografia. Nenhum componente escreve
-   valor cru: tudo referencia uma variavel daqui. Mudar a identidade visual
-   do sistema inteiro passa a ser mudar este arquivo.
+   LOG ROTAS — sistema visual
+   =========================================================================
+
+   Fonte única de cor, espaço, forma, sombra, tipografia e tempo.
+   Nenhum componente escreve valor cru: tudo referencia uma variável daqui.
+
+   Como está organizado:
+
+   1. RAMPAS       valores brutos (cinza-100, marca-500). Não usar direto
+                   nos componentes — são a matéria-prima.
+   2. PAPÉIS       o que o componente usa (--superficie, --texto, --borda).
+                   É o que muda entre tema claro e escuro.
+   3. ESTRUTURA    espaço, forma, sombra, tipografia, tempo — iguais nos
+                   dois temas.
+
+   A separação entre rampa e papel é o que torna o tema escuro possível sem
+   "inverter tudo": no escuro, cada superfície sobe um degrau de elevação em
+   vez de virar o oposto da clara.
    ========================================================================= */
 
 :root {
-  /* --- Marca -------------------------------------------------------- */
-  /* Azul-marinho profundo: transmite operacao e logistica sem parecer
-     infantil. O ambar entra apenas como sinal de atencao, nunca decorativo. */
-  --cor-marca: #14284a;
-  --cor-marca-clara: #1f3d6e;
-  --cor-marca-hover: #1b3560;
-  --cor-marca-suave: #eaeff7;
+  /* ======================================================================
+     1. RAMPAS
+     ====================================================================== */
 
-  --cor-acento: #b45309;
-  --cor-acento-suave: #fef3e2;
+  /* Neutros levemente frios — a base de quase toda a interface. */
+  --cinza-0: #ffffff;
+  --cinza-25: #fcfcfd;
+  --cinza-50: #f7f8fa;
+  --cinza-100: #f0f2f6;
+  --cinza-150: #e8ebf1;
+  --cinza-200: #dfe3ea;
+  --cinza-300: #cbd1dc;
+  --cinza-400: #98a1b3;
+  --cinza-500: #6d7689;
+  --cinza-600: #515a6d;
+  --cinza-700: #3a4255;
+  --cinza-800: #252c3c;
+  --cinza-900: #161b28;
+  --cinza-950: #0d111b;
 
-  /* --- Superficies --------------------------------------------------- */
-  --cor-fundo: #f4f6f9;
-  --cor-superficie: #ffffff;
-  --cor-superficie-alt: #fafbfc;
-  --cor-borda: #dfe3e9;
-  --cor-borda-forte: #c3cad4;
+  /* Marca: azul-violeta. Lê como tecnologia e precisão, e não é o azul
+     genérico de painel administrativo. */
+  --marca-50: #eff0ff;
+  --marca-100: #e2e4ff;
+  --marca-200: #c9cdff;
+  --marca-300: #a6aaff;
+  --marca-400: #8781fb;
+  --marca-500: #6f66f2;
+  --marca-600: #5d49e6;
+  --marca-700: #4f3acb;
+  --marca-800: #4132a4;
+  --marca-900: #372f82;
 
-  /* --- Texto ---------------------------------------------------------- */
-  --cor-texto: #16191f;
-  --cor-texto-suave: #5b6270;
-  --cor-texto-fraco: #868d9a;
-  --cor-texto-invertido: #ffffff;
+  /* Estados. Saturação contida de propósito: a tela fica cheia de status,
+     e cor berrante em volume vira ruído. */
+  --verde-500: #12925a;
+  --verde-600: #0e7a4a;
+  --ambar-500: #c2740a;
+  --ambar-600: #a35f06;
+  --vermelho-500: #d33b3b;
+  --vermelho-600: #b82d2d;
+  --azul-500: #2a6ce0;
+  --azul-600: #2159bd;
 
-  /* --- Estados operacionais ------------------------------------------ */
-  /* Usados tambem pelos status de entrega e rota, para que a cor signifique
-     a mesma coisa na lista, no mapa e na tela do motorista. */
-  --cor-sucesso: #15803d;
-  --cor-sucesso-suave: #e7f6ec;
-  --cor-atencao: #b45309;
-  --cor-atencao-suave: #fdf3e3;
-  --cor-erro: #b91c1c;
-  --cor-erro-suave: #fdeaea;
-  --cor-info: #1d4ed8;
-  --cor-info-suave: #e8eefd;
-  --cor-neutro: #6b7280;
-  --cor-neutro-suave: #f0f1f4;
+  /* ======================================================================
+     2. PAPÉIS — tema claro
+     ====================================================================== */
 
-  /* --- Tipografia ------------------------------------------------------ */
-  --fonte: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-  --fonte-mono: "Cascadia Mono", "SF Mono", Consolas, monospace;
+  color-scheme: light;
 
-  --texto-xs: 0.75rem;
-  --texto-sm: 0.8125rem;
-  --texto-base: 0.9375rem;
-  --texto-md: 1rem;
-  --texto-lg: 1.125rem;
-  --texto-xl: 1.375rem;
-  --texto-2xl: 1.75rem;
-  --texto-3xl: 2.25rem;
+  /* Superfícies, da mais funda para a mais alta. */
+  --fundo: var(--cinza-50);
+  --superficie: var(--cinza-0);
+  --superficie-2: var(--cinza-25);
+  --superficie-3: var(--cinza-100);
+  --superficie-hover: var(--cinza-50);
+  --superficie-ativa: var(--cinza-100);
+  --superficie-inversa: var(--cinza-900);
 
-  --peso-normal: 400;
-  --peso-medio: 500;
-  --peso-semi: 600;
-  --peso-forte: 700;
+  /* Barra lateral: levemente mais funda que o conteúdo, para o conteúdo
+     parecer a camada de cima. */
+  --lateral-fundo: var(--cinza-25);
+  --lateral-borda: var(--cinza-200);
 
-  /* --- Espacamento (escala de 4px) -------------------------------------- */
-  --esp-1: 0.25rem;
-  --esp-2: 0.5rem;
-  --esp-3: 0.75rem;
-  --esp-4: 1rem;
-  --esp-5: 1.25rem;
-  --esp-6: 1.5rem;
-  --esp-8: 2rem;
-  --esp-10: 2.5rem;
-  --esp-12: 3rem;
+  /* Bordas. */
+  --borda: var(--cinza-200);
+  --borda-suave: var(--cinza-150);
+  --borda-forte: var(--cinza-300);
 
-  /* --- Formas e profundidade --------------------------------------------- */
-  --raio-sm: 4px;
-  --raio: 6px;
-  --raio-lg: 10px;
-  --raio-total: 999px;
+  /* Texto. */
+  --texto: var(--cinza-900);
+  --texto-2: var(--cinza-600);
+  --texto-3: var(--cinza-500);
+  --texto-4: var(--cinza-400);
+  --texto-inverso: var(--cinza-0);
 
-  --sombra-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --sombra: 0 1px 3px rgba(16, 24, 40, 0.1), 0 1px 2px rgba(16, 24, 40, 0.06);
-  --sombra-lg: 0 8px 24px rgba(16, 24, 40, 0.12);
+  /* Marca aplicada. */
+  --primaria: var(--marca-600);
+  --primaria-hover: var(--marca-700);
+  --primaria-ativa: var(--marca-800);
+  --primaria-texto: #ffffff;
+  --primaria-suave: var(--marca-50);
+  --primaria-borda: var(--marca-200);
+  --primaria-realce: var(--marca-600);
 
-  --foco: 0 0 0 3px rgba(29, 78, 216, 0.25);
+  /* Estados aplicados. O fundo suave é derivado da própria cor, então
+     acompanha automaticamente qualquer ajuste de matiz. */
+  --sucesso: var(--verde-600);
+  --sucesso-suave: color-mix(in srgb, var(--verde-500) 10%, var(--superficie));
+  --sucesso-borda: color-mix(in srgb, var(--verde-500) 28%, var(--superficie));
 
-  /* --- Layout ------------------------------------------------------------ */
-  --largura-sidebar: 232px;
-  --altura-topo: 56px;
-  /* Alvo minimo de toque. A interface do motorista respeita isso em todos os
-     botoes: ele opera de pe, com pressa, as vezes de luva. */
-  --toque-min: 48px;
+  --atencao: var(--ambar-600);
+  --atencao-suave: color-mix(in srgb, var(--ambar-500) 12%, var(--superficie));
+  --atencao-borda: color-mix(in srgb, var(--ambar-500) 30%, var(--superficie));
 
-  --transicao: 140ms ease;
+  --perigo: var(--vermelho-600);
+  --perigo-suave: color-mix(in srgb, var(--vermelho-500) 10%, var(--superficie));
+  --perigo-borda: color-mix(in srgb, var(--vermelho-500) 28%, var(--superficie));
+
+  --info: var(--azul-600);
+  --info-suave: color-mix(in srgb, var(--azul-500) 10%, var(--superficie));
+  --info-borda: color-mix(in srgb, var(--azul-500) 28%, var(--superficie));
+
+  --neutro: var(--cinza-600);
+  --neutro-suave: var(--cinza-100);
+  --neutro-borda: var(--cinza-200);
+
+  /* Sombras: duas camadas, sombra de contato curta mais difusão longa.
+     É o que faz o elemento parecer apoiado e não flutuando. */
+  --sombra-xs: 0 1px 2px rgba(13, 17, 27, 0.05);
+  --sombra-sm: 0 1px 2px rgba(13, 17, 27, 0.06), 0 1px 3px rgba(13, 17, 27, 0.04);
+  --sombra-md: 0 2px 4px rgba(13, 17, 27, 0.05), 0 4px 12px rgba(13, 17, 27, 0.07);
+  --sombra-lg: 0 4px 8px rgba(13, 17, 27, 0.06), 0 12px 32px rgba(13, 17, 27, 0.1);
+  --sombra-xl: 0 8px 16px rgba(13, 17, 27, 0.08), 0 24px 56px rgba(13, 17, 27, 0.14);
+
+  --anel-foco: 0 0 0 3px color-mix(in srgb, var(--primaria) 24%, transparent);
+  --cor-foco: var(--primaria);
+
+  --cobertura: rgba(13, 17, 27, 0.42);
+
+  /* Brilho que percorre os skeletons. */
+  --brilho: color-mix(in srgb, var(--cinza-0) 62%, transparent);
+}
+
+/* ========================================================================
+   2b. PAPÉIS — tema escuro
+
+   Não é a inversão do claro. As superfícies sobem de elevação (mais claras
+   conforme se aproximam do usuário), o texto perde contraste máximo para
+   não vibrar sobre fundo escuro, e a marca clareia para manter legibilidade.
+   ======================================================================== */
+
+:root[data-tema="escuro"] {
+  color-scheme: dark;
+
+  --fundo: var(--cinza-950);
+  --superficie: #141926;
+  --superficie-2: #191f2e;
+  --superficie-3: #202737;
+  --superficie-hover: #1c2231;
+  --superficie-ativa: #232b3c;
+  --superficie-inversa: var(--cinza-100);
+
+  --lateral-fundo: #10141f;
+  --lateral-borda: #222a3a;
+
+  --borda: #262f41;
+  --borda-suave: #1e2533;
+  --borda-forte: #36415a;
+
+  /* Branco puro sobre fundo escuro cansa a vista; o topo da escala é um
+     cinza muito claro, não #fff. */
+  --texto: #e9ecf3;
+  --texto-2: #a8b0c2;
+  --texto-3: #7d8699;
+  --texto-4: #616a7d;
+  --texto-inverso: var(--cinza-900);
+
+  --primaria: var(--marca-400);
+  --primaria-hover: var(--marca-300);
+  --primaria-ativa: var(--marca-200);
+  --primaria-texto: #0d111b;
+  --primaria-suave: color-mix(in srgb, var(--marca-400) 16%, var(--superficie));
+  --primaria-borda: color-mix(in srgb, var(--marca-400) 34%, var(--superficie));
+  --primaria-realce: var(--marca-400);
+
+  --sucesso: #3dbd84;
+  --sucesso-suave: color-mix(in srgb, #3dbd84 16%, var(--superficie));
+  --sucesso-borda: color-mix(in srgb, #3dbd84 32%, var(--superficie));
+
+  --atencao: #e0a34a;
+  --atencao-suave: color-mix(in srgb, #e0a34a 16%, var(--superficie));
+  --atencao-borda: color-mix(in srgb, #e0a34a 32%, var(--superficie));
+
+  --perigo: #f07070;
+  --perigo-suave: color-mix(in srgb, #f07070 16%, var(--superficie));
+  --perigo-borda: color-mix(in srgb, #f07070 32%, var(--superficie));
+
+  --info: #6a9ef5;
+  --info-suave: color-mix(in srgb, #6a9ef5 16%, var(--superficie));
+  --info-borda: color-mix(in srgb, #6a9ef5 32%, var(--superficie));
+
+  --neutro: var(--texto-2);
+  --neutro-suave: var(--superficie-3);
+  --neutro-borda: var(--borda);
+
+  /* No escuro a sombra sozinha não separa camadas: o que separa é a
+     superfície mais clara. A sombra fica mais densa e menos difusa. */
+  --sombra-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sombra-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --sombra-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --sombra-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --sombra-xl: 0 24px 56px rgba(0, 0, 0, 0.6);
+
+  --cobertura: rgba(5, 7, 12, 0.66);
+  --brilho: color-mix(in srgb, #ffffff 8%, transparent);
+}
+
+/* ========================================================================
+   3. ESTRUTURA — igual nos dois temas
+   ======================================================================== */
+
+:root {
+  /* --- Tipografia ---------------------------------------------------- */
+  /* Inter: desenhada para interface, ótima em tamanho pequeno e com
+     algarismos tabulares — que é o que mantém número alinhado em coluna. */
+  --fonte: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --fonte-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --t-11: 0.6875rem;
+  --t-12: 0.75rem;
+  --t-13: 0.8125rem;
+  --t-14: 0.875rem;
+  --t-15: 0.9375rem;
+  --t-16: 1rem;
+  --t-18: 1.125rem;
+  --t-20: 1.25rem;
+  --t-24: 1.5rem;
+  --t-30: 1.875rem;
+  --t-36: 2.25rem;
+
+  --p-400: 400;
+  --p-500: 500;
+  --p-600: 600;
+  --p-700: 700;
+
+  --lh-justo: 1.2;
+  --lh-normal: 1.5;
+  --lh-solto: 1.65;
+
+  /* Títulos grandes precisam de tracking negativo para não parecerem
+     espalhados; texto pequeno precisa do contrário para respirar. */
+  --tr-titulo: -0.021em;
+  --tr-normal: -0.008em;
+  --tr-rotulo: 0.02em;
+  --tr-maiuscula: 0.06em;
+
+  /* --- Espaço (escala de 4) ------------------------------------------ */
+  --e-1: 0.25rem;
+  --e-2: 0.5rem;
+  --e-3: 0.75rem;
+  --e-4: 1rem;
+  --e-5: 1.25rem;
+  --e-6: 1.5rem;
+  --e-7: 1.75rem;
+  --e-8: 2rem;
+  --e-10: 2.5rem;
+  --e-12: 3rem;
+  --e-16: 4rem;
+  --e-20: 5rem;
+
+  /* --- Forma ---------------------------------------------------------- */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-2xl: 20px;
+  --r-total: 999px;
+
+  /* --- Tempo ---------------------------------------------------------- */
+  /* Uma única curva no sistema inteiro: sai rápido, chega devagar. É o que
+     faz a interface parecer responsiva sem parecer apressada. */
+  --curva: cubic-bezier(0.32, 0.72, 0, 1);
+  --curva-saida: cubic-bezier(0.4, 0, 1, 1);
+
+  --tempo-instantaneo: 90ms;
+  --tempo-rapido: 140ms;
+  --tempo-normal: 220ms;
+  --tempo-lento: 320ms;
+
+  --transicao: all var(--tempo-rapido) var(--curva);
+
+  /* --- Layout ---------------------------------------------------------- */
+  --lateral-largura: 244px;
+  --lateral-largura-estreita: 68px;
+  --topo-altura: 60px;
+  --conteudo-max: 1480px;
+
+  /* Alvo mínimo de toque. A tela do motorista respeita isso em tudo que
+     for clicável: ele opera de pé, com pressa, às vezes de luva. */
+  --toque: 48px;
+
+  --z-base: 1;
+  --z-mapa-painel: 400;
+  --z-topo: 30;
+  --z-lateral: 40;
+  --z-cobertura: 50;
+  --z-modal: 60;
+  --z-dropdown: 70;
+  --z-toast: 80;
 }
