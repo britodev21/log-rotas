@@ -1,0 +1,153 @@
+.mapa {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  background: var(--superficie-3);
+  isolation: isolate;
+}
+
+.mapa__tela {
+  width: 100%;
+  height: 100%;
+  background: var(--superficie-3);
+  /* O Leaflet cria contexto de empilhamento próprio com z-index alto; sem
+     isto ele passa por cima da topbar e dos modais. */
+  z-index: var(--z-base);
+}
+
+/* --- Camadas flutuantes -------------------------------------------------- */
+
+.mapa__sobreposicao {
+  position: absolute;
+  top: var(--e-3);
+  left: var(--e-3);
+  z-index: var(--z-mapa-painel);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+  /* Não intercepta o arraste do mapa; cada cápsula reativa o ponteiro. */
+  pointer-events: none;
+}
+
+.mapa__rodape {
+  position: absolute;
+  left: var(--e-3);
+  right: var(--e-3);
+  bottom: var(--e-3);
+  z-index: var(--z-mapa-painel);
+  pointer-events: none;
+}
+
+.mapa__rodape > * {
+  pointer-events: auto;
+}
+
+.mapa-resumo {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--e-2) var(--e-3);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--superficie) 88%, transparent);
+  backdrop-filter: blur(8px) saturate(1.3);
+  border: 1px solid var(--borda);
+  box-shadow: var(--sombra-sm);
+  animation: subir-curto var(--tempo-normal) var(--curva) both;
+}
+
+.mapa-resumo__valor {
+  font-size: var(--t-18);
+  font-weight: var(--p-600);
+  line-height: 1.1;
+  letter-spacing: var(--tr-titulo);
+  color: var(--resumo-cor, var(--texto));
+}
+
+.mapa-resumo__rotulo {
+  font-size: var(--t-11);
+  font-weight: var(--p-500);
+  color: var(--texto-3);
+  white-space: nowrap;
+}
+
+.mapa-resumo--info { --resumo-cor: var(--info); }
+.mapa-resumo--sucesso { --resumo-cor: var(--sucesso); }
+.mapa-resumo--atencao { --resumo-cor: var(--atencao); }
+.mapa-resumo--marca { --resumo-cor: var(--primaria); }
+
+/* --- Créditos ------------------------------------------------------------ */
+
+/* O controle nativo do Leaflet destoa do sistema; os créditos são
+   reconstruídos aqui, discretos mas presentes — a licença do OpenStreetMap
+   exige atribuição visível. */
+.mapa__creditos {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-mapa-painel);
+  padding: 2px var(--e-2);
+  font-size: 10px;
+  color: var(--texto-4);
+  background: color-mix(in srgb, var(--superficie) 80%, transparent);
+  border-top-left-radius: var(--r-sm);
+  pointer-events: auto;
+}
+
+.mapa__creditos a {
+  color: var(--texto-3);
+}
+
+/* --- Controles do Leaflet no vocabulário do sistema ---------------------- */
+
+.mapa .leaflet-control-zoom {
+  border: 1px solid var(--borda) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: var(--sombra-sm) !important;
+  overflow: hidden;
+}
+
+.mapa .leaflet-control-zoom a {
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  background: var(--superficie);
+  color: var(--texto-2);
+  border-bottom-color: var(--borda-suave);
+  transition:
+    background-color var(--tempo-rapido) var(--curva),
+    color var(--tempo-rapido) var(--curva);
+}
+
+.mapa .leaflet-control-zoom a:hover {
+  background: var(--superficie-hover);
+  color: var(--texto);
+}
+
+.mapa .leaflet-popup-content-wrapper {
+  background: var(--superficie);
+  color: var(--texto);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  box-shadow: var(--sombra-lg);
+}
+
+.mapa .leaflet-popup-tip {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+}
+
+@media (max-width: 560px) {
+  .mapa__sobreposicao {
+    top: var(--e-2);
+    left: var(--e-2);
+    right: var(--e-2);
+  }
+
+  .mapa-resumo {
+    flex: 1;
+    min-width: 0;
+    padding: var(--e-2);
+  }
+}

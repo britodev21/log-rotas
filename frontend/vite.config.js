@@ -3,6 +3,19 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        // Separa o que quase nunca muda do codigo da aplicacao: o navegador
+        // mantem react, router e leaflet em cache entre deploys, e so
+        // rebaixa o pedaco que de fato mudou.
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          mapa: ["leaflet", "react-leaflet"],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     // host: true expoe o dev server na rede local, necessario para testar a
