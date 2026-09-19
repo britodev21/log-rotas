@@ -22,10 +22,17 @@ Em ordem de urgência.
 |---|---|---|---|
 | **Nominatim** | Geocodificação | 1 requisição/s, uso pesado proibido | Plano pago, LocationIQ ou Google |
 | **OSRM público** | Distância e tempo | Servidor de demonstração, sem garantia | OSRM próprio na VPS com extrato de MS |
-| **CARTO** | Ladrilhos do mapa | Plano gratuito | Plano pago, MapTiler ou Stadia |
+| **OpenStreetMap** | Ladrilhos do mapa | Política de uso proíbe volume comercial | CARTO, MapTiler ou Stadia (todos com chave) |
 
 Nenhum deles custa nada hoje e todos funcionam para desenvolvimento. Todos são trocáveis por
-configuração: o código fala com `GeocodingProvider` e `MatrixProvider`, nunca com o serviço.
+configuração: o código fala com `GeocodingProvider` e `MatrixProvider`, nunca com o serviço, e
+a base cartográfica sai de `VITE_MAP_TILE_URL` no `.env` do frontend.
+
+**Uma armadilha que já nos pegou:** a base era da CARTO, que passou a exigir chave. Ela não
+recusa a requisição — devolve **HTTP 200 com um PNG válido**, carimbado com "API KEY
+REQUIRED" atravessando o ladrilho. Nenhuma verificação automática de status detecta isso; só
+olhando o mapa. Quando trocar de provedor, **confira visualmente**, não pelo código de
+resposta.
 
 **Quando o OSRM sai do ar**, o sistema cai para estimativa em linha reta e **avisa na tela** —
 o planejamento continua possível, mas os quilômetros deixam de ser de estrada.
@@ -127,7 +134,16 @@ criar índices, ajustar repositórios) — um a dois dias.
 O painel atualiza a cada 15 segundos. Suficiente para poucos motoristas; vira SSE quando
 houver GPS contínuo.
 
-### 3.6 Limitador de taxa em memória
+### 3.6 Base cartográfica sem estilo próprio
+
+Os ladrilhos do OpenStreetMap são coloridos. O visual dessaturado do sistema — e o tema
+escuro — vêm de **filtro CSS** aplicado ao ladrilho, não do estilo do provedor.
+
+Funciona bem e não depende de chave, mas é uma aproximação: um provedor com estilo próprio
+(CARTO, MapTiler) entrega rótulos pensados para fundo escuro, enquanto o filtro apenas inverte
+os que existem. Definir `VITE_MAP_TILE_URL` desliga o filtro automaticamente.
+
+### 3.7 Limitador de taxa em memória
 
 O limite de 1 req/s do Nominatim é respeitado por um lock de processo. Com vários workers isso
 deixa de valer, e o controle passa a ser assunto de fila externa.

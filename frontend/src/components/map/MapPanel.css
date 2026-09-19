@@ -16,6 +16,32 @@
   z-index: var(--z-base);
 }
 
+/* --- Estilo da base cartográfica ---------------------------------------- */
+
+/* Os ladrilhos vêm do OpenStreetMap, que é colorido. O visual dessaturado
+   do sistema é obtido aqui, por filtro, e não pelo estilo do provedor —
+   assim o mapa não depende de nenhuma chave de API para ter a aparência
+   certa.
+
+   O filtro é aplicado ao ladrilho, não ao container: aplicar ao container
+   afetaria também marcadores e trajetos, apagando justamente as cores de
+   status que precisam se destacar. */
+.mapa--claro .leaflet-tile {
+  filter: saturate(0.62) brightness(1.04) contrast(0.96);
+}
+
+/* Inverter mais girar a matiz é o caminho conhecido para transformar uma
+   base clara em escura sem trocar de provedor: o mapa escurece, mas o verde
+   continua verde e a água continua azul. */
+.mapa--escuro .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) saturate(0.55) brightness(0.92) contrast(0.92);
+}
+
+/* Provedor com estilo próprio (CARTO, MapTiler) já entrega a base pronta. */
+.mapa--sem-filtro .leaflet-tile {
+  filter: none;
+}
+
 /* --- Camadas flutuantes -------------------------------------------------- */
 
 .mapa__sobreposicao {
@@ -84,14 +110,14 @@
    exige atribuição visível. */
 .mapa__creditos {
   position: absolute;
-  right: 0;
+  left: 0;
   bottom: 0;
   z-index: var(--z-mapa-painel);
   padding: 2px var(--e-2);
   font-size: 10px;
   color: var(--texto-4);
   background: color-mix(in srgb, var(--superficie) 80%, transparent);
-  border-top-left-radius: var(--r-sm);
+  border-top-right-radius: var(--r-sm);
   pointer-events: auto;
 }
 
@@ -102,6 +128,7 @@
 /* --- Controles do Leaflet no vocabulário do sistema ---------------------- */
 
 .mapa .leaflet-control-zoom {
+  margin: var(--e-3) !important;
   border: 1px solid var(--borda) !important;
   border-radius: var(--r-md) !important;
   box-shadow: var(--sombra-sm) !important;
