@@ -1,0 +1,165 @@
+/* =========================================================================
+   Esqueletos de carregamento
+   ========================================================================= */
+
+.osso {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background: var(--superficie-3);
+  flex-shrink: 0;
+}
+
+/* O brilho é um pseudo-elemento que atravessa o bloco com translate3d —
+   sem repintar fundo a cada quadro. Um `background-position` animado
+   forçaria repintura de todos os ossos da tela ao mesmo tempo. */
+.osso::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--brilho) 50%,
+    transparent 100%
+  );
+  animation: varrer 1.5s var(--curva) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .osso::after {
+    display: none;
+  }
+  .osso {
+    opacity: 0.75;
+  }
+}
+
+/* --- Composições --------------------------------------------------------- */
+
+.osso-texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.osso-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  padding: var(--e-4);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+}
+
+.osso-cartao__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+}
+
+.osso-lista {
+  display: flex;
+  flex-direction: column;
+}
+
+.osso-lista__item {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-4) var(--e-5);
+  border-bottom: 1px solid var(--borda-suave);
+}
+
+.osso-lista__item:last-child {
+  border-bottom: none;
+}
+
+.osso-lista__texto {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  min-width: 0;
+}
+
+.osso-tabela {
+  display: flex;
+  flex-direction: column;
+}
+
+.osso-tabela__cabecalho,
+.osso-tabela__linha {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr 1fr 1fr;
+  align-items: center;
+  gap: var(--e-4);
+  padding: var(--e-3) var(--e-5);
+}
+
+.osso-tabela__cabecalho {
+  background: var(--superficie-2);
+  border-bottom: 1px solid var(--borda);
+}
+
+.osso-tabela__linha {
+  height: 52px;
+  border-bottom: 1px solid var(--borda-suave);
+}
+
+.osso-tabela__linha:last-child {
+  border-bottom: none;
+}
+
+/* O esqueleto do mapa traz uma grade tênue: sugere cartografia em vez de
+   um retângulo cinza sem significado. */
+.osso-mapa {
+  position: relative;
+  overflow: hidden;
+  background: var(--superficie-3);
+  border-radius: var(--r-lg);
+}
+
+.osso-mapa__grade {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--borda) 1px, transparent 1px),
+    linear-gradient(90deg, var(--borda) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.5;
+}
+
+.osso-mapa::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--brilho) 50%, transparent);
+  animation: varrer 1.8s var(--curva) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .osso-mapa::after {
+    display: none;
+  }
+}
+
+.osso-pagina {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-6);
+}
+
+.osso-pagina__cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.osso-pagina__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--e-4);
+}

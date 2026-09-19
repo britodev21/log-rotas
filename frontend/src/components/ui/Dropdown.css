@@ -1,0 +1,75 @@
+.menu-area {
+  position: relative;
+  display: inline-flex;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: var(--z-dropdown);
+  padding: var(--e-1);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra-lg);
+  animation: escalar var(--tempo-rapido) var(--curva) both;
+  /* Ancora a animacao no canto de onde o menu nasce, em vez do centro:
+     o menu parece sair do botao, nao aparecer solto no ar. */
+  transform-origin: top right;
+}
+
+.menu--esquerda {
+  left: 0;
+  transform-origin: top left;
+}
+
+.menu--direita {
+  right: 0;
+}
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  width: 100%;
+  padding: var(--e-2) var(--e-3);
+  border-radius: var(--r-sm);
+  font-size: var(--t-14);
+  color: var(--texto-2);
+  text-align: left;
+  transition:
+    background-color var(--tempo-instantaneo) var(--curva),
+    color var(--tempo-instantaneo) var(--curva);
+}
+
+.menu__item:hover,
+.menu__item:focus-visible {
+  background: var(--superficie-3);
+  color: var(--texto);
+  outline: none;
+}
+
+.menu__item--perigo {
+  color: var(--perigo);
+}
+
+.menu__item--perigo:hover,
+.menu__item--perigo:focus-visible {
+  background: var(--perigo-suave);
+  color: var(--perigo);
+}
+
+.menu__rotulo {
+  padding: var(--e-2) var(--e-3);
+  font-size: var(--t-11);
+  font-weight: var(--p-600);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-maiuscula);
+  color: var(--texto-4);
+}
+
+.menu__separador {
+  height: 1px;
+  margin: var(--e-1) 0;
+  background: var(--borda-suave);
+}

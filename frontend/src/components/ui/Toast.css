@@ -1,0 +1,89 @@
+.toast-area {
+  position: fixed;
+  right: var(--e-5);
+  bottom: var(--e-5);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  width: min(380px, calc(100vw - var(--e-8)));
+  /* A area nao intercepta clique; cada toast reativa o ponteiro. Sem isso
+     a coluna inteira bloquearia o canto da tela mesmo vazia. */
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-3);
+  padding: var(--e-3) var(--e-3) var(--e-3) var(--e-4);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-left: 3px solid var(--toast-cor, var(--borda-forte));
+  border-radius: var(--r-md);
+  box-shadow: var(--sombra-lg);
+  animation: deslizar-direita var(--tempo-normal) var(--curva) both;
+}
+
+.toast__icone {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--toast-cor, var(--texto-3));
+}
+
+.toast__conteudo {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast__titulo {
+  font-size: var(--t-14);
+  font-weight: var(--p-600);
+  color: var(--texto);
+}
+
+.toast__mensagem {
+  margin-top: 2px;
+  font-size: var(--t-13);
+  line-height: var(--lh-normal);
+  color: var(--texto-3);
+}
+
+.toast__fechar {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-sm);
+  color: var(--texto-4);
+  transition:
+    background-color var(--tempo-rapido) var(--curva),
+    color var(--tempo-rapido) var(--curva);
+}
+
+.toast__fechar:hover {
+  background: var(--superficie-3);
+  color: var(--texto);
+}
+
+.toast--sucesso { --toast-cor: var(--sucesso); }
+.toast--erro { --toast-cor: var(--perigo); }
+.toast--atencao { --toast-cor: var(--atencao); }
+.toast--info { --toast-cor: var(--info); }
+
+/* No celular o toast ancora embaixo e ocupa a largura, onde o polegar
+   alcanca o botao de dispensar. */
+@media (max-width: 560px) {
+  .toast-area {
+    left: var(--e-3);
+    right: var(--e-3);
+    bottom: calc(var(--e-3) + env(safe-area-inset-bottom));
+    width: auto;
+  }
+
+  .toast {
+    animation: subir var(--tempo-normal) var(--curva) both;
+  }
+}

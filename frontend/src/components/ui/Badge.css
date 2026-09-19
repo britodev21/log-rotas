@@ -1,31 +1,62 @@
-.etiqueta {
+.etq {
   display: inline-flex;
   align-items: center;
-  padding: 2px var(--esp-2);
-  border-radius: var(--raio-total);
-  font-size: var(--texto-xs);
-  font-weight: var(--peso-semi);
-  letter-spacing: 0.02em;
+  gap: var(--e-2);
+  height: 22px;
+  padding: 0 var(--e-2);
+  border: 1px solid;
+  border-radius: var(--r-sm);
+  font-size: var(--t-12);
+  font-weight: var(--p-500);
+  letter-spacing: var(--tr-normal);
   white-space: nowrap;
+  transition:
+    background-color var(--tempo-rapido) var(--curva),
+    border-color var(--tempo-rapido) var(--curva);
 }
 
-.etiqueta--neutro {
-  background: var(--cor-neutro-suave);
-  color: var(--cor-neutro);
+/* O ponto carrega a cor; o texto fica legível. Etiqueta inteira saturada,
+   repetida em 40 linhas de tabela, vira parede de cor e cansa a leitura. */
+.etq__ponto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
-.etiqueta--info {
-  background: var(--cor-info-suave);
-  color: var(--cor-info);
+
+.etq--neutro {
+  background: var(--neutro-suave);
+  border-color: var(--neutro-borda);
+  color: var(--neutro);
 }
-.etiqueta--sucesso {
-  background: var(--cor-sucesso-suave);
-  color: var(--cor-sucesso);
+
+.etq--info {
+  background: var(--info-suave);
+  border-color: var(--info-borda);
+  color: var(--info);
 }
-.etiqueta--atencao {
-  background: var(--cor-atencao-suave);
-  color: var(--cor-atencao);
+
+.etq--sucesso {
+  background: var(--sucesso-suave);
+  border-color: var(--sucesso-borda);
+  color: var(--sucesso);
 }
-.etiqueta--erro {
-  background: var(--cor-erro-suave);
-  color: var(--cor-erro);
+
+.etq--atencao {
+  background: var(--atencao-suave);
+  border-color: var(--atencao-borda);
+  color: var(--atencao);
+}
+
+.etq--perigo {
+  background: var(--perigo-suave);
+  border-color: var(--perigo-borda);
+  color: var(--perigo);
+}
+
+.etq--marca {
+  background: var(--primaria-suave);
+  border-color: var(--primaria-borda);
+  color: var(--primaria);
 }

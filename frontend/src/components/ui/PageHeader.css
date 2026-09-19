@@ -1,23 +1,41 @@
-.cabecalho-pagina {
+.cab {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--esp-4);
+  gap: var(--e-4);
   flex-wrap: wrap;
-  margin-bottom: var(--esp-6);
+  margin-bottom: var(--e-6);
 }
 
-.cabecalho-pagina__titulo {
-  font-size: var(--texto-2xl);
+.cab__identificacao {
+  min-width: 0;
 }
 
-.cabecalho-pagina__descricao {
-  margin-top: var(--esp-1);
-  color: var(--cor-texto-suave);
+.cab__titulo {
+  font-size: var(--t-24);
+  font-weight: var(--p-600);
+  letter-spacing: var(--tr-titulo);
+}
+
+.cab__descricao {
+  margin-top: var(--e-1);
   max-width: 68ch;
+  font-size: var(--t-14);
+  color: var(--texto-3);
 }
 
-.cabecalho-pagina__acoes {
+.cab__acoes {
   display: flex;
-  gap: var(--esp-2);
+  align-items: center;
+  gap: var(--e-2);
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .cab__acoes {
+    width: 100%;
+  }
+  .cab__acoes > * {
+    flex: 1;
+  }
 }

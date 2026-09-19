@@ -1,0 +1,18 @@
+.spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0.85;
+  animation: girar 620ms linear infinite;
+}
+
+/* Com movimento reduzido o giro vira pulso de opacidade: continua
+   comunicando atividade sem rotacao continua. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: pulsar 1.4s ease-in-out infinite !important;
+    border-right-color: currentColor;
+  }
+}

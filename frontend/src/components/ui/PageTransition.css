@@ -1,0 +1,3 @@
+.transicao {
+  animation: subir-curto var(--tempo-normal) var(--curva) both;
+}

@@ -1,34 +1,48 @@
 import "./Card.css";
 
-export function Card({ titulo, descricao, acoes, children, className = "" }) {
+/**
+ * Superficie de conteudo.
+ *
+ * `interativo` liga a microinteracao de hover (elevacao minima e borda mais
+ * definida). So use em cartao que realmente responde ao clique — elevar
+ * algo que nao faz nada promete interacao que nao existe.
+ */
+export function Card({
+  titulo,
+  descricao,
+  acoes,
+  rodape,
+  interativo = false,
+  semPadding = false,
+  children,
+  className = "",
+  ...resto
+}) {
+  const classes = [
+    "cartao",
+    interativo && "cartao--interativo",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <section className={`cartao ${className}`}>
+    <section className={classes} {...resto}>
       {(titulo || acoes) && (
         <header className="cartao__topo">
-          <div>
+          <div className="cartao__identificacao">
             {titulo && <h3 className="cartao__titulo">{titulo}</h3>}
             {descricao && <p className="cartao__descricao">{descricao}</p>}
           </div>
           {acoes && <div className="cartao__acoes">{acoes}</div>}
         </header>
       )}
-      <div className="cartao__corpo">{children}</div>
-    </section>
-  );
-}
 
-/**
- * Estado vazio — usado tambem para dizer, sem rodeios, o que ainda nao existe.
- *
- * Preferimos isso a inventar dados de demonstracao: uma tela que mostra numero
- * falso ensina o usuario a confiar em coisa que nao existe.
- */
-export function EmptyState({ titulo, children, acao }) {
-  return (
-    <div className="vazio">
-      <h4 className="vazio__titulo">{titulo}</h4>
-      {children && <div className="vazio__texto">{children}</div>}
-      {acao && <div className="vazio__acao">{acao}</div>}
-    </div>
+      <div className={semPadding ? "cartao__corpo cartao__corpo--cru" : "cartao__corpo"}>
+        {children}
+      </div>
+
+      {rodape && <footer className="cartao__rodape">{rodape}</footer>}
+    </section>
   );
 }

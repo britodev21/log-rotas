@@ -1,0 +1,112 @@
+.processo {
+  display: flex;
+  flex-direction: column;
+}
+
+.processo__etapa {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-3) 0;
+}
+
+/* Linha vertical ligando os marcadores: a sequencia fica visivel de
+   relance, como um trajeto. Ela para no penultimo item. */
+.processo__etapa::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 32px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--borda);
+}
+
+.processo__etapa:last-child::before {
+  display: none;
+}
+
+.processo__marcador {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--borda-forte);
+  background: var(--superficie);
+  color: var(--texto-4);
+  transition:
+    background-color var(--tempo-normal) var(--curva),
+    border-color var(--tempo-normal) var(--curva),
+    color var(--tempo-normal) var(--curva);
+}
+
+.processo__texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.processo__nome {
+  font-size: var(--t-14);
+  color: var(--texto-3);
+  transition: color var(--tempo-normal) var(--curva);
+}
+
+.processo__detalhe {
+  font-size: var(--t-12);
+  color: var(--texto-4);
+}
+
+/* --- Estados ------------------------------------------------------------- */
+
+.processo__etapa--concluido .processo__marcador {
+  background: var(--sucesso);
+  border-color: var(--sucesso);
+  color: #fff;
+}
+
+.processo__etapa--concluido .processo__nome {
+  color: var(--texto-2);
+}
+
+.processo__etapa--concluido::before {
+  background: var(--sucesso-borda);
+}
+
+.processo__etapa--executando .processo__marcador {
+  border-color: var(--primaria);
+  background: var(--primaria-suave);
+}
+
+.processo__etapa--executando .processo__nome {
+  color: var(--texto);
+  font-weight: var(--p-500);
+}
+
+.processo__pulso {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primaria);
+  animation: pulsar 1.3s ease-in-out infinite;
+}
+
+.processo__etapa--erro .processo__marcador {
+  background: var(--perigo-suave);
+  border-color: var(--perigo);
+  color: var(--perigo);
+}
+
+.processo__etapa--erro .processo__nome {
+  color: var(--perigo);
+  font-weight: var(--p-500);
+}
+
+.processo__etapa--aguardando .processo__marcador {
+  border-style: dashed;
+}

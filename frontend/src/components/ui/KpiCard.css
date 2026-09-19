@@ -1,0 +1,101 @@
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  padding: var(--e-4);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra-xs);
+  text-align: left;
+  transition:
+    border-color var(--tempo-normal) var(--curva),
+    box-shadow var(--tempo-normal) var(--curva),
+    transform var(--tempo-normal) var(--curva);
+}
+
+.kpi--clicavel {
+  cursor: pointer;
+}
+
+.kpi--clicavel:hover {
+  border-color: var(--kpi-cor, var(--borda-forte));
+  box-shadow: var(--sombra-md);
+  transform: translate3d(0, -2px, 0);
+}
+
+.kpi--clicavel:active {
+  transform: translate3d(0, 0, 0);
+}
+
+.kpi__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-2);
+}
+
+.kpi__rotulo {
+  font-size: var(--t-12);
+  font-weight: var(--p-500);
+  color: var(--texto-3);
+}
+
+.kpi__icone {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  background: var(--kpi-fundo, var(--superficie-3));
+  color: var(--kpi-cor, var(--texto-3));
+}
+
+.kpi__valor {
+  display: flex;
+  align-items: baseline;
+  gap: var(--e-1);
+  font-size: var(--t-24);
+  font-weight: var(--p-600);
+  letter-spacing: var(--tr-titulo);
+  color: var(--texto);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi__unidade {
+  font-size: var(--t-13);
+  font-weight: var(--p-500);
+  color: var(--texto-3);
+}
+
+/* Enquanto o numero nao chegou, um bloco do tamanho exato dele segura o
+   espaco — assim o cartao nao muda de altura quando o dado carrega. */
+.kpi__vazio {
+  display: block;
+  width: 44px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  background: var(--superficie-3);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi__vazio::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--brilho) 50%, transparent);
+  animation: varrer 1.5s var(--curva) infinite;
+}
+
+.kpi__contexto {
+  font-size: var(--t-12);
+  color: var(--texto-4);
+}
+
+.kpi--info { --kpi-cor: var(--info); --kpi-fundo: var(--info-suave); }
+.kpi--sucesso { --kpi-cor: var(--sucesso); --kpi-fundo: var(--sucesso-suave); }
+.kpi--atencao { --kpi-cor: var(--atencao); --kpi-fundo: var(--atencao-suave); }
+.kpi--perigo { --kpi-cor: var(--perigo); --kpi-fundo: var(--perigo-suave); }
+.kpi--marca { --kpi-cor: var(--primaria); --kpi-fundo: var(--primaria-suave); }

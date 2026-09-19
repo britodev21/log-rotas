@@ -1,64 +1,149 @@
 .campo {
   display: flex;
   flex-direction: column;
-  gap: var(--esp-2);
+  gap: var(--e-2);
+  min-width: 0;
 }
 
 .campo__rotulo {
-  font-size: var(--texto-sm);
-  font-weight: var(--peso-medio);
-  color: var(--cor-texto-suave);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--t-13);
+  font-weight: var(--p-500);
+  color: var(--texto-2);
 }
 
 .campo__obrigatorio {
-  color: var(--cor-erro);
-  margin-left: 2px;
+  color: var(--perigo);
 }
 
-.campo__controle {
+.controle {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.controle__campo {
   width: 100%;
-  min-height: 40px;
-  padding: var(--esp-2) var(--esp-3);
-  border: 1px solid var(--cor-borda-forte);
-  border-radius: var(--raio);
-  background: var(--cor-superficie);
-  font-size: var(--texto-base);
+  height: 38px;
+  padding: 0 var(--e-3);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--r-md);
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: var(--t-14);
   transition:
-    border-color var(--transicao),
-    box-shadow var(--transicao);
+    border-color var(--tempo-rapido) var(--curva),
+    box-shadow var(--tempo-rapido) var(--curva),
+    background-color var(--tempo-rapido) var(--curva);
 }
 
-.campo__controle:focus {
+.controle__campo::placeholder {
+  color: var(--texto-4);
+}
+
+.controle__campo:hover:not(:disabled):not(:focus) {
+  border-color: var(--texto-4);
+}
+
+/* O anel de foco substitui o outline padrão aqui porque acompanha o raio
+   do campo; o outline do navegador ficaria quadrado em volta do arredondado. */
+.controle__campo:focus {
   outline: none;
-  border-color: var(--cor-info);
-  box-shadow: var(--foco);
+  border-color: var(--primaria);
+  box-shadow: var(--anel-foco);
 }
 
-.campo__controle:disabled {
-  background: var(--cor-neutro-suave);
-  color: var(--cor-texto-fraco);
+.controle__campo:disabled {
+  background: var(--superficie-3);
+  color: var(--texto-4);
+  cursor: not-allowed;
 }
 
-.campo--erro .campo__controle {
-  border-color: var(--cor-erro);
+.controle__campo--area {
+  height: auto;
+  min-height: 84px;
+  padding: var(--e-2) var(--e-3);
+  line-height: var(--lh-normal);
+  resize: vertical;
+}
+
+/* --- Ícone e ação ------------------------------------------------------- */
+
+.controle__icone {
+  position: absolute;
+  left: var(--e-3);
+  color: var(--texto-4);
+  pointer-events: none;
+  transition: color var(--tempo-rapido) var(--curva);
+}
+
+.controle--com-icone .controle__campo {
+  padding-left: calc(var(--e-3) * 2 + 16px);
+}
+
+.controle:focus-within .controle__icone {
+  color: var(--primaria);
+}
+
+.controle__acao {
+  position: absolute;
+  right: var(--e-1);
+  display: flex;
+  align-items: center;
+}
+
+.controle--com-acao .controle__campo {
+  padding-right: 40px;
+}
+
+/* --- Select -------------------------------------------------------------- */
+
+.controle--select .controle__campo {
+  appearance: none;
+  padding-right: calc(var(--e-3) * 2 + 12px);
+  cursor: pointer;
+}
+
+.controle__seta {
+  position: absolute;
+  right: var(--e-3);
+  color: var(--texto-3);
+  pointer-events: none;
+}
+
+/* --- Erro ---------------------------------------------------------------- */
+
+.campo--erro .controle__campo {
+  border-color: var(--perigo);
+}
+
+.campo--erro .controle__campo:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--perigo) 22%, transparent);
+}
+
+.campo__ajuda,
+.campo__erro {
+  font-size: var(--t-12);
+  line-height: var(--lh-normal);
 }
 
 .campo__ajuda {
-  font-size: var(--texto-xs);
-  color: var(--cor-texto-fraco);
+  color: var(--texto-3);
 }
 
-.campo__mensagem-erro {
-  font-size: var(--texto-xs);
-  color: var(--cor-erro);
-  font-weight: var(--peso-medio);
+.campo__erro {
+  color: var(--perigo);
+  font-weight: var(--p-500);
+  animation: subir-curto var(--tempo-rapido) var(--curva) both;
 }
 
-/* No celular, fonte menor que 16px faz o iOS dar zoom sozinho ao focar o
-   campo e desalinha a tela inteira. */
-@media (max-width: 720px) {
-  .campo__controle {
-    font-size: 16px;
-    min-height: var(--toque-min);
+/* Abaixo de 16px o iOS dá zoom sozinho ao focar o campo e desalinha a tela
+   inteira — por isso o tamanho sobe no celular em vez de encolher. */
+@media (max-width: 768px) {
+  .controle__campo {
+    font-size: var(--t-16);
+    height: 44px;
   }
 }

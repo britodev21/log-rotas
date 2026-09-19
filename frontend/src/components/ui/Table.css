@@ -1,0 +1,117 @@
+.tb-area {
+  width: 100%;
+  overflow-x: auto;
+  /* Rolagem horizontal com inercia no celular. */
+  -webkit-overflow-scrolling: touch;
+}
+
+.tb {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-14);
+}
+
+/* --- Cabecalho ---------------------------------------------------------- */
+
+.tb__cabeca {
+  background: var(--superficie-2);
+}
+
+.tb__th {
+  padding: var(--e-3) var(--e-5);
+  font-size: var(--t-11);
+  font-weight: var(--p-600);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-maiuscula);
+  color: var(--texto-4);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--borda);
+}
+
+.tb__th--numero,
+.tb__td--numero {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* --- Linhas -------------------------------------------------------------- */
+
+.tb__tr {
+  border-bottom: 1px solid var(--borda-suave);
+  transition: background-color var(--tempo-rapido) var(--curva);
+}
+
+.tb__corpo .tb__tr:last-child {
+  border-bottom: none;
+}
+
+.tb__tr:hover {
+  background: var(--superficie-hover);
+}
+
+.tb__tr--clicavel {
+  cursor: pointer;
+}
+
+/* A linha selecionada e marcada por uma barra na borda esquerda, usando
+   box-shadow interno — uma borda de verdade empurraria o conteudo 2px e a
+   tabela inteira tremeria ao selecionar. */
+.tb__tr--selecionada {
+  background: var(--primaria-suave);
+  box-shadow: inset 2px 0 0 var(--primaria);
+}
+
+.tb__td {
+  padding: var(--e-3) var(--e-5);
+  color: var(--texto-2);
+  vertical-align: middle;
+}
+
+.tb__principal {
+  display: block;
+  color: var(--texto);
+  font-weight: var(--p-500);
+}
+
+.tb__secundario {
+  display: block;
+  margin-top: 1px;
+  font-size: var(--t-12);
+  color: var(--texto-4);
+}
+
+/* --- Acoes --------------------------------------------------------------- */
+
+.tb__td--acoes {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.tb__acoes {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--e-1);
+  opacity: 0;
+  transition: opacity var(--tempo-rapido) var(--curva);
+}
+
+.tb__tr:hover .tb__acoes,
+.tb__tr:focus-within .tb__acoes {
+  opacity: 1;
+}
+
+/* Em telas de toque nao existe hover: as acoes ficam sempre visiveis, ou
+   seriam inalcancaveis. */
+@media (hover: none) {
+  .tb__acoes {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .tb__th,
+  .tb__td {
+    padding: var(--e-3);
+  }
+}

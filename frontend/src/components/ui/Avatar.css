@@ -1,0 +1,20 @@
+.avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: var(--r-total);
+  background: var(--avatar-fundo);
+  border: 1px solid var(--avatar-borda);
+  color: var(--avatar-texto);
+  font-weight: var(--p-600);
+  letter-spacing: 0;
+  user-select: none;
+}
+
+/* No tema escuro o fundo claro do avatar viraria uma mancha brilhante na
+   tela: a mesma matiz e reconstruida em versao escura. */
+:root[data-tema="escuro"] .avatar {
+  background: color-mix(in srgb, var(--avatar-texto) 34%, var(--superficie));
+  border-color: color-mix(in srgb, var(--avatar-texto) 46%, var(--superficie));
+  color: var(--texto);
+}

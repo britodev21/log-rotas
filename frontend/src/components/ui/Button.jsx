@@ -1,42 +1,69 @@
+import { forwardRef } from "react";
+
+import { Spinner } from "./Spinner";
 import "./Button.css";
 
 /**
- * Botao da aplicacao.
+ * Botão do sistema.
  *
- * variante: "primario" | "secundario" | "perigo" | "texto"
- * tamanho:  "normal" | "grande"  ("grande" e o usado na tela do motorista)
+ * variante: primario | secundario | sutil | perigo | texto
+ * tamanho:  sm | md | lg        (lg é o usado na tela do motorista)
+ *
+ * Durante o carregamento o botão fica desabilitado, o que impede o clique
+ * duplo que dispararia a operação duas vezes. O rótulo permanece no lugar e
+ * apenas o ícone vira spinner, para a largura não mudar e a linha não
+ * "pular" no meio da ação.
  */
-export function Button({
-  children,
-  variante = "primario",
-  tamanho = "normal",
-  carregando = false,
-  larguraTotal = false,
-  type = "button",
-  disabled,
-  className = "",
-  ...resto
-}) {
+export const Button = forwardRef(function Button(
+  {
+    children,
+    variante = "primario",
+    tamanho = "md",
+    icone: Icone,
+    iconeDireita: IconeDireita,
+    carregando = false,
+    larguraTotal = false,
+    type = "button",
+    disabled,
+    className = "",
+    ...resto
+  },
+  ref,
+) {
+  const apenasIcone = !children && (Icone || IconeDireita);
+
   const classes = [
-    "botao",
-    `botao--${variante}`,
-    `botao--${tamanho}`,
-    larguraTotal ? "botao--largo" : "",
+    "bt",
+    `bt--${variante}`,
+    `bt--${tamanho}`,
+    larguraTotal && "bt--largo",
+    apenasIcone && "bt--icone",
+    carregando && "bt--carregando",
     className,
   ]
     .filter(Boolean)
     .join(" ");
 
+  const tamanhoIcone = tamanho === "lg" ? 19 : tamanho === "sm" ? 14 : 16;
+
   return (
     <button
+      ref={ref}
       type={type}
       className={classes}
       disabled={disabled || carregando}
       aria-busy={carregando || undefined}
       {...resto}
     >
-      {carregando && <span className="botao__girando" aria-hidden="true" />}
-      {children}
+      {carregando ? (
+        <Spinner tamanho={tamanhoIcone} />
+      ) : (
+        Icone && <Icone size={tamanhoIcone} strokeWidth={2} aria-hidden="true" />
+      )}
+      {children && <span className="bt__rotulo">{children}</span>}
+      {!carregando && IconeDireita && (
+        <IconeDireita size={tamanhoIcone} strokeWidth={2} aria-hidden="true" />
+      )}
     </button>
   );
-}
+});

@@ -1,0 +1,37 @@
+.dica-area {
+  position: relative;
+  display: inline-flex;
+}
+
+.dica {
+  position: absolute;
+  z-index: var(--z-dropdown);
+  padding: var(--e-1) var(--e-2);
+  background: var(--superficie-inversa);
+  color: var(--fundo);
+  font-size: var(--t-12);
+  font-weight: var(--p-500);
+  white-space: nowrap;
+  border-radius: var(--r-sm);
+  box-shadow: var(--sombra-md);
+  pointer-events: none;
+  animation: subir-curto var(--tempo-instantaneo) var(--curva) both;
+}
+
+.dica--cima {
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dica--baixo {
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dica--direita {
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+}
