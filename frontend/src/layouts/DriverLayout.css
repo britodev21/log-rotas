@@ -1,52 +1,81 @@
-.motorista {
-  min-height: 100dvh;
+.mot {
   display: flex;
   flex-direction: column;
-  background: var(--cor-fundo);
+  min-height: 100dvh;
+  background: var(--fundo);
 }
 
-.motorista__topo {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--esp-3);
-  padding: var(--esp-3) var(--esp-4);
-  /* padding-top extra respeita o recorte da tela em celulares com notch. */
-  padding-top: max(var(--esp-3), env(safe-area-inset-top));
-  background: var(--cor-marca);
-  color: var(--cor-texto-invertido);
+.mot__topo {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: var(--z-topo);
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-3) var(--e-4);
+  /* Respeita o recorte da tela em aparelho com notch. */
+  padding-top: max(var(--e-3), env(safe-area-inset-top));
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borda);
 }
 
-.motorista__marca {
-  display: block;
-  font-size: var(--texto-md);
-  font-weight: var(--peso-forte);
-}
-
-.motorista__nome {
-  display: block;
-  font-size: var(--texto-sm);
-  opacity: 0.85;
-}
-
-.motorista__conteudo {
+.mot__identificacao {
   flex: 1;
-  padding: var(--esp-4);
-  padding-bottom: max(var(--esp-4), env(safe-area-inset-bottom));
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--esp-4);
 }
 
-/* Em tela grande a interface do motorista nao se espalha: manter a mesma
-   coluna estreita preserva o desenho pensado para o celular. */
+.mot__marca {
+  font-size: var(--t-14);
+  font-weight: var(--p-600);
+  letter-spacing: var(--tr-titulo);
+  line-height: 1.2;
+}
+
+.mot__nome {
+  font-size: var(--t-12);
+  color: var(--texto-3);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mot__sair {
+  flex-shrink: 0;
+}
+
+.mot__conteudo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  padding: var(--e-4);
+  padding-bottom: max(var(--e-6), env(safe-area-inset-bottom));
+}
+
+/* Em tela grande a interface do motorista nao se espalha: manter a coluna
+   estreita preserva o desenho pensado para o celular, em vez de esticar
+   botoes ate a largura do monitor. */
 @media (min-width: 640px) {
-  .motorista__conteudo {
+  .mot__conteudo {
     width: 100%;
-    max-width: 560px;
+    max-width: 520px;
     margin: 0 auto;
+  }
+
+  .mot__topo {
+    justify-content: center;
+  }
+
+  .mot__identificacao {
+    flex: 0 1 auto;
+  }
+}
+
+@media (max-width: 360px) {
+  .mot__conteudo {
+    padding: var(--e-3);
   }
 }

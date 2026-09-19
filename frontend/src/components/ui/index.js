@@ -21,6 +21,7 @@ export {
   SkeletonText,
 } from "./Skeleton";
 export { Spinner } from "./Spinner";
+export { Splash } from "./Splash";
 export { EmptyState, ErrorState } from "./States";
 export { TBody, TD, TDAcoes, TDPrincipal, TH, THead, TR, Table } from "./Table";
 export { ThemeToggle } from "./ThemeToggle";

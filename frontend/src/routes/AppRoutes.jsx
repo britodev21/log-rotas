@@ -1,21 +1,22 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import { Splash } from "../components/ui/Splash";
+import { useAuth } from "../hooks/useAuth";
 import { AdminLayout } from "../layouts/AdminLayout";
 import { DriverLayout } from "../layouts/DriverLayout";
+import { Login } from "../pages/Login";
+import { NotFound } from "../pages/NotFound";
+import { Setup } from "../pages/Setup";
 import { Dashboard } from "../pages/admin/Dashboard";
 import { Settings } from "../pages/admin/Settings";
 import { Users } from "../pages/admin/Users";
 import { DriverHome } from "../pages/driver/DriverHome";
-import { Login } from "../pages/Login";
-import { NotFound } from "../pages/NotFound";
-import { Setup } from "../pages/Setup";
-import { useAuth } from "../hooks/useAuth";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 /** Leva cada perfil para a sua area — a raiz nunca mostra tela de outro papel. */
 function Inicio() {
   const { autenticado, carregando, usuario } = useAuth();
-  if (carregando) return <div className="carregando-tela">Carregando...</div>;
+  if (carregando) return <Splash />;
   if (!autenticado) return <Navigate to="/entrar" replace />;
   return <Navigate to={usuario.role === "ADMIN" ? "/admin" : "/motorista"} replace />;
 }

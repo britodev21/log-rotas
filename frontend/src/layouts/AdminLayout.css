@@ -1,174 +1,397 @@
-/* Layout administrativo: pensado para desktop, com o menu virando gaveta no
-   celular. A experiencia do motorista NAO usa este layout — ela tem o seu,
-   desenhado para o celular desde o inicio. */
+/* =========================================================================
+   Casca administrativa — desktop primeiro, gaveta no celular.
 
-.admin {
+   A interface do motorista NÃO usa esta casca: ela tem a própria, desenhada
+   para o celular desde o início. Encolher um layout de desktop não produz
+   uma boa tela de celular.
+   ========================================================================= */
+
+.app {
+  display: grid;
+  grid-template-columns: var(--lateral-largura) minmax(0, 1fr);
   min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
+  transition: grid-template-columns var(--tempo-normal) var(--curva);
 }
 
-.admin__topo {
+.app--recolhida {
+  grid-template-columns: var(--lateral-largura-estreita) minmax(0, 1fr);
+}
+
+/* ---------------------------------------------------------------- Lateral */
+
+.lateral {
   display: flex;
-  align-items: center;
-  gap: var(--esp-4);
-  height: var(--altura-topo);
-  padding: 0 var(--esp-5);
-  background: var(--cor-marca);
-  color: var(--cor-texto-invertido);
+  flex-direction: column;
+  background: var(--lateral-fundo);
+  border-right: 1px solid var(--lateral-borda);
   position: sticky;
   top: 0;
-  z-index: 20;
+  height: 100dvh;
+  z-index: var(--z-lateral);
+  overflow: hidden;
 }
 
-.admin__marca {
-  font-size: var(--texto-lg);
-  font-weight: var(--peso-forte);
-  letter-spacing: -0.01em;
-}
-
-.admin__menu-botao {
-  display: none;
-  background: none;
-  border: none;
-  color: inherit;
-  font-size: 20px;
-  cursor: pointer;
-  padding: var(--esp-2);
-}
-
-.admin__usuario {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--esp-3);
-}
-
-.admin__usuario-nome {
-  font-size: var(--texto-sm);
-  opacity: 0.9;
-}
-
-.admin__corpo {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-.admin__lateral {
-  width: var(--largura-sidebar);
-  flex-shrink: 0;
-  background: var(--cor-superficie);
-  border-right: 1px solid var(--cor-borda);
-  padding: var(--esp-4) var(--esp-3);
-  overflow-y: auto;
-}
-
-.admin__lista {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.admin__link {
+.lateral__marca {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--esp-2);
-  padding: var(--esp-2) var(--esp-3);
-  border-radius: var(--raio);
-  font-size: var(--texto-base);
-  color: var(--cor-texto-suave);
+  height: var(--topo-altura);
+  padding: 0 var(--e-4);
+  flex-shrink: 0;
+}
+
+.lateral__fechar {
+  display: none;
+  color: var(--texto-3);
+  padding: var(--e-1);
+  border-radius: var(--r-sm);
+}
+
+.lateral__nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--e-2) var(--e-3) var(--e-4);
+}
+
+.lateral__grupo + .lateral__grupo {
+  margin-top: var(--e-5);
+}
+
+.lateral__grupo-titulo {
+  padding: 0 var(--e-3);
+  margin-bottom: var(--e-2);
+  font-size: var(--t-11);
+  font-weight: var(--p-600);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-maiuscula);
+  color: var(--texto-4);
+  white-space: nowrap;
+  transition: opacity var(--tempo-rapido) var(--curva);
+}
+
+/* --- Item de navegação --------------------------------------------------- */
+
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  height: 34px;
+  padding: 0 var(--e-3);
+  margin-bottom: 1px;
+  border-radius: var(--r-md);
+  font-size: var(--t-14);
+  font-weight: var(--p-500);
+  color: var(--texto-2);
+  white-space: nowrap;
+  transition:
+    background-color var(--tempo-rapido) var(--curva),
+    color var(--tempo-rapido) var(--curva);
+}
+
+.nav-item:hover {
+  background: var(--superficie-ativa);
+  color: var(--texto);
   text-decoration: none;
 }
 
-.admin__link:hover {
-  background: var(--cor-neutro-suave);
-  color: var(--cor-texto);
-  text-decoration: none;
+.nav-item svg {
+  flex-shrink: 0;
+  color: var(--texto-4);
+  transition: color var(--tempo-rapido) var(--curva);
 }
 
-.admin__link--ativo {
-  background: var(--cor-marca-suave);
-  color: var(--cor-marca);
-  font-weight: var(--peso-semi);
+.nav-item:hover svg {
+  color: var(--texto-2);
 }
 
-.admin__link--planejado {
-  color: var(--cor-texto-fraco);
+.nav-item__rotulo {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ativo: superfície própria mais um traço vertical curto na borda esquerda,
+   desenhado com ::before. É o nó do trajeto — o mesmo vocabulário do
+   símbolo da marca, sem virar ilustração. */
+.nav-item--ativo {
+  background: var(--superficie);
+  color: var(--texto);
+  font-weight: var(--p-600);
+  box-shadow: var(--sombra-xs);
+}
+
+.nav-item--ativo::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  width: 3px;
+  height: 16px;
+  border-radius: var(--r-total);
+  background: var(--primaria);
+  transform: translateY(-50%);
+  animation: surgir var(--tempo-normal) var(--curva) both;
+}
+
+.nav-item--ativo svg {
+  color: var(--primaria);
+}
+
+/* Item de fase futura: presente, legível, claramente indisponível. */
+.nav-item--futuro {
+  color: var(--texto-4);
   cursor: default;
 }
 
-.admin__link--planejado:hover {
-  background: none;
-  color: var(--cor-texto-fraco);
+.nav-item--futuro:hover {
+  background: transparent;
+  color: var(--texto-4);
 }
 
-.admin__fase {
+.nav-item--futuro svg {
+  opacity: 0.6;
+}
+
+.nav-item__fase {
   font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  background: var(--cor-neutro-suave);
-  color: var(--cor-texto-fraco);
-  padding: 1px 6px;
-  border-radius: var(--raio-total);
+  font-weight: var(--p-600);
+  letter-spacing: var(--tr-rotulo);
+  color: var(--texto-4);
+  background: var(--superficie-3);
+  border: 1px solid var(--borda-suave);
+  padding: 0 5px;
+  border-radius: var(--r-xs);
+  flex-shrink: 0;
 }
 
-.admin__secao {
-  margin: var(--esp-5) var(--esp-3) var(--esp-2);
-  font-size: var(--texto-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--cor-texto-fraco);
-  font-weight: var(--peso-semi);
+.lateral__rodape {
+  padding: var(--e-3);
+  border-top: 1px solid var(--lateral-borda);
+  flex-shrink: 0;
 }
 
-.admin__conteudo {
+/* --- Recolhida ----------------------------------------------------------- */
+
+.app--recolhida .nav-item__rotulo,
+.app--recolhida .nav-item__fase,
+.app--recolhida .lateral__grupo-titulo {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+.app--recolhida .lateral__grupo-titulo {
+  height: 1px;
+  margin-bottom: var(--e-1);
+}
+
+.app--recolhida .nav-item {
+  justify-content: center;
+  padding: 0;
+}
+
+.app--recolhida .lateral__marca {
+  justify-content: center;
+  padding: 0;
+}
+
+.app--recolhida .lateral__recolher {
+  transform: rotate(180deg);
+}
+
+/* ------------------------------------------------------------------- Topo */
+
+.app__coluna {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topo {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-topo);
+  display: flex;
+  align-items: center;
+  gap: var(--e-4);
+  height: var(--topo-altura);
+  padding: 0 var(--e-6);
+  background: color-mix(in srgb, var(--fundo) 82%, transparent);
+  /* Vidro fosco: o conteúdo passa por baixo e continua perceptível, sem
+     borrar o texto da própria barra. */
+  backdrop-filter: blur(10px) saturate(1.4);
+  border-bottom: 1px solid var(--borda-suave);
+}
+
+.topo__menu {
+  display: none;
+  color: var(--texto-2);
+  padding: var(--e-2);
+  margin-left: calc(var(--e-2) * -1);
+  border-radius: var(--r-sm);
+}
+
+.topo__contexto {
   flex: 1;
   min-width: 0;
-  padding: var(--esp-6);
-  max-width: 1280px;
 }
 
-.admin__sombra {
+.topo__titulo {
+  font-size: var(--t-15);
+  font-weight: var(--p-600);
+  line-height: 1.2;
+}
+
+.topo__descricao {
+  font-size: var(--t-12);
+  color: var(--texto-4);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topo__acoes {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  flex-shrink: 0;
+}
+
+.topo__usuario {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  padding: var(--e-1) var(--e-2) var(--e-1) var(--e-1);
+  border-radius: var(--r-total);
+  border: 1px solid transparent;
+  transition:
+    background-color var(--tempo-rapido) var(--curva),
+    border-color var(--tempo-rapido) var(--curva);
+}
+
+.topo__usuario:hover {
+  background: var(--superficie);
+  border-color: var(--borda);
+}
+
+.topo__usuario-nome {
+  font-size: var(--t-13);
+  font-weight: var(--p-500);
+  color: var(--texto-2);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------- Conteúdo */
+
+.app__conteudo {
+  flex: 1;
+  width: 100%;
+  max-width: var(--conteudo-max);
+  padding: var(--e-6);
+  min-width: 0;
+}
+
+.app__cobertura {
   display: none;
 }
 
-@media (max-width: 860px) {
-  .admin__menu-botao {
+/* ----------------------------------------------------------- Responsivo */
+
+@media (max-width: 1024px) {
+  .app,
+  .app--recolhida {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lateral {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(280px, 84vw);
+    transform: translate3d(-100%, 0, 0);
+    transition: transform var(--tempo-normal) var(--curva);
+    box-shadow: none;
+  }
+
+  .lateral--aberta {
+    transform: translate3d(0, 0, 0);
+    box-shadow: var(--sombra-xl);
+  }
+
+  .lateral__fechar {
     display: block;
   }
 
-  .admin__usuario-nome {
+  .lateral__rodape {
     display: none;
   }
 
-  .admin__lateral {
-    position: fixed;
-    top: var(--altura-topo);
-    bottom: 0;
-    left: 0;
-    z-index: 30;
-    transform: translateX(-100%);
-    transition: transform var(--transicao);
+  /* Fora do desktop os rótulos voltam sempre: a gaveta não tem por que
+     ficar recolhida. */
+  .app--recolhida .nav-item__rotulo,
+  .app--recolhida .nav-item__fase,
+  .app--recolhida .lateral__grupo-titulo {
+    opacity: 1;
+    width: auto;
+    height: auto;
   }
 
-  .admin__lateral--aberta {
-    transform: translateX(0);
-    box-shadow: var(--sombra-lg);
+  .app--recolhida .nav-item {
+    justify-content: flex-start;
+    padding: 0 var(--e-3);
   }
 
-  .admin__sombra {
+  .app--recolhida .lateral__marca {
+    justify-content: space-between;
+    padding: 0 var(--e-4);
+  }
+
+  .topo__menu {
+    display: block;
+  }
+
+  .app__cobertura {
     display: block;
     position: fixed;
-    inset: var(--altura-topo) 0 0 0;
-    background: rgba(16, 24, 40, 0.4);
-    z-index: 25;
+    inset: 0;
+    z-index: var(--z-cobertura);
+    background: var(--cobertura);
+    animation: surgir var(--tempo-rapido) var(--curva) both;
   }
 
-  .admin__conteudo {
-    padding: var(--esp-4);
+  .lateral {
+    z-index: calc(var(--z-cobertura) + 1);
+  }
+}
+
+@media (max-width: 768px) {
+  .topo {
+    padding: 0 var(--e-4);
+  }
+
+  .topo__descricao,
+  .topo__usuario-nome {
+    display: none;
+  }
+
+  .app__conteudo {
+    padding: var(--e-4);
+  }
+}
+
+@media (max-width: 380px) {
+  .topo {
+    gap: var(--e-2);
+    padding: 0 var(--e-3);
+  }
+
+  .app__conteudo {
+    padding: var(--e-3);
   }
 }
