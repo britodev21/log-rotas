@@ -7,7 +7,16 @@ antigos sem funcionar.
 
 from fastapi import APIRouter
 
-from app.api.v1 import auth, cadastros, company_settings, deliveries, setup, users
+from app.api.v1 import (
+    auth,
+    cadastros,
+    company_settings,
+    deliveries,
+    geocoding,
+    planning,
+    setup,
+    users,
+)
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -22,6 +31,8 @@ api_router.include_router(cadastros.vehicles_router)
 api_router.include_router(cadastros.drivers_router)
 api_router.include_router(cadastros.customers_router)
 
+api_router.include_router(planning.router)
+api_router.include_router(geocoding.router)
 api_router.include_router(company_settings.router)
 
 __all__ = ["api_router"]

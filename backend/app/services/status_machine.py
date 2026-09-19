@@ -81,9 +81,20 @@ _MAPAS = {
 
 
 def pode(tipo: str, de: str, para: str) -> bool:
-    """A transicao e permitida?"""
-    if de == para:
-        return True  # idempotente: regravar o mesmo status nao e erro
+    """A transicao e permitida?
+
+    Regravar o MESMO status nao e permitido, e isso e deliberado.
+
+    A versao anterior tratava `de == para` como idempotente, o que parecia
+    inofensivo e nao era: confirmar um planejamento duas vezes passava pelas
+    duas vezes, gravando eventos duplicados no historico das entregas e
+    reatribuindo motoristas. Operacao com efeito colateral precisa ser
+    recusada na segunda chamada, nao aceita em silencio.
+
+    Quem precisa de comportamento idempotente de verdade — um endpoint que
+    possa ser repetido com seguranca — checa o estado antes de chamar, e
+    nao pede a transicao.
+    """
     return para in _MAPAS[tipo].get(de, set())
 
 
@@ -95,6 +106,12 @@ def exigir(tipo: str, de: str, para: str) -> None:
     """
     if pode(tipo, de, para):
         return
+
+    if de == para:
+        raise InvalidStateTransitionError(
+            f"O status {_ROTULOS[tipo]} ja e {para}.",
+            details={"de": de, "para": para, "permitidos": sorted(_MAPAS[tipo].get(de, set()))},
+        )
 
     permitidos = sorted(_MAPAS[tipo].get(de, set()))
     detalhe = ", ".join(permitidos) if permitidos else "nenhum (estado final)"
