@@ -77,7 +77,18 @@ acesso, e montar SMTP agora seria infraestrutura desnecessária para uso interno
 Como o sistema não tem cadastro público, o risco é baixo: só o administrador cria usuários.
 **Precisa ser reavaliado** se o sistema um dia for exposto para fora da empresa.
 
-### 3.3 Sem limite de tentativas de login
+### 3.3 Acessibilidade verificada por medição
+
+A escala de texto da interface foi calibrada calculando a razão de contraste de cada nível
+contra a superfície mais clara em que ele aparece, nos dois temas. Os quatro níveis atingem
+4.5:1 (mínimo da WCAG AA para texto pequeno). O nível mais apagado, usado em e-mail de
+tabela e contexto de indicador, reprovava com 2.6:1 na primeira versão da paleta e foi
+escurecido.
+
+A hierarquia entre os níveis passou a se apoiar também em tamanho e peso, não apenas em
+cor — empilhar cinzas cada vez mais claros termina com o último ilegível.
+
+### 3.4 Sem limite de tentativas de login
 
 Não há bloqueio por tentativas repetidas nem CAPTCHA. Em rede interna o risco é baixo; ao
 publicar o sistema na internet, isso precisa entrar — preferencialmente no nginx, não na
@@ -107,8 +118,12 @@ subir o sistema em uma VPS com certificado.
 - **OSRM público** (distância/tempo): servidor de demonstração, sem garantia de
   disponibilidade e proibido para uso comercial de volume. Mitigação planejada: OSRM próprio
   na VPS, com o extrato de Mato Grosso do Sul.
-- **Tiles do OpenStreetMap**: a política de uso proíbe aplicação comercial de volume no
-  servidor público. Trocar por MapTiler, Stadia ou Carto ao publicar.
+- **Base cartográfica (CARTO)**: o painel usa os ladrilhos gratuitos `light_all` /
+  `dark_all` da CARTO, servidos sobre dados do OpenStreetMap. São adequados a
+  desenvolvimento e uso leve, mas a política do serviço não cobre aplicação comercial de
+  volume. Antes de a empresa depender do sistema, trocar por um plano pago da CARTO, por
+  MapTiler ou por Stadia — é uma URL no componente `MapPanel`, nada além disso.
+  A atribuição ao OpenStreetMap e à CARTO já é exibida no mapa, como a licença exige.
 
 Nada disso impede o desenvolvimento local nem custa dinheiro agora, mas todos precisam ser
 trocados antes de a empresa depender do sistema no dia a dia.

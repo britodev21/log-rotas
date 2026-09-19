@@ -89,11 +89,17 @@
   --borda-suave: var(--cinza-150);
   --borda-forte: var(--cinza-300);
 
-  /* Texto. */
-  --texto: var(--cinza-900);
-  --texto-2: var(--cinza-600);
-  --texto-3: var(--cinza-500);
-  --texto-4: var(--cinza-400);
+  /* Texto.
+     A escala foi calibrada por contraste medido, nao a olho: todos os quatro
+     niveis atingem 4.5:1 sobre a superficie mais clara em que sao usados,
+     inclusive --texto-4, que carrega e-mail em tabela e contexto de
+     indicador. A hierarquia entre eles vem tambem de tamanho e peso, nao so
+     de cor — o que e mais robusto do que empilhar cinzas cada vez mais
+     apagados ate o ultimo ficar ilegivel. */
+  --texto: var(--cinza-900); /* 17.2:1 sobre branco */
+  --texto-2: var(--cinza-700); /* 10.1:1 */
+  --texto-3: var(--cinza-600); /*  6.9:1 */
+  --texto-4: #646d7f; /*  5.2:1 — 4.6:1 na superficie mais clara */
   --texto-inverso: var(--cinza-0);
 
   /* Marca aplicada. */
@@ -172,10 +178,10 @@
 
   /* Branco puro sobre fundo escuro cansa a vista; o topo da escala é um
      cinza muito claro, não #fff. */
-  --texto: #e9ecf3;
-  --texto-2: #a8b0c2;
-  --texto-3: #7d8699;
-  --texto-4: #616a7d;
+  --texto: #e9ecf3; /* 14.8:1 sobre a superficie */
+  --texto-2: #c4cbd8; /* 10.8:1 */
+  --texto-3: #a8b0c2; /*  8.1:1 */
+  --texto-4: #8991a1; /*  5.5:1 — 4.7:1 na superficie mais alta */
   --texto-inverso: var(--cinza-900);
 
   --primaria: var(--marca-400);
@@ -291,7 +297,6 @@
   --tempo-normal: 220ms;
   --tempo-lento: 320ms;
 
-  --transicao: all var(--tempo-rapido) var(--curva);
 
   /* --- Layout ---------------------------------------------------------- */
   --lateral-largura: 244px;
