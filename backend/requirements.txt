@@ -18,7 +18,7 @@ argon2-cffi==25.1.0
 httpx==0.28.1
 
 # --- Otimizacao (Fase 6) ---
-# ortools==9.15.6755
+ortools==9.15.6755
 
 # --- Desenvolvimento ---
 pytest==9.1.1

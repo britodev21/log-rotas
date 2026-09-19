@@ -51,3 +51,97 @@ class GeocodePrecision(StrEnum):
     RUA = "RUA"
     BAIRRO = "BAIRRO"
     CIDADE = "CIDADE"
+
+
+class DeliveryStatus(StrEnum):
+    """Situacao de uma entrega.
+
+    PENDENTE     cadastrada, ainda nao entrou em planejamento
+    PLANEJADA    faz parte de um plano confirmado, aguardando a rota comecar
+    EM_ROTA      o motorista iniciou a rota que a contem
+    CHEGOU       o motorista chegou na parada
+    ENTREGUE     concluida
+    NAO_ENTREGUE tentativa sem sucesso, com motivo registrado
+    CANCELADA    cancelada antes de ser executada
+    """
+
+    PENDENTE = "PENDENTE"
+    PLANEJADA = "PLANEJADA"
+    EM_ROTA = "EM_ROTA"
+    CHEGOU = "CHEGOU"
+    ENTREGUE = "ENTREGUE"
+    NAO_ENTREGUE = "NAO_ENTREGUE"
+    CANCELADA = "CANCELADA"
+
+
+class Priority(StrEnum):
+    BAIXA = "BAIXA"
+    NORMAL = "NORMAL"
+    ALTA = "ALTA"
+    URGENTE = "URGENTE"
+
+
+class FailureReason(StrEnum):
+    """Por que a entrega nao aconteceu.
+
+    Lista fechada de proposito: campo livre produziria vinte grafias do
+    mesmo motivo e nenhum relatorio confiavel. `OUTRO` existe para o que
+    escapa, sempre acompanhado de observacao.
+    """
+
+    CLIENTE_AUSENTE = "CLIENTE_AUSENTE"
+    ENDERECO_INCORRETO = "ENDERECO_INCORRETO"
+    RECUSA = "RECUSA"
+    ESTABELECIMENTO_FECHADO = "ESTABELECIMENTO_FECHADO"
+    PROBLEMA_ACESSO = "PROBLEMA_ACESSO"
+    AVARIA = "AVARIA"
+    FALTA_PRODUTO = "FALTA_PRODUTO"
+    OUTRO = "OUTRO"
+
+
+class RouteStatus(StrEnum):
+    RASCUNHO = "RASCUNHO"
+    PLANEJADA = "PLANEJADA"
+    INICIADA = "INICIADA"
+    FINALIZADA = "FINALIZADA"
+    CANCELADA = "CANCELADA"
+
+
+class PlanStatus(StrEnum):
+    RASCUNHO = "RASCUNHO"
+    CONFIRMADO = "CONFIRMADO"
+    DESCARTADO = "DESCARTADO"
+
+
+class StopType(StrEnum):
+    """Tipo de parada numa rota.
+
+    BASE_RECARGA existe desde ja, embora o MVP so gere rotas
+    BASE_SAIDA -> ENTREGA* -> BASE_RETORNO. Custa um valor de enum hoje e e
+    o que torna o retorno a base para recarregar implementavel depois sem
+    migracao destrutiva na tabela que mais tera linhas.
+    """
+
+    BASE_SAIDA = "BASE_SAIDA"
+    ENTREGA = "ENTREGA"
+    BASE_RECARGA = "BASE_RECARGA"
+    BASE_RETORNO = "BASE_RETORNO"
+
+
+class StopStatus(StrEnum):
+    PENDENTE = "PENDENTE"
+    CHEGOU = "CHEGOU"
+    CONCLUIDA = "CONCLUIDA"
+    PULADA = "PULADA"
+
+
+class MatrixSource(StrEnum):
+    """De onde vieram distancia e duracao.
+
+    HAVERSINE e linha reta com fator de correcao, NAO distancia de estrada.
+    Sempre que uma rota for calculada com ela, a interface precisa dizer
+    isso — e a diferenca entre estimar e mentir.
+    """
+
+    OSRM = "OSRM"
+    HAVERSINE = "HAVERSINE"
