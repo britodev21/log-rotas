@@ -8,10 +8,12 @@ veículos respeitando restrições, encontra uma sequência otimizada de paradas
 um mapa dentro da própria aplicação e entrega a rota pronta ao motorista, que a executa pelo
 celular e atualiza o status de cada entrega.
 
-> **Estado atual: Fase 2 concluída.**
-> Funcionam autenticação, primeiro acesso, gestão de usuários com papéis e configuração da
-> empresa. Entregas, mapa, otimização e a operação do motorista ainda **não** foram
-> implementados — e nenhuma tela finge que foram. Ver [docs/LIMITACOES.md](docs/LIMITACOES.md).
+> **Estado atual: Fase 3 parcial.**
+> Funcionam autenticação, primeiro acesso, usuários com papéis, configuração da empresa e os
+> cadastros de **clientes, motoristas, veículos e bases**.
+> Entregas, geocodificação, mapa com dados, otimização e a operação do motorista ainda **não**
+> foram implementados — e nenhuma tela finge que foram.
+> Ver [docs/LIMITACOES.md](docs/LIMITACOES.md) e [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 

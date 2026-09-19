@@ -26,7 +26,7 @@ cd backend
 
 ---
 
-## Tabelas implementadas (Fase 2)
+## Tabelas implementadas (Fases 2 e 3)
 
 ### `company_settings`
 
@@ -66,17 +66,49 @@ diferente.
 
 ---
 
+### `bases`, `vehicles`, `drivers`, `customers` — Fase 3
+
+**`bases`** — nome, telefone, `is_default`, `active` + bloco de geocodificação.
+A classe do modelo se chama `BaseLocation` para não colidir com a base declarativa do
+SQLAlchemy.
+
+**`vehicles`** — `plate` com índice único (normalizada sem máscara, em maiúsculas),
+`capacity_weight_kg`, `capacity_volume_m3`, `capacity_length_m`, `max_stops` e `crew_size`.
+As quatro capacidades são **anuláveis** de propósito: ainda não se sabe qual limita a operação
+da Britto. `CHECK` garante que, quando preenchidas, sejam positivas.
+
+**`drivers`** — `user_id` **anulável e único**, com `ON DELETE SET NULL`: apagar o acesso não
+pode apagar o histórico do motorista, que ficará amarrado às rotas executadas.
+
+**`customers`** — dados de contato + bloco de geocodificação, com **índice único parcial** em
+`document`:
+
+```sql
+CREATE UNIQUE INDEX uq_customers_document ON customers (document)
+  WHERE document IS NOT NULL;
+```
+
+Um `UNIQUE` comum aceitaria vários `NULL` no Postgres, mas o índice parcial deixa a intenção
+explícita e não indexa as linhas sem documento.
+
+### Bloco de geocodificação (`GeocodableMixin`)
+
+Compartilhado por `bases` e `customers`, e por `deliveries` quando ela existir:
+`address`, `latitude`, `longitude` (`NUMERIC(9,6)`), `geocode_status`, `geocode_precision`,
+`geocode_provider`, `geocode_error`, `geocoded_at`.
+
+`CHECK` garante que latitude e longitude andem **juntas** — uma sem a outra não localiza nada
+e seria um estado impossível de interpretar depois — e que estejam dentro da faixa válida.
+
+Status: `PENDENTE | OK | AMBIGUO | FALHOU | MANUAL`. `MANUAL` nunca é sobrescrito pela
+geocodificação automática.
+
+---
+
 ## Modelo planejado (Fases 3 a 7)
 
 Ainda não implementado. Registrado aqui porque as decisões abaixo foram tomadas e precisam ser
 respeitadas quando as tabelas forem criadas.
-
-### `customers`, `drivers`, `vehicles`, `bases`
-
-- `drivers.user_id` é **anulável**: motorista terceirizado pode não ter acesso ao sistema.
-- `vehicles` tem capacidade **tipada**, não um número genérico:
-  `capacity_weight_kg`, `capacity_volume_m3`, `capacity_length_m`, `max_stops` — todas
-  opcionais. O solver só ativa a dimensão que a operação confirmar usar.
 
 ### `deliveries`
 

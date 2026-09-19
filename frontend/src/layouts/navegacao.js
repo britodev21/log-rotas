@@ -33,10 +33,10 @@ export const GRUPOS = [
   {
     titulo: "Cadastros",
     itens: [
-      { rotulo: "Clientes", icone: Users, fase: "F3" },
-      { rotulo: "Motoristas", icone: UserCog, fase: "F3" },
-      { rotulo: "Veículos", icone: Truck, fase: "F3" },
-      { rotulo: "Bases", icone: MapPin, fase: "F3" },
+      { para: "/admin/clientes", rotulo: "Clientes", icone: Users },
+      { para: "/admin/motoristas", rotulo: "Motoristas", icone: UserCog },
+      { para: "/admin/veiculos", rotulo: "Veículos", icone: Truck },
+      { para: "/admin/bases", rotulo: "Bases", icone: MapPin },
     ],
   },
   {
@@ -53,6 +53,22 @@ export const GRUPOS = [
 export const CONTEXTO_ROTA = {
   "/admin": { titulo: "Painel", contexto: "Visão geral da operação" },
   "/admin/usuarios": { titulo: "Usuários", contexto: "Quem tem acesso ao sistema" },
+  "/admin/clientes": {
+    titulo: "Clientes",
+    contexto: "Quem recebe as entregas",
+  },
+  "/admin/motoristas": {
+    titulo: "Motoristas",
+    contexto: "Quem executa as rotas",
+  },
+  "/admin/veiculos": {
+    titulo: "Veículos",
+    contexto: "A frota disponível para o planejamento",
+  },
+  "/admin/bases": {
+    titulo: "Bases",
+    contexto: "De onde as rotas saem e para onde voltam",
+  },
   "/admin/configuracoes": {
     titulo: "Configurações",
     contexto: "Dados da empresa e parâmetros de planejamento",

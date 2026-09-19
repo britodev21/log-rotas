@@ -1,0 +1,84 @@
+/* Celula de identificacao usada por todas as telas de cadastro: nome em
+   destaque e uma linha secundaria abaixo (endereco, placa, telefone). */
+
+.identificacao {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  min-width: 0;
+}
+
+.identificacao__icone {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--r-md);
+  background: var(--superficie-3);
+  border: 1px solid var(--borda-suave);
+  color: var(--texto-3);
+}
+
+.identificacao__texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.identificacao__nome {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  font-weight: var(--p-500);
+  color: var(--texto);
+}
+
+.identificacao__detalhe {
+  font-size: var(--t-12);
+  color: var(--texto-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 42ch;
+}
+
+/* Placa tem leitura de codigo, nao de texto: monoespacada e com respiro
+   entre as letras, como aparece no proprio veiculo. */
+.placa {
+  display: inline-block;
+  padding: 1px var(--e-2);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-xs);
+  background: var(--superficie-2);
+  font-family: var(--fonte-mono);
+  font-size: var(--t-12);
+  letter-spacing: 0.06em;
+  color: var(--texto-2);
+}
+
+/* Lista de capacidades do veiculo; as nao informadas simplesmente nao
+   aparecem, em vez de mostrarem zero — que seria um numero inventado. */
+.capacidades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-1) var(--e-3);
+  font-size: var(--t-12);
+  color: var(--texto-3);
+}
+
+.capacidade {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.capacidade__unidade {
+  font-size: var(--t-11);
+  color: var(--texto-4);
+}
+
+.sem-dado {
+  color: var(--texto-4);
+}

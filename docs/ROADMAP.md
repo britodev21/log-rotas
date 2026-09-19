@@ -7,7 +7,7 @@ Uma fase por vez. Cada uma é entregável e testável sozinha, e termina num cri
 | 0 — Esqueleto do projeto | ✅ concluída |
 | 1 — Arquitetura | ✅ concluída |
 | 2 — Backend base, acesso e usuários | ✅ concluída |
-| 3 — Cadastros | ⬜ próxima |
+| 3 — Cadastros | 🟡 parcial — falta entregas |
 | 4 — Mapa e geocodificação | ⬜ |
 | 5 — Distância e tempo | ⬜ |
 | 6 — Otimização | ⬜ |
@@ -47,17 +47,33 @@ motorista recebe 403 em toda rota administrativa.
 
 ---
 
-## ⬜ Fase 3 — Cadastros
+## 🟡 Fase 3 — Cadastros
 
-Clientes, motoristas, veículos (com capacidade tipada), bases e entregas, com telas de
-listagem e filtros.
+**Entregue:** clientes, motoristas, veículos e bases — API, regras, migration, 35 testes e as
+quatro telas com busca, filtro, criação e edição.
 
-**Pronto quando:** o administrador cadastra tudo e lista entregas filtrando por status, data,
-prioridade e motorista.
+Regras que valem registro:
 
-**Depende de:** respostas sobre a operação da Britto — o que limita a carga (peso, volume ou
-comprimento), se a entrega inclui instalação e quanto tempo leva, quantas pessoas cada serviço
-exige. Ver [LIMITACOES.md](LIMITACOES.md) § 2.
+- a primeira base cadastrada vira a padrão sozinha, e marcar outra desmarca a anterior;
+  desativar uma base limpa o `is_default`, porque o planejador a ofereceria e falharia;
+- placa é normalizada (sem máscara, maiúscula) antes de gravar — `abc-1234` e `ABC1234` não
+  podem virar dois veículos;
+- as capacidades do veículo (peso, volume, comprimento, paradas) são **todas opcionais**,
+  porque ainda não se sabe qual limita a operação da Britto. Cada uma preenchida pode virar
+  restrição no solver da Fase 6; as vazias são ignoradas;
+- motorista existe sem acesso ao sistema (terceirizado), mas vincular um usuário administrador
+  a um perfil de motorista é recusado — ele passaria a aparecer como quem leva carga;
+- **trocar o endereço descarta a coordenada** e devolve o registro para a fila de
+  geocodificação. Sem essa regra, editar "Rua A, 100" para "Rua B, 500" manteria o pino na
+  Rua A e a rota seria calculada para o endereço errado, sem aviso. Coordenada informada à
+  mão vira `MANUAL` e a geocodificação automática nunca a sobrescreve.
+
+**Falta:** o cadastro de entregas.
+
+**Por que ficou para depois:** a entrega é a entidade que depende das respostas sobre a
+operação — o que limita a carga, se há instalação e quanto dura, quantas pessoas cada serviço
+exige. Modelá-la sobre suposição significaria acertar o schema da tabela que mais terá dados
+por sorte. Ver [LIMITACOES.md](LIMITACOES.md) § 2.
 
 ## ⬜ Fase 4 — Mapa e geocodificação
 

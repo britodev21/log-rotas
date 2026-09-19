@@ -7,9 +7,13 @@ import { DriverLayout } from "../layouts/DriverLayout";
 import { Login } from "../pages/Login";
 import { NotFound } from "../pages/NotFound";
 import { Setup } from "../pages/Setup";
+import { Bases } from "../pages/admin/Bases";
+import { Customers } from "../pages/admin/Customers";
 import { Dashboard } from "../pages/admin/Dashboard";
+import { Drivers } from "../pages/admin/Drivers";
 import { Settings } from "../pages/admin/Settings";
 import { Users } from "../pages/admin/Users";
+import { Vehicles } from "../pages/admin/Vehicles";
 import { DriverHome } from "../pages/driver/DriverHome";
 import { ProtectedRoute } from "./ProtectedRoute";
 
@@ -37,6 +41,10 @@ export function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="clientes" element={<Customers />} />
+        <Route path="motoristas" element={<Drivers />} />
+        <Route path="veiculos" element={<Vehicles />} />
+        <Route path="bases" element={<Bases />} />
         <Route path="usuarios" element={<Users />} />
         <Route path="configuracoes" element={<Settings />} />
       </Route>

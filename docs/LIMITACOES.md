@@ -7,7 +7,7 @@ A regra do projeto: quando houver limitação, ela aparece aqui, no código e na
 número estimado é apresentado como medido, e nenhuma ordenação simples é chamada de
 "otimização".
 
-Última atualização: **Fase 2**.
+Última atualização: **Fase 3** (cadastros).
 
 ---
 
@@ -15,7 +15,6 @@ número estimado é apresentado como medido, e nenhuma ordenação simples é ch
 
 | Funcionalidade | Fase prevista |
 |---|---|
-| Cadastro de clientes, motoristas, veículos e bases | 3 |
 | Cadastro de entregas | 3 |
 | Geocodificação de endereços | 4 |
 | Mapa da operação (Leaflet + OpenStreetMap) | 4 |
@@ -29,6 +28,12 @@ número estimado é apresentado como medido, e nenhuma ordenação simples é ch
 O painel administrativo mostra o andamento da implantação em vez de indicadores, e a tela do
 motorista diz que não há rota atribuída. Isso é intencional: uma tela com números de exemplo
 ensina a equipe a confiar em dado que não existe.
+
+**Sobre os endereços já cadastrados:** base e cliente aceitam endereço, mas ele ainda **não é
+convertido em coordenada** — isso é a Fase 4. Por isso cada registro exibe a etiqueta "Sem
+coordenada" na listagem, em vez de o sistema dar a entender que já sabe onde as coisas ficam.
+Quem quiser marcar a posição agora pode informar latitude e longitude direto pela API, e ela
+é respeitada como pino manual.
 
 ---
 
@@ -45,6 +50,10 @@ operação real da Britto. Enquanto não forem, qualquer cálculo que dependa de
 | Equipe por entrega | até 4 pessoas | Informado, ainda não modelado |
 | Volume diário de entregas | desconhecido | Sistema dimensionado para dezenas/dia |
 | Vínculo com pedido / nota fiscal | desconhecido | Campos opcionais previstos |
+
+O cadastro de veículos da Fase 3 já reflete essa incerteza: peso, volume, comprimento e número
+máximo de paradas são **todos opcionais**, e a tela diz para preencher apenas o que realmente
+limita a carga. Custo de estar errado sobre qual deles importa: uma coluna vazia.
 
 **Por que o tempo de parada importa tanto:** a operação é dentro de Campo Grande, com
 deslocamentos de 10 a 25 minutos entre paradas. Se a instalação leva 90 minutos, o tempo de

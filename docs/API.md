@@ -182,11 +182,91 @@ Todos os campos opcionais: `company_name`, `document`, `phone`, `email`, `timezo
 
 ---
 
+## Cadastros — somente `ADMIN`
+
+Os quatro cadastros expõem a mesma interface:
+
+| Método | Caminho | |
+|---|---|---|
+| `GET` | `/api/v1/{recurso}` | Lista. Filtros: `active` (bool), `search` (texto) |
+| `POST` | `/api/v1/{recurso}` | Cria |
+| `GET` | `/api/v1/{recurso}/{id}` | Detalhe |
+| `PATCH` | `/api/v1/{recurso}/{id}` | Altera; só os campos enviados |
+
+Recursos: `bases`, `veiculos`, `motoristas`, `clientes`.
+
+Nenhum registro é apagado — `active: false` desativa. O histórico de rotas vai depender
+desses registros, e apagar um veículo levaria junto a explicação de por que uma rota antiga
+foi montada daquele jeito.
+
+### Bases
+
+Campos: `name`, `address`, `phone`, `latitude`, `longitude`, `is_default`, `active`, `notes`.
+
+**Regras:**
+- a primeira base cadastrada vira a padrão automaticamente;
+- marcar uma como padrão desmarca a anterior — duas padrão deixariam o planejador sem critério;
+- desativar uma base limpa o `is_default`, porque ela seria oferecida por default e falharia.
+
+### Veículos
+
+Campos: `name`, `plate`, `model`, `capacity_weight_kg`, `capacity_volume_m3`,
+`capacity_length_m`, `max_stops`, `crew_size`, `active`, `notes`.
+
+**Regras:**
+- a placa é normalizada antes de gravar (sem máscara, em maiúsculas) e é única. Enviar
+  `abc-1234` quando já existe `ABC1234` devolve **409**;
+- formatos aceitos: `ABC1234` (antigo) e `ABC1D23` (Mercosul). Qualquer outro devolve **422**;
+- **todas as capacidades são opcionais.** Ainda não se sabe qual limita a operação da Britto,
+  e exigir qualquer uma obrigaria a inventar número. Cada uma preenchida poderá virar
+  restrição do otimizador; as vazias são ignoradas.
+
+### Motoristas
+
+Campos: `name`, `user_id`, `phone`, `document`, `license_number`, `license_expires_at`,
+`active`, `notes`.
+
+**Regras:**
+- `user_id` é opcional: motorista terceirizado, ou ainda sem acesso criado, existe
+  normalmente e já pode receber rota;
+- vincular um usuário com perfil `ADMIN` devolve **422** — ele passaria a aparecer como quem
+  leva carga;
+- o mesmo usuário não pode estar vinculado a dois motoristas (**409**);
+- `user_id` inexistente devolve **404**.
+
+### Clientes
+
+Campos: `name`, `phone`, `email`, `document`, `address`, `latitude`, `longitude`, `active`,
+`notes`.
+
+**Regras:**
+- `document` (CPF/CNPJ) é único quando informado, e a comparação ignora máscara. Vários
+  clientes podem ficar sem documento;
+- telefone e documento são guardados **apenas com dígitos** — guardar `(67) 99999-0000` e
+  `67999990000` como valores distintos tornaria qualquer busca pouco confiável.
+
+### Endereço e coordenada
+
+Vale para bases e clientes, e valerá para entregas.
+
+| Situação | O que acontece |
+|---|---|
+| Enviou `latitude` + `longitude` | `geocode_status` vira **`MANUAL`**, que a geocodificação automática nunca sobrescreve |
+| Alterou `address` sem coordenada | A coordenada antiga é **descartada** e o status volta para `PENDENTE` |
+| Alterou qualquer outro campo | Coordenada e status ficam como estão |
+| Enviou só uma das duas coordenadas | **422** — uma sem a outra não localiza nada |
+
+A segunda regra é a que evita rota calculada para o endereço errado: sem ela, editar
+"Rua A, 100" para "Rua B, 500" manteria o pino na Rua A sem nenhum aviso.
+
+Status possíveis: `PENDENTE`, `OK`, `AMBIGUO`, `FALHOU`, `MANUAL`.
+
+---
+
 ## Ainda não implementado
 
 | Recurso | Fase |
 |---|---|
-| `/clientes`, `/motoristas`, `/veiculos`, `/bases` | 3 |
 | `/entregas` | 3 |
 | `/geocodificacao` | 4 |
 | `/planejamento` (calcular, revisar, confirmar) | 7 |

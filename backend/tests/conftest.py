@@ -22,6 +22,9 @@ os.environ["DATABASE_URL"] = (
 )
 os.environ.setdefault("JWT_SECRET", "chave-de-teste-com-tamanho-suficiente-para-passar")
 os.environ.setdefault("ENVIRONMENT", "test")
+# Sem isto o .env com DEBUG=true faz o SQLAlchemy despejar todo o SQL no
+# relatorio, e a falha de verdade fica enterrada sob centenas de linhas.
+os.environ.setdefault("DEBUG", "false")
 
 from collections.abc import Iterator
 

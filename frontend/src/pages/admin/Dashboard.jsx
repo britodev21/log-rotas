@@ -28,7 +28,7 @@ const ETAPAS = [
   { nome: "Acesso, usuários e permissões", fase: "Fase 2", pronto: true },
   { nome: "Configuração da empresa", fase: "Fase 2", pronto: true },
   { nome: "Interface e sistema visual", fase: "Fase 2", pronto: true },
-  { nome: "Clientes, motoristas, veículos e bases", fase: "Fase 3", pronto: false },
+  { nome: "Clientes, motoristas, veículos e bases", fase: "Fase 3", pronto: true },
   { nome: "Entregas e geocodificação", fase: "Fases 3 e 4", pronto: false },
   { nome: "Entregas no mapa", fase: "Fase 4", pronto: false },
   { nome: "Distância e tempo reais", fase: "Fase 5", pronto: false },
