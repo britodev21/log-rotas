@@ -46,6 +46,35 @@ def chave_cache(endereco: str) -> str:
     return hashlib.sha256(normalizar_endereco(endereco).encode("utf-8")).hexdigest()
 
 
+def chave_lugar(place_id: str) -> str:
+    """Chave do cache para um lugar escolhido no Google.
+
+    O prefixo separa do cache por texto de endereco: as duas chaves vivem na
+    mesma tabela e nao podem colidir.
+    """
+    return hashlib.sha256(f"place:{place_id}".encode()).hexdigest()
+
+
+def guardar_lugar(session: Session, lugar) -> None:
+    """Registra o que o Google disse sobre um lugar escolhido.
+
+    E o que permite ao servidor, na hora de gravar a entrega, CONFERIR que
+    o ponto recebido e o mesmo que o Google devolveu e com que precisao —
+    em vez de acreditar no que o navegador diz. Ver `tirar_origem`.
+    """
+    chave = chave_lugar(lugar.place_id)
+    registro = session.get(GeocodeCache, chave) or GeocodeCache(address_hash=chave)
+    registro.normalized_address = f"place:{lugar.place_id}"[:255]
+    registro.provider = "google"
+    registro.status = GeocodeStatus.OK.value
+    registro.latitude = lugar.latitude
+    registro.longitude = lugar.longitude
+    registro.precision = lugar.precision.value
+    registro.display_name = (lugar.endereco_formatado or "")[:400] or None
+    registro.raw = {"tipo_ponto": lugar.tipo_ponto, "tipos": lugar.tipos}
+    session.add(registro)
+
+
 #: Adaptadores disponiveis.
 #:
 #: `nominatim` e gratuito e nao acha o numero da porta em Campo Grande --

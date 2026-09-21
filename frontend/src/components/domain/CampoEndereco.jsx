@@ -1,50 +1,55 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Marker, useMapEvents } from "react-leaflet";
-import { Check, Crosshair, MapPin, RotateCw } from "lucide-react";
+import { Check, CheckCircle2, Crosshair, MapPin, RotateCw } from "lucide-react";
 
 import { mensagemDeErro } from "../../api/client";
 import { geocodificacao as api } from "../../api/operacao";
 import { AjustarLimites, MapPanel } from "../map";
 import { Alert, Badge, Button, InputField, Spinner } from "../ui";
 import { useTheme } from "../../hooks/useTheme";
+import { BuscaEndereco } from "./BuscaEndereco";
 import "./CampoEndereco.css";
 
 /**
- * Entrada de endereço brasileiro: CEP, número, complemento e o ponto no mapa.
+ * Entrada de endereço e o ponto no mapa.
  *
- * O fluxo tem três passos e o terceiro é obrigatório:
+ * Dois caminhos, e a ordem importa:
  *
- *   1. CEP    → rua, bairro, cidade e UF vêm dos Correios, e o mapa pula
- *               para a quadra do trecho antes de qualquer digitação.
- *   2. Número → o sistema procura sozinho e põe um pino provisório.
- *   3. Você   → arrasta o pino até o portão e confirma.
+ *   1. Busca do Google (quando configurada). A pessoa digita, escolhe um
+ *      endereço que existe, e o ponto vem do cadastro do Google. Medido nos
+ *      mesmos oito endereços de Campo Grande: número certo em oito de oito.
  *
- * O passo 3 existe porque o passo 2 não é confiável em Campo Grande, e isso
- * foi medido, não suposto: o OpenStreetMap tem número de porta em cerca de
- * 530 prédios da cidade. Em oito endereços reais das avenidas principais,
- * com CEP conferido, o provedor acertou o número em ZERO.
+ *   2. CEP + número, pelo geocodificador gratuito. Continua existindo para
+ *      quando o Google não conhece o lugar (loteamento novo, chácara) ou não
+ *      está configurado. Aqui o número certo saiu em ZERO de oito — o
+ *      OpenStreetMap tem número de porta em cerca de 530 prédios da cidade —
+ *      e por isso o pino vale como provisório.
  *
- * Quer dizer que "Avenida Afonso Pena, 3000" vira um ponto qualquer de uma
- * avenida de 10 km. Mostrar isso com um selo verde de "localizado" — que é
- * o que esta tela fazia — é a forma mais eficiente de produzir entrega no
- * endereço errado: ninguém confere o que o sistema diz que já está certo.
+ * Em qualquer caminho, "achou o endereço" não é "o ponto é o portão". Só
+ * dispensa conferência o que o Google provou ser o telhado (ROOFTOP), e
+ * quem decide isso é o servidor, não esta tela. O resto pede um olhar no
+ * satélite e um clique — o planejamento recusa pino não conferido.
  *
- * Por isso o pino automático aparece como PROVISÓRIO, e só o que uma pessoa
- * marcou conta como confirmado. O planejamento recusa o resto
- * (app/services/precisao.py no backend).
- *
- * Devolve ao pai: endereço montado, CEP, coordenada e `ponto_confirmado`.
+ * Devolve ao pai: endereço montado, CEP, coordenada, `ponto_confirmado` e
+ * `google_place_id`.
  */
 
-/** Espera antes de consultar o provedor.
- *
- *  Não é enfeite: o Nominatim permite UMA requisição por segundo, e buscar
- *  a cada tecla digitada queimaria o limite e bloquearia o IP. */
+/** O Nominatim permite UMA requisição por segundo; buscar a cada tecla
+ *  queimaria o limite e bloquearia o IP. */
 const ESPERA_MS = 900;
-
-/** Abaixo disto o texto não identifica lugar nenhum e a busca só gastaria
- *  o limite do provedor. */
 const MINIMO_PARA_BUSCAR = 10;
+
+// Uma consulta por carregamento de página basta: o que está ligado no
+// servidor não muda enquanto a pessoa preenche formulários.
+let recursosEmCache = null;
+function carregarRecursos() {
+  recursosEmCache ??= api.recursos().catch((e) => {
+    console.error("Falha ao consultar recursos de geocodificação", e);
+    recursosEmCache = null;
+    return { autocomplete: false };
+  });
+  return recursosEmCache;
+}
 
 function CliqueNoMapa({ aoClicar }) {
   useMapEvents({ click: (e) => aoClicar([e.latlng.lat, e.latlng.lng]) });
@@ -56,8 +61,32 @@ function formatarCep(valor) {
   return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
 }
 
+const mesmoPonto = (a, b) =>
+  Boolean(a && b) && Math.abs(a[0] - b[0]) < 1e-6 && Math.abs(a[1] - b[1]) < 1e-6;
+
+function montarDoGoogle(lugar, complemento) {
+  if (!lugar.logradouro) {
+    // Estabelecimento ou lugar sem rua estruturada: o texto do Google é o
+    // melhor que há.
+    return [lugar.endereco_formatado, complemento || null].filter(Boolean).join(", ");
+  }
+  return [
+    lugar.numero ? `${lugar.logradouro}, ${lugar.numero}` : lugar.logradouro,
+    complemento || null,
+    lugar.bairro,
+    lugar.cidade && lugar.uf ? `${lugar.cidade} - ${lugar.uf}` : lugar.cidade,
+    lugar.cep,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
 export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
   const { tema } = useTheme();
+
+  const [recursos, setRecursos] = useState(null);
+  const [modoCep, setModoCep] = useState(false);
+  const [lugar, setLugar] = useState(null);
 
   const [cep, setCep] = useState(formatarCep(valor?.postal_code ?? ""));
   const [numero, setNumero] = useState("");
@@ -71,88 +100,128 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
   const [avisoMapa, setAvisoMapa] = useState("");
   const [candidatos, setCandidatos] = useState([]);
 
-  const [pino, setPino] = useState(
-    valor?.latitude != null ? [Number(valor.latitude), Number(valor.longitude)] : null,
-  );
+  const pontoInicial =
+    valor?.latitude != null ? [Number(valor.latitude), Number(valor.longitude)] : null;
+  const [pino, setPino] = useState(pontoInicial);
 
-  // Um registro já gravado como MANUAL chega confirmado: alguém marcou o
-  // ponto um dia, e pedir de novo a cada edição transformaria a proteção
-  // em burocracia.
+  // Registro já gravado como MANUAL chega confirmado; como EXATO, chega
+  // provado. Pedir de novo a cada edição transformaria a proteção em
+  // burocracia.
   const [confirmado, setConfirmado] = useState(valor?.geocode_status === "MANUAL");
+  const exatoSalvo = useRef(
+    valor?.geocode_precision === "EXATO" && valor?.geocode_status !== "MANUAL"
+      ? pontoInicial
+      : null,
+  );
 
   const aoMudarRef = useRef(aoMudar);
   aoMudarRef.current = aoMudar;
-
-  // Guarda o último endereço já procurado, para não repetir a consulta ao
-  // reabrir um registro que já tem pino.
   const jaLocalizado = useRef(valor?.latitude != null ? (valor?.address ?? "") : null);
 
-  const enderecoFinal = enderecoCep
-    ? [
-        enderecoCep.logradouro && numero
-          ? `${enderecoCep.logradouro}, ${numero}`
-          : enderecoCep.logradouro,
-        complemento || null,
-        enderecoCep.bairro,
-        `${enderecoCep.cidade} - ${enderecoCep.uf}`,
-        enderecoCep.cep_formatado,
-      ]
-        .filter(Boolean)
-        .join(", ")
-    : manual;
+  useEffect(() => {
+    let vivo = true;
+    carregarRecursos().then((r) => vivo && setRecursos(r));
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  const usarGoogle = Boolean(recursos?.autocomplete) && !modoCep;
+
+  const enderecoFinal = lugar
+    ? montarDoGoogle(lugar, complemento)
+    : enderecoCep
+      ? [
+          enderecoCep.logradouro && numero
+            ? `${enderecoCep.logradouro}, ${numero}`
+            : enderecoCep.logradouro,
+          complemento || null,
+          enderecoCep.bairro,
+          `${enderecoCep.cidade} - ${enderecoCep.uf}`,
+          enderecoCep.cep_formatado,
+        ]
+          .filter(Boolean)
+          .join(", ")
+      : manual;
+
+  const cepFinal = (lugar ? lugar.cep : cep)?.replace(/\D/g, "") || null;
+
+  const exatoGoogle =
+    Boolean(lugar) && lugar.precision === "EXATO" && mesmoPonto(pino, [lugar.latitude, lugar.longitude]);
+  const exato = !confirmado && (exatoGoogle || mesmoPonto(pino, exatoSalvo.current));
 
   useEffect(() => {
     aoMudarRef.current({
       address: enderecoFinal || null,
-      postal_code: cep.replace(/\D/g, "") || null,
+      postal_code: cepFinal,
       latitude: pino ? pino[0] : null,
       longitude: pino ? pino[1] : null,
       ponto_confirmado: confirmado,
+      // Só um identificador. Se o ponto é exato quem decide é o servidor,
+      // conferindo no próprio cache — esta tela não consegue afirmar isso.
+      google_place_id: lugar ? lugar.place_id : null,
     });
-  }, [enderecoFinal, cep, pino, confirmado]);
+  }, [enderecoFinal, cepFinal, pino, confirmado, lugar]);
 
-  /** Marca o ponto como posto por uma pessoa. */
+  /** Uma pessoa marcou ou conferiu o ponto. */
   const marcarAMao = useCallback((posicao) => {
     setPino(posicao);
     setConfirmado(true);
     setAvisoMapa("");
   }, []);
 
-  // ------------------------------------------------------------------ CEP
-  const buscarCep = useCallback(async (valorCep) => {
-    const digitos = String(valorCep).replace(/\D/g, "");
-    if (digitos.length !== 8) return;
+  // --------------------------------------------------------- Google
+  const aoEscolherNoGoogle = useCallback((escolhido) => {
+    setLugar(escolhido);
+    setEnderecoCep(null);
+    setCandidatos([]);
+    setAvisoMapa("");
+    setPino([escolhido.latitude, escolhido.longitude]);
+    setConfirmado(false);
+    exatoSalvo.current = null;
+  }, []);
 
-    setBuscandoCep(true);
-    setErroCep("");
-    try {
-      const dados = await api.cep(digitos);
-      setEnderecoCep(dados);
-      setManual("");
+  const aoGoogleFalhar = useCallback((mensagem) => {
+    // Chave recusada, cota, Google fora: o cadastro não pode parar por isso.
+    setModoCep(true);
+    setAvisoMapa(`${mensagem} Usando CEP por enquanto.`);
+  }, []);
 
-      // O CEP brasileiro é por TRECHO de rua, então esta coordenada já põe
-      // o mapa na quadra certa — antes mesmo do número. Ela entra como
-      // pino PROVISÓRIO: aponta a quadra, não a porta.
-      if (dados.latitude != null && !confirmado) {
-        setPino([dados.latitude, dados.longitude]);
+  // ------------------------------------------------------------ CEP
+  const buscarCep = useCallback(
+    async (valorCep) => {
+      const digitos = String(valorCep).replace(/\D/g, "");
+      if (digitos.length !== 8) return;
+
+      setBuscandoCep(true);
+      setErroCep("");
+      try {
+        const dados = await api.cep(digitos);
+        setEnderecoCep(dados);
+        setManual("");
+        // O CEP é por trecho de rua: esta coordenada põe o mapa na quadra
+        // certa antes do número. Entra como provisória — aponta a quadra,
+        // não a porta.
+        if (dados.latitude != null && !confirmado) {
+          setPino([dados.latitude, dados.longitude]);
+        }
+      } catch (e) {
+        console.error("Falha ao consultar CEP", e);
+        setEnderecoCep(null);
+        setErroCep(mensagemDeErro(e, "CEP não encontrado."));
+      } finally {
+        setBuscandoCep(false);
       }
-    } catch (e) {
-      console.error("Falha ao consultar CEP", e);
-      setEnderecoCep(null);
-      setErroCep(mensagemDeErro(e, "CEP não encontrado."));
-    } finally {
-      setBuscandoCep(false);
-    }
-  }, [confirmado]);
+    },
+    [confirmado],
+  );
 
   useEffect(() => {
+    if (usarGoogle || lugar) return;
     const digitos = cep.replace(/\D/g, "");
-    if (digitos.length === 8 && digitos !== enderecoCep?.cep) {
-      buscarCep(digitos);
-    }
-  }, [cep, enderecoCep, buscarCep]);
+    if (digitos.length === 8 && digitos !== enderecoCep?.cep) buscarCep(digitos);
+  }, [cep, enderecoCep, buscarCep, usarGoogle, lugar]);
 
-  // ---------------------------------------------------------------- Mapa
   const localizar = useCallback(async (texto) => {
     if (!texto || texto.trim().length < MINIMO_PARA_BUSCAR) return;
 
@@ -162,23 +231,14 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
     try {
       const resultado = await api.buscar(texto.trim());
       jaLocalizado.current = texto;
-
       if (resultado.candidatos.length === 0) {
-        setAvisoMapa(
-          "Não encontramos este endereço. Clique no mapa para marcar o ponto.",
-        );
+        setAvisoMapa("Não encontramos este endereço. Clique no mapa para marcar o ponto.");
         return;
       }
-
       const [primeiro] = resultado.candidatos;
       setPino([primeiro.latitude, primeiro.longitude]);
       setConfirmado(false);
-
-      if (resultado.candidatos.length > 1) {
-        // Mais de um lugar possível: o mapa vai para o primeiro, mas a
-        // lista fica visível. Quem escolhe é a pessoa.
-        setCandidatos(resultado.candidatos);
-      }
+      if (resultado.candidatos.length > 1) setCandidatos(resultado.candidatos);
     } catch (e) {
       console.error("Falha ao localizar endereço", e);
       setAvisoMapa(mensagemDeErro(e, "Não foi possível consultar o mapa agora."));
@@ -187,67 +247,128 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
     }
   }, []);
 
-  /**
-   * Localização automática: terminou de digitar, o pino provisório aparece.
-   *
-   * Não roda quando o ponto já foi confirmado à mão — mover um pino que
-   * alguém conferiu seria desfazer trabalho humano com um palpite.
-   */
+  // Localização automática do caminho por CEP. Não roda no caminho do
+  // Google — lá o ponto já veio da escolha — nem sobre ponto conferido.
   useEffect(() => {
+    if (usarGoogle || lugar || confirmado) return undefined;
     const texto = enderecoFinal?.trim() ?? "";
-    if (texto.length < MINIMO_PARA_BUSCAR) return;
-    if (texto === jaLocalizado.current) return;
-    if (confirmado) return;
-
+    if (texto.length < MINIMO_PARA_BUSCAR || texto === jaLocalizado.current) return undefined;
     const id = setTimeout(() => localizar(texto), ESPERA_MS);
     return () => clearTimeout(id);
-  }, [enderecoFinal, localizar, confirmado]);
+  }, [enderecoFinal, localizar, confirmado, usarGoogle, lugar]);
+
+  function trocarParaCep() {
+    setModoCep(true);
+    setLugar(null);
+  }
+
+  function voltarParaGoogle() {
+    setModoCep(false);
+    setEnderecoCep(null);
+    setAvisoMapa("");
+    setCandidatos([]);
+  }
 
   const semPino = !pino;
   const estaProcurando = buscandoCep || localizando;
-  const precisaConfirmar = Boolean(pino) && !confirmado;
+  const precisaConfirmar = Boolean(pino) && !confirmado && !exato;
+
+  let motivoConfirmacao;
+  if (lugar && lugar.tipo_ponto === "RANGE_INTERPOLATED") {
+    motivoConfirmacao =
+      "O Google achou o número, mas o ponto é estimado entre as casas da quadra.";
+  } else if (lugar && !lugar.numero) {
+    motivoConfirmacao =
+      "Este resultado não tem número. Digite o número na busca ou marque o portão no mapa.";
+  } else if (lugar) {
+    motivoConfirmacao =
+      "O Google achou o endereço, mas não garantiu que o ponto é o do prédio.";
+  } else {
+    motivoConfirmacao =
+      "Ele veio do CEP ou da busca gratuita, que em Campo Grande acertam a rua mas quase nunca o número.";
+  }
+
+  if (recursos === null) {
+    return (
+      <div className="endereco endereco--carregando">
+        <Spinner tamanho={14} />
+        <span className="texto-3">Preparando a busca de endereço...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="endereco">
-      <div className="endereco__linha">
-        <div className="endereco__cep">
-          <InputField
-            label="CEP"
-            placeholder="79000-000"
-            inputMode="numeric"
-            value={cep}
-            onChange={(e) => setCep(formatarCep(e.target.value))}
-            erro={erroCep}
+      {usarGoogle ? (
+        <>
+          <BuscaEndereco
+            valorInicial={valor?.address ?? ""}
+            aoEscolher={aoEscolherNoGoogle}
+            aoFalhar={aoGoogleFalhar}
           />
-        </div>
-        <div className="endereco__numero">
-          <InputField
-            label="Número"
-            inputMode="numeric"
-            value={numero}
-            onChange={(e) => setNumero(e.target.value)}
-            disabled={!enderecoCep}
-          />
-        </div>
-        <div className="endereco__complemento">
-          <InputField
-            label="Complemento"
-            placeholder="Apto, bloco, fundos"
-            value={complemento}
-            onChange={(e) => setComplemento(e.target.value)}
-            disabled={!enderecoCep}
-          />
-        </div>
-      </div>
+          <div className="endereco__linha endereco__linha--google">
+            <div className="endereco__complemento">
+              <InputField
+                label="Complemento"
+                placeholder="Apto, bloco, fundos"
+                value={complemento}
+                onChange={(e) => setComplemento(e.target.value)}
+              />
+            </div>
+            <button type="button" className="endereco__troca" onClick={trocarParaCep}>
+              Não achou? Buscar pelo CEP
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="endereco__linha">
+            <div className="endereco__cep">
+              <InputField
+                label="CEP"
+                placeholder="79000-000"
+                inputMode="numeric"
+                value={cep}
+                onChange={(e) => setCep(formatarCep(e.target.value))}
+                erro={erroCep}
+              />
+            </div>
+            <div className="endereco__numero">
+              <InputField
+                label="Número"
+                inputMode="numeric"
+                value={numero}
+                onChange={(e) => setNumero(e.target.value)}
+                disabled={!enderecoCep}
+              />
+            </div>
+            <div className="endereco__complemento">
+              <InputField
+                label="Complemento"
+                placeholder="Apto, bloco, fundos"
+                value={complemento}
+                onChange={(e) => setComplemento(e.target.value)}
+                disabled={!enderecoCep}
+              />
+            </div>
+          </div>
 
-      {!enderecoCep && !buscandoCep && (
-        <InputField
-          label="Ou digite o endereço completo"
-          placeholder="Rua, número, bairro, cidade"
-          value={manual}
-          onChange={(e) => setManual(e.target.value)}
-          ajuda="Use quando não souber o CEP. O resultado costuma ser menos preciso."
-        />
+          {!enderecoCep && !buscandoCep && (
+            <InputField
+              label="Ou digite o endereço completo"
+              placeholder="Rua, número, bairro, cidade"
+              value={manual}
+              onChange={(e) => setManual(e.target.value)}
+              ajuda="Use quando não souber o CEP. O resultado costuma ser menos preciso."
+            />
+          )}
+
+          {recursos?.autocomplete && (
+            <button type="button" className="endereco__troca" onClick={voltarParaGoogle}>
+              Voltar para a busca do Google
+            </button>
+          )}
+        </>
       )}
 
       {/* Uma linha só, que troca de conteúdo conforme o estado. Empilhar
@@ -263,14 +384,16 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
             <MapPin size={13} strokeWidth={2} aria-hidden="true" />
             <span className="endereco__texto">{enderecoFinal}</span>
             {pino && (
-              <Badge tom={confirmado ? "sucesso" : "atencao"} ponto>
-                {confirmado ? "ponto confirmado" : "provisório"}
+              <Badge tom={confirmado || exato ? "sucesso" : "atencao"} ponto>
+                {confirmado ? "ponto confirmado" : exato ? "ponto exato" : "provisório"}
               </Badge>
             )}
           </>
         ) : (
           <span className="texto-3">
-            Comece pelo CEP — rua, bairro e cidade vêm automaticamente.
+            {usarGoogle
+              ? "Digite o endereço e escolha na lista — o ponto vem junto."
+              : "Comece pelo CEP — rua, bairro e cidade vêm automaticamente."}
           </span>
         )}
       </div>
@@ -330,16 +453,25 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
         )}
       </div>
 
-      {/* O pedido de confirmação é o centro desta tela, não um rodapé.
-          Diz o que fazer, por que, e o que acontece se não fizer. */}
+      {/* O pedido de confirmação é o centro desta tela, não um rodapé. Diz o
+          que aconteceu, o que fazer e o que acontece se não fizer. */}
       {precisaConfirmar && (
         <div className="endereco__confirmar">
           <Crosshair size={16} strokeWidth={2} aria-hidden="true" />
-          <div>
-            <strong>Este pino é provisório.</strong> Ele veio do CEP ou da busca, que
-            em Campo Grande acertam a rua mas quase nunca o número.{" "}
-            <strong>Arraste o pino até o portão</strong> — use o botão Satélite para
-            enxergar o prédio. Sem confirmar, esta entrega não entra no planejamento.
+          <div className="endereco__confirmar-texto">
+            <p>
+              <strong>Confira o ponto.</strong> {motivoConfirmacao} Ligue o{" "}
+              <strong>Satélite</strong>, veja se o pino está no portão e arraste se precisar.
+              Sem conferir, esta entrega não entra no planejamento.
+            </p>
+            <Button
+              variante="secundario"
+              tamanho="sm"
+              icone={CheckCircle2}
+              onClick={() => marcarAMao(pino)}
+            >
+              Conferi — o ponto está no portão
+            </Button>
           </div>
         </div>
       )}
@@ -347,10 +479,12 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
       <div className="endereco__rodape">
         <span className="texto-3">
           {confirmado
-            ? "Ponto confirmado. A busca automática não mexe mais nele."
-            : "Clique no mapa ou arraste o pino para confirmar."}
+            ? "Ponto conferido por você. A busca automática não mexe mais nele."
+            : exato
+              ? "O Google confirmou que este é o ponto do prédio. Arraste só se souber que o portão é outro."
+              : "Clique no mapa ou arraste o pino para marcar o portão."}
         </span>
-        {enderecoFinal && !confirmado && (
+        {!usarGoogle && enderecoFinal && !confirmado && (
           <Button
             variante="texto"
             tamanho="sm"

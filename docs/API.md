@@ -297,6 +297,9 @@ Transição impossível responde **409** dizendo quais status eram possíveis.
 | `GET` | `/api/v1/geocodificacao/pendentes` | Fila de revisão |
 | `GET` | `/api/v1/geocodificacao/cep/{cep}` | Endereço dos Correios |
 | `GET` | `/api/v1/geocodificacao/buscar?endereco=...` | Candidatos para o mapa |
+| `GET` | `/api/v1/geocodificacao/recursos` | O que está ligado (`autocomplete`) |
+| `GET` | `/api/v1/geocodificacao/sugestoes?texto=...&sessao=...` | Sugestões do Google |
+| `GET` | `/api/v1/geocodificacao/lugar/{place_id}?sessao=...` | Detalhe do lugar escolhido |
 | `POST` | `/api/v1/geocodificacao/testar?endereco=...` | Consulta sem gravar |
 | `POST` | `/api/v1/geocodificacao/lote` | Processa uma fila |
 | `POST` | `/api/v1/geocodificacao/{tipo}/{id}` | Geocodifica um registro |
@@ -307,6 +310,29 @@ Transição impossível responde **409** dizendo quais status eram possíveis.
 > **A ordem desta tabela é a ordem do código, e isso importa.** `/{tipo}/{id}` casa com
 > qualquer coisa de dois segmentos, inclusive `/cep/79002000`. Registrar a rota genérica
 > antes das fixas devolve **405** num caminho que existe. Há teste de regressão para as duas.
+
+### Busca do Google: `/sugestoes` e `/lugar/{place_id}`
+
+`sessao` é um token gerado no navegador (UUID) e repetido em todas as chamadas de uma mesma
+busca: o Google cobra a digitação e a escolha como uma sessão só. A chamada ao Google sai do
+servidor; a chave nunca chega ao navegador.
+
+`/lugar` devolve logradouro, número, bairro, cidade, UF, CEP, coordenada, `precision` e
+`tipo_ponto` (`ROOFTOP`, `RANGE_INTERPOLATED`... ou `null` quando a Geocoding API não
+respondeu). E grava o resultado em cache — é contra ele que o servidor confere, ao salvar,
+se a coordenada recebida com `google_place_id` é a que o Google devolveu.
+
+Sem `GOOGLE_MAPS_API_KEY`, `/sugestoes` e `/lugar` respondem **503** com a instrução.
+
+### Gravar a origem do ponto
+
+Entregas, clientes e bases aceitam, junto com `latitude`/`longitude`:
+
+| Campo | Efeito |
+|---|---|
+| `ponto_confirmado: true` | Uma pessoa marcou ou conferiu o ponto → `MANUAL` |
+| `google_place_id` | O servidor procura o lugar no cache; se a coordenada for a mesma, grava a precisão que o Google provou |
+| nenhum dos dois | Coordenada gravada como aproximada (`RUA`) — o planejamento recusa |
 
 ### `GET /cep/{cep}`
 

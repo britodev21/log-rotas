@@ -60,6 +60,7 @@ export function Customers() {
         latitude: cliente.latitude,
         longitude: cliente.longitude,
         geocode_status: cliente.geocode_status,
+        geocode_precision: cliente.geocode_precision,
       });
       setModal(cliente);
     } else {
@@ -87,6 +88,7 @@ export function Customers() {
       latitude: endereco.latitude ?? null,
       longitude: endereco.longitude ?? null,
       ponto_confirmado: Boolean(endereco.ponto_confirmado),
+      google_place_id: endereco.google_place_id || null,
       notes: form.notes || null,
     };
 

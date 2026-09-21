@@ -71,6 +71,7 @@ export function ModalEntrega({ alvo, clientes, dataPadrao, onFechar, onSalvo }) 
             latitude: alvo.latitude,
             longitude: alvo.longitude,
             geocode_status: alvo.geocode_status,
+            geocode_precision: alvo.geocode_precision,
           }
         : {},
     );
@@ -100,6 +101,7 @@ export function ModalEntrega({ alvo, clientes, dataPadrao, onFechar, onSalvo }) 
       // linha o backend guardaria o palpite do geocodificador como MANUAL,
       // e a entrega entraria em rota apontando para a quadra errada.
       ponto_confirmado: Boolean(endereco.ponto_confirmado),
+      google_place_id: endereco.google_place_id || null,
       description: form.description || null,
       order_number: form.order_number || null,
       weight_kg: numeroOuNulo(form.weight_kg),

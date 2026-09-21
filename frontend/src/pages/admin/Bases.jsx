@@ -56,6 +56,7 @@ export function Bases() {
         latitude: base.latitude,
         longitude: base.longitude,
         geocode_status: base.geocode_status,
+        geocode_precision: base.geocode_precision,
       });
       setModal(base);
     } else {
@@ -80,6 +81,7 @@ export function Bases() {
       latitude: endereco.latitude ?? null,
       longitude: endereco.longitude ?? null,
       ponto_confirmado: Boolean(endereco.ponto_confirmado),
+      google_place_id: endereco.google_place_id || null,
       phone: form.phone || null,
       notes: form.notes || null,
     };

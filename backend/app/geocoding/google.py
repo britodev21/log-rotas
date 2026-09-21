@@ -76,10 +76,15 @@ class GoogleProvider:
     nome = "google"
 
     def __init__(self, *, chave: str | None = None) -> None:
-        self.chave = chave or get_settings().geocoding_provider_key
+        settings = get_settings()
+        # Uma chave do Google serve para tudo; a especifica tem prioridade.
+        self.chave = (
+            chave or settings.geocoding_provider_key or settings.google_maps_api_key
+        )
         if not self.chave:
             raise ValueError(
-                "GEOCODING_PROVIDER=google exige GEOCODING_PROVIDER_KEY no .env."
+                "GEOCODING_PROVIDER=google exige GEOCODING_PROVIDER_KEY "
+                "ou GOOGLE_MAPS_API_KEY no .env."
             )
 
     def buscar(self, endereco: str, limite: int = 5) -> list[Candidato]:

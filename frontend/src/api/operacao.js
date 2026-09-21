@@ -35,6 +35,21 @@ export const painel = {
 
 // --- Geocodificacao --------------------------------------------------------
 export const geocodificacao = {
+  // O que esta ligado no servidor. Hoje: se a busca do Google existe.
+  recursos: () => api.get("/geocodificacao/recursos").then((r) => r.data),
+
+  // Busca com sugestoes (Google Places). A chamada ao Google sai do
+  // servidor; a chave nunca chega ao navegador. `sessao` agrupa a digitacao
+  // e a escolha numa cobranca so.
+  sugestoes: (texto, sessao, config = {}) =>
+    api
+      .get("/geocodificacao/sugestoes", { params: { texto, sessao }, ...config })
+      .then((r) => r.data),
+  lugar: (placeId, sessao) =>
+    api
+      .get(`/geocodificacao/lugar/${encodeURIComponent(placeId)}`, { params: { sessao } })
+      .then((r) => r.data),
+
   // CEP dos Correios: traz logradouro, bairro, cidade e UF normalizados.
   cep: (cep, numero) =>
     api

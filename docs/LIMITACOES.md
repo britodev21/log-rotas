@@ -183,6 +183,37 @@ resolve. Todos leem o mesmo OpenStreetMap. O problema é o dado, não o provedor
 **O custo honesto:** hoje, praticamente todo endereço novo exige um clique de confirmação.
 Isso não é burocracia inventada; é o preço de não ter o dado.
 
+### Busca com sugestões do Google (ligada)
+
+Com `GOOGLE_MAPS_API_KEY` no `.env`, o cadastro de endereço vira o campo do Google Maps: a
+pessoa digita, o Google sugere endereços que existem, ela escolhe um.
+
+Medido em 21/09/2026, nos **mesmos oito endereços** em que o Nominatim acertou o número em
+zero:
+
+| | Nominatim | Google Places |
+|---|---|---|
+| Número certo em Campo Grande | 0 de 8 | **8 de 8** |
+
+O pino do Nominatim ficava de **900 m a 2,3 km** do ponto do Google em sete dos oito.
+
+**Achar o endereço não é provar o portão.** O Places diz onde fica o lugar, mas não se o ponto é
+o telhado ou uma estimativa entre as casas da quadra. Quem diz é a Geocoding API
+(`location_type`). Só `ROOFTOP` dispensa conferência — e quem decide isso é o **servidor**,
+conferindo no próprio cache que a coordenada gravada é a mesma que o Google devolveu. O
+navegador manda só o `place_id`; não consegue afirmar "é exato".
+
+**Enquanto a Geocoding API não estiver ativada no projeto do Google**, nenhum ponto vira
+exato: todo endereço escolhido pede um clique de conferência. O pino já começa no lugar certo,
+então a conferência é um olhar no satélite e o botão "Conferi — o ponto está no portão".
+
+**Tempo:** a primeira sugestão depois de o servidor subir leva ~2 s (abertura da conexão com o
+Google); as seguintes, 250 a 700 ms. Antes de reaproveitar a conexão, **todas** levavam ~2 s —
+o aperto de mão TLS a cada tecla.
+
+**Custo:** o token de sessão agrupa a digitação e a escolha numa cobrança só. Ainda assim é
+serviço pago por uso; ponha cota diária e alerta de orçamento no console.
+
 ### Trocar por um provedor que acha o número
 
 Os adaptadores de **Google** e **HERE** já estão escritos (`app/geocoding/google.py` e

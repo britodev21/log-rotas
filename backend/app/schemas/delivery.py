@@ -47,6 +47,10 @@ class _DeliveryBase(BaseModel):
     #: planejada para um ponto qualquer de uma avenida de 10 km.
     #: A barreira esta em app/services/precisao.py.
     ponto_confirmado: bool = False
+    #: Lugar escolhido na busca do Google. So um identificador: a precisao
+    #: quem decide e o servidor, conferindo no proprio cache que a
+    #: coordenada e a mesma que o Google devolveu.
+    google_place_id: str | None = Field(default=None, max_length=300)
 
     weight_kg: Medida = None
     volume_m3: Medida = None

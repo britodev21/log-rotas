@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.core.enums import DeliveryStatus, FailureReason, GeocodeStatus
+from app.core.enums import DeliveryStatus, FailureReason, GeocodePrecision, GeocodeStatus
 from app.core.errors import NotFoundError, ValidationError
 from app.models.delivery import Delivery
 from app.models.delivery_event import DeliveryEvent
@@ -20,7 +20,7 @@ from app.services import status_machine
 from app.services.cadastros_service import (
     _aplicar,
     _reavaliar_geocodificacao,
-    tirar_confirmacao,
+    tirar_origem,
 )
 
 logger = logging.getLogger(__name__)
@@ -78,10 +78,10 @@ class DeliveryService:
     def criar(self, payload: DeliveryCreate, *, actor: User | None = None) -> Delivery:
         dados = payload.model_dump()
         self._herdar_do_cliente(dados)
-        confirmado = tirar_confirmacao(dados)
+        origem = tirar_origem(self.session, dados)
 
         entrega = Delivery(**dados, status=DeliveryStatus.PENDENTE.value)
-        _reavaliar_geocodificacao(entrega, dados, confirmado)
+        _reavaliar_geocodificacao(entrega, dados, origem)
 
         self.repo.add(entrega)
         self._registrar(entrega, None, DeliveryStatus.PENDENTE.value, actor=actor)
@@ -95,7 +95,7 @@ class DeliveryService:
     ) -> Delivery:
         entrega = self.get(delivery_id)
         dados = payload.model_dump(exclude_unset=True)
-        confirmado = tirar_confirmacao(dados)
+        origem = tirar_origem(self.session, dados)
 
         # Trava explicita, com mensagem que diz o que fazer. Deixar passar
         # mudaria o peso de uma carga que ja esta no caminhao.
@@ -110,10 +110,10 @@ class DeliveryService:
 
         if "customer_id" in dados:
             self._herdar_do_cliente(dados, forcar=False)
-            confirmado = confirmado or tirar_confirmacao(dados)
+            origem = origem.ou(tirar_origem(self.session, dados))
 
         _aplicar(entrega, dados)
-        _reavaliar_geocodificacao(entrega, dados, confirmado)
+        _reavaliar_geocodificacao(entrega, dados, origem)
 
         self.session.commit()
         return entrega
@@ -179,6 +179,11 @@ class DeliveryService:
                 # cliente recorrente voltaria para a fila toda semana.
                 if cliente.geocode_status == GeocodeStatus.MANUAL.value:
                     dados["ponto_confirmado"] = True
+                elif cliente.geocode_precision == GeocodePrecision.EXATO.value:
+                    # O Google provou o ponto do cliente; a entrega herda a
+                    # prova junto com a coordenada.
+                    dados["_precisao_herdada"] = cliente.geocode_precision
+                    dados["_provedor_herdado"] = cliente.geocode_provider
 
         if forcar and not dados.get("recipient_name"):
             dados["recipient_name"] = cliente.name

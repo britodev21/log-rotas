@@ -94,6 +94,10 @@
   position: relative;
   border-radius: var(--r-md);
   overflow: hidden;
+  /* Contém o z-index do aviso de mapa vazio (400) aqui dentro. Sem isto
+     ele competia com a lista de sugestões da busca, que flutua por cima do
+     mapa, e ganhava: o aviso aparecia desenhado sobre os endereços. */
+  isolation: isolate;
 }
 
 /* Sem ponto, o mapa nao fica so um retangulo mudo: ele diz o que vai
@@ -152,4 +156,58 @@
 .endereco__confirmar strong {
   color: var(--texto);
   font-weight: 650;
+}
+
+/* --- Caminho do Google ---------------------------------------------------- */
+
+.endereco--carregando {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--e-2);
+}
+
+/* Complemento com a sobra, e o atalho para o CEP alinhado à base do campo. */
+.endereco__linha--google {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.endereco__troca {
+  align-self: flex-start;
+  padding: var(--e-2) 0;
+  font-size: var(--t-sm);
+  font-weight: 500;
+  color: var(--marca);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.endereco__troca:hover {
+  color: var(--texto);
+}
+
+.endereco__troca:focus-visible {
+  outline: 2px solid var(--marca);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+.endereco__confirmar-texto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--e-3);
+}
+
+.endereco__confirmar-texto p {
+  margin: 0;
+}
+
+@media (max-width: 560px) {
+  .endereco__linha--google {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

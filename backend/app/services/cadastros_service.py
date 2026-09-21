@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.core.enums import GeocodePrecision, GeocodeStatus, Role
 from app.core.errors import ConflictError, NotFoundError, ValidationError
+from app.geocoding.service import chave_lugar
 from app.models.base_location import BaseLocation
 from app.models.customer import Customer
 from app.models.driver import Driver
+from app.models.geocode_cache import GeocodeCache
 from app.models.vehicle import Vehicle
 from app.repositories.cadastros_repository import (
     BaseLocationRepository,
@@ -47,17 +51,70 @@ def _aplicar(registro: Any, dados: dict[str, Any], *, ignorar: set[str] | None =
             setattr(registro, campo, valor)
 
 
-def tirar_confirmacao(dados: dict[str, Any]) -> bool:
-    """Retira `ponto_confirmado` do dicionario, porque nao e coluna.
+@dataclass(frozen=True)
+class OrigemDoPonto:
+    """De onde veio a coordenada recebida, ja conferido pelo servidor."""
 
-    Fica separado para ser chamado ANTES de `Modelo(**dados)`, que recusaria
-    a chave.
+    #: Uma pessoa marcou o ponto no mapa.
+    confirmado: bool = False
+    #: Precisao que o SERVIDOR conseguiu provar (cache do Google ou cliente
+    #: herdado). Nunca vem direto do navegador.
+    precisao: str | None = None
+    provedor: str | None = None
+
+    def ou(self, outra: OrigemDoPonto) -> OrigemDoPonto:
+        return self if (self.confirmado or self.precisao) else outra
+
+
+#: Uma coordenada so conta como "a mesma que o Google devolveu" se bater ate
+#: a quinta casa decimal (~1 m). O banco guarda seis.
+_TOLERANCIA_GRAUS = 1e-5
+
+
+def tirar_origem(session: Session, dados: dict[str, Any]) -> OrigemDoPonto:
+    """Retira do payload o que nao e coluna e decide a origem do ponto.
+
+    Precisa rodar ANTES de `Modelo(**dados)`, que recusaria as chaves.
+
+    O navegador pode dizer "escolhi este lugar no Google" (`google_place_id`),
+    mas nao pode dizer "e exato". Quem diz e o servidor: procura o lugar no
+    proprio cache — gravado quando o Google respondeu — e so aceita a
+    precisao de la se a coordenada recebida for a MESMA. Se a pessoa mexeu
+    no pino, isso e `ponto_confirmado`, e vale mais.
+
+    Sem essa conferencia, qualquer cliente da API poderia gravar uma
+    coordenada qualquer como EXATO e passar pela barreira do planejamento.
     """
-    return bool(dados.pop("ponto_confirmado", False))
+    confirmado = bool(dados.pop("ponto_confirmado", False))
+    place_id = dados.pop("google_place_id", None)
+    precisao_herdada = dados.pop("_precisao_herdada", None)
+    provedor_herdado = dados.pop("_provedor_herdado", None)
+
+    if confirmado:
+        return OrigemDoPonto(confirmado=True)
+
+    lat, lon = dados.get("latitude"), dados.get("longitude")
+    if lat is None or lon is None:
+        return OrigemDoPonto()
+
+    if place_id:
+        registro = session.get(GeocodeCache, chave_lugar(place_id))
+        if (
+            registro is not None
+            and registro.latitude is not None
+            and abs(float(registro.latitude) - float(lat)) <= _TOLERANCIA_GRAUS
+            and abs(float(registro.longitude) - float(lon)) <= _TOLERANCIA_GRAUS
+        ):
+            return OrigemDoPonto(precisao=registro.precision, provedor="google")
+
+    if precisao_herdada:
+        return OrigemDoPonto(precisao=precisao_herdada, provedor=provedor_herdado)
+
+    return OrigemDoPonto()
 
 
 def _reavaliar_geocodificacao(
-    registro: Any, dados: dict[str, Any], confirmado: bool = False
+    registro: Any, dados: dict[str, Any], origem: OrigemDoPonto | None = None
 ) -> None:
     """Mantem coordenada e endereco coerentes entre si.
 
@@ -89,17 +146,22 @@ def _reavaliar_geocodificacao(
     )
     mudou_endereco = "address" in dados
 
+    origem = origem or OrigemDoPonto()
+
     if informou_coordenada:
-        if confirmado:
+        if origem.confirmado:
             registro.geocode_status = GeocodeStatus.MANUAL.value
             registro.geocode_precision = None
+            registro.geocode_provider = None
         else:
-            # RUA e o piso honesto: sem saber a origem, tratar como
-            # aproximado. Errar para "impreciso" custa uma confirmacao;
-            # errar para "exato" custa uma entrega.
+            # Sem precisao provada pelo servidor, RUA e o piso honesto.
+            # Errar para "impreciso" custa uma confirmacao; errar para
+            # "exato" custa uma entrega.
             registro.geocode_status = GeocodeStatus.OK.value
-            registro.geocode_precision = GeocodePrecision.RUA.value
-        registro.geocode_provider = None
+            registro.geocode_precision = origem.precisao or GeocodePrecision.RUA.value
+            registro.geocode_provider = origem.provedor
+            if origem.provedor:
+                registro.geocoded_at = datetime.now(UTC)
         registro.geocode_error = None
         return
 
@@ -132,7 +194,7 @@ class BaseLocationService:
 
     def criar(self, payload: BaseLocationCreate) -> BaseLocation:
         dados = payload.model_dump()
-        confirmado = tirar_confirmacao(dados)
+        origem = tirar_origem(self.session, dados)
         # A primeira base cadastrada vira padrao sozinha: um sistema com uma
         # unica base e nenhuma marcada como padrao so geraria atrito no
         # planejador, sem informar nada.
@@ -140,7 +202,7 @@ class BaseLocationService:
         dados["is_default"] = dados["is_default"] or primeira
 
         base = BaseLocation(**dados)
-        _reavaliar_geocodificacao(base, dados, confirmado)
+        _reavaliar_geocodificacao(base, dados, origem)
 
         if base.is_default:
             self.repo.limpar_padrao()
@@ -153,10 +215,10 @@ class BaseLocationService:
     def atualizar(self, base_id: int, payload: BaseLocationUpdate) -> BaseLocation:
         base = self.get(base_id)
         dados = payload.model_dump(exclude_unset=True)
-        confirmado = tirar_confirmacao(dados)
+        origem = tirar_origem(self.session, dados)
 
         _aplicar(base, dados)
-        _reavaliar_geocodificacao(base, dados, confirmado)
+        _reavaliar_geocodificacao(base, dados, origem)
 
         # Base inativa nao pode continuar sendo a padrao: o planejador a
         # ofereceria por default e falharia ao montar a rota.
@@ -295,11 +357,11 @@ class CustomerService:
 
     def criar(self, payload: CustomerCreate) -> Customer:
         dados = payload.model_dump()
-        confirmado = tirar_confirmacao(dados)
+        origem = tirar_origem(self.session, dados)
         self._garantir_documento_livre(dados.get("document"))
 
         cliente = Customer(**dados)
-        _reavaliar_geocodificacao(cliente, dados, confirmado)
+        _reavaliar_geocodificacao(cliente, dados, origem)
 
         self.repo.add(cliente)
         self.session.commit()
@@ -309,13 +371,13 @@ class CustomerService:
     def atualizar(self, customer_id: int, payload: CustomerUpdate) -> Customer:
         cliente = self.get(customer_id)
         dados = payload.model_dump(exclude_unset=True)
-        confirmado = tirar_confirmacao(dados)
+        origem = tirar_origem(self.session, dados)
 
         if "document" in dados and dados["document"] != cliente.document:
             self._garantir_documento_livre(dados["document"], excluir_id=cliente.id)
 
         _aplicar(cliente, dados)
-        _reavaliar_geocodificacao(cliente, dados, confirmado)
+        _reavaliar_geocodificacao(cliente, dados, origem)
 
         self.session.commit()
         return cliente

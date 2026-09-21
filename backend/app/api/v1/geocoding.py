@@ -10,7 +10,8 @@ from sqlalchemy import or_, select
 from app.api.deps import AdminUser, DbSession
 from app.core.enums import GeocodeStatus
 from app.geocoding import cep as cep_service
-from app.geocoding.service import ALVOS, GeocodingService
+from app.geocoding import places
+from app.geocoding.service import ALVOS, GeocodingService, guardar_lugar
 from app.models.base_location import BaseLocation
 from app.models.customer import Customer
 from app.models.delivery import Delivery
@@ -22,7 +23,10 @@ from app.schemas.geocoding import (
     GeocodeTentativaRead,
     LoteRequest,
     LoteResultado,
+    LugarRead,
     PendenteRead,
+    RecursosRead,
+    SugestaoRead,
 )
 from app.services import precisao
 from app.services.delivery_service import DeliveryService
@@ -219,11 +223,68 @@ def buscar(
     )
 
 
+@router.get("/recursos", response_model=RecursosRead, summary="O que esta ligado")
+def recursos(_: AdminUser) -> RecursosRead:
+    """Diz a tela se a busca do Google esta disponivel.
+
+    Existe para a tela nao descobrir por tentativa: mostrar o campo do Google
+    e trocar para o CEP no primeiro erro faria o formulario piscar.
+    """
+    return RecursosRead(autocomplete=places.disponivel())
+
+
+@router.get("/sugestoes", response_model=list[SugestaoRead], summary="Sugestoes do Google")
+def sugestoes(
+    _: AdminUser,
+    texto: Annotated[str, Query(min_length=3, max_length=200)],
+    sessao: Annotated[str, Query(min_length=8, max_length=64)],
+) -> list[SugestaoRead]:
+    """Enderecos que existem, enquanto a pessoa digita.
+
+    `sessao` e o token de sessao gerado no navegador: agrupa a digitacao e a
+    escolha numa cobranca so. Sem ele o Google cobraria cada tecla.
+    """
+    return [SugestaoRead(**vars(s)) for s in places.sugerir(texto.strip(), sessao)]
+
+
+@router.get("/lugar/{place_id}", response_model=LugarRead, summary="Detalhe do lugar escolhido")
+def lugar(
+    place_id: str,
+    session: DbSession,
+    _: AdminUser,
+    sessao: Annotated[str | None, Query(max_length=64)] = None,
+) -> LugarRead:
+    """Endereco, componentes e ponto do lugar escolhido.
+
+    Grava o resultado no cache: e contra ele que o servidor confere, na hora
+    de salvar a entrega, se o ponto recebido e mesmo o que o Google devolveu
+    — em vez de acreditar no navegador quando ele diz "e exato".
+    """
+    resultado = places.detalhar(place_id, sessao)
+    guardar_lugar(session, resultado)
+    session.commit()
+    return LugarRead(
+        place_id=resultado.place_id,
+        endereco_formatado=resultado.endereco_formatado,
+        latitude=resultado.latitude,
+        longitude=resultado.longitude,
+        precision=resultado.precision,
+        tipo_ponto=resultado.tipo_ponto,
+        logradouro=resultado.logradouro,
+        numero=resultado.numero,
+        bairro=resultado.bairro,
+        cidade=resultado.cidade,
+        uf=resultado.uf,
+        cep=resultado.cep,
+    )
+
+
 # --------------------------------------------------------------------------- #
 # ORDEM IMPORTA: as rotas de caminho fixo precisam vir ANTES das que usam
 # parametro no lugar do primeiro segmento.
 #
-# `/geocodificacao/cep/79002000` casa com `/geocodificacao/{tipo}/{registro_id}`
+# `/geocodificacao/cep/79002000` (e `/geocodificacao/lugar/<id>`) casam com
+# `/geocodificacao/{tipo}/{registro_id}`
 # — com tipo="cep" e registro_id="79002000". Registrada primeiro, a rota
 # generica faz o FastAPI achar o caminho, nao achar o metodo e responder 405,
 # numa falha que nao parece ter relacao nenhuma com ordenacao.

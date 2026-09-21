@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     nominatim_base_url: str = "https://nominatim.openstreetmap.org"
     nominatim_user_agent: str = "LogRotas/0.1"
     geocoding_provider_key: str = ""
+    #: Chave do Google Maps Platform. Liga a busca com sugestoes (Places
+    #: Autocomplete) no cadastro de endereco. Vazia, o sistema volta ao
+    #: fluxo por CEP. Fica so no servidor: o navegador nunca a recebe.
+    google_maps_api_key: str = ""
     matrix_provider: str = "osrm"
     osrm_base_url: str = "https://router.project-osrm.org"
     map_provider_key: str = ""

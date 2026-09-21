@@ -61,6 +61,10 @@ class BaseLocationCreate(BaseModel):
     #: entrega ser planejada para um ponto qualquer da avenida.
     #: Ver app/services/precisao.py.
     ponto_confirmado: bool = False
+    #: Lugar escolhido na busca do Google. So um identificador: a precisao
+    #: quem decide e o servidor, conferindo no proprio cache que a
+    #: coordenada e a mesma que o Google devolveu.
+    google_place_id: str | None = Field(default=None, max_length=300)
     is_default: bool = False
     active: bool = True
     notes: Observacao = None
@@ -89,6 +93,10 @@ class BaseLocationUpdate(BaseModel):
     #: entrega ser planejada para um ponto qualquer da avenida.
     #: Ver app/services/precisao.py.
     ponto_confirmado: bool = False
+    #: Lugar escolhido na busca do Google. So um identificador: a precisao
+    #: quem decide e o servidor, conferindo no proprio cache que a
+    #: coordenada e a mesma que o Google devolveu.
+    google_place_id: str | None = Field(default=None, max_length=300)
     is_default: bool | None = None
     active: bool | None = None
     notes: Observacao = None
@@ -219,6 +227,10 @@ class CustomerCreate(BaseModel):
     #: formulario acha sozinho nao conta — ver app/schemas/delivery.py e
     #: app/services/precisao.py.
     ponto_confirmado: bool = False
+    #: Lugar escolhido na busca do Google. So um identificador: a precisao
+    #: quem decide e o servidor, conferindo no proprio cache que a
+    #: coordenada e a mesma que o Google devolveu.
+    google_place_id: str | None = Field(default=None, max_length=300)
     active: bool = True
     notes: Observacao = None
 
@@ -242,6 +254,10 @@ class CustomerUpdate(BaseModel):
     #: formulario acha sozinho nao conta — ver app/schemas/delivery.py e
     #: app/services/precisao.py.
     ponto_confirmado: bool = False
+    #: Lugar escolhido na busca do Google. So um identificador: a precisao
+    #: quem decide e o servidor, conferindo no proprio cache que a
+    #: coordenada e a mesma que o Google devolveu.
+    google_place_id: str | None = Field(default=None, max_length=300)
     active: bool | None = None
     notes: Observacao = None
 

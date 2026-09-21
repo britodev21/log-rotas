@@ -16,6 +16,8 @@ reescrever enderecos que estavam certos enquanto o problema era a cota.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import httpx
 import pytest
 
@@ -136,7 +138,13 @@ def test_google_falha_de_servico_nao_e_endereco_errado(com_resposta, status) -> 
     assert r.error
 
 
-def test_google_sem_chave_recusa_de_imediato() -> None:
+def test_google_sem_chave_recusa_de_imediato(monkeypatch) -> None:
+    # Isola do .env de verdade: o adaptador tambem aceita GOOGLE_MAPS_API_KEY,
+    # e na maquina de desenvolvimento ela existe.
+    monkeypatch.setattr(
+        "app.geocoding.google.get_settings",
+        lambda: SimpleNamespace(geocoding_provider_key="", google_maps_api_key=""),
+    )
     with pytest.raises(ValueError, match="GEOCODING_PROVIDER_KEY"):
         GoogleProvider(chave="")
 

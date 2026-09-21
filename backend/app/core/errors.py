@@ -52,6 +52,18 @@ class PermissionDeniedError(LogRotasError):
     code = "sem_permissao"
 
 
+class ServiceUnavailableError(LogRotasError):
+    """Um provedor externo nao respondeu ou recusou a chamada.
+
+    Separado de ValidationError de proposito: "o Google esta fora" e "o
+    endereco esta errado" pedem acoes diferentes, e quem le a mensagem
+    precisa saber qual das duas.
+    """
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    code = "servico_indisponivel"
+
+
 class InvalidStateTransitionError(LogRotasError):
     """Transicao de status proibida pela maquina de estados (Fases 3 e 9)."""
 

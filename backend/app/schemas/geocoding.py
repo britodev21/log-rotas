@@ -92,3 +92,38 @@ class BuscaResultado(BaseModel):
 
     consulta: str
     candidatos: list[CandidatoRead]
+
+
+class RecursosRead(BaseModel):
+    """O que esta ligado, para a tela escolher o fluxo sem tentativa e erro."""
+
+    #: Busca com sugestoes do Google. Desligada, a tela usa o fluxo por CEP.
+    autocomplete: bool
+
+
+class SugestaoRead(BaseModel):
+    place_id: str
+    texto: str
+    principal: str
+    secundario: str
+
+
+class LugarRead(BaseModel):
+    """Lugar escolhido na busca do Google, pronto para o formulario."""
+
+    place_id: str
+    endereco_formatado: str
+    latitude: float
+    longitude: float
+    #: EXATO so quando a Geocoding API confirmou ROOFTOP. Qualquer outra
+    #: coisa pede conferencia no mapa.
+    precision: GeocodePrecision
+    #: ROOFTOP, RANGE_INTERPOLATED... Nulo quando nao foi possivel saber —
+    #: e a tela precisa dizer isso, nao esconder.
+    tipo_ponto: str | None
+    logradouro: str | None
+    numero: str | None
+    bairro: str | None
+    cidade: str | None
+    uf: str | None
+    cep: str | None
