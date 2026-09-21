@@ -203,7 +203,9 @@ o telhado ou uma estimativa entre as casas da quadra. Quem diz é a Geocoding AP
 conferindo no próprio cache que a coordenada gravada é a mesma que o Google devolveu. O
 navegador manda só o `place_id`; não consegue afirmar "é exato".
 
-**Enquanto a Geocoding API não estiver ativada no projeto do Google**, nenhum ponto vira
+**A Geocoding API exige faturamento ativo** no projeto do Google — conferido em 21/09/2026:
+ativada e liberada na chave, ela respondeu "You must enable Billing", enquanto a Places API
+(New) funcionou sem faturamento. **Enquanto ela não responder**, nenhum ponto vira
 exato: todo endereço escolhido pede um clique de conferência. O pino já começa no lugar certo,
 então a conferência é um olhar no satélite e o botão "Conferi — o ponto está no portão".
 

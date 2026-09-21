@@ -243,10 +243,28 @@ def _tipo_do_ponto(place_id: str, valor: str) -> str | None:
     if status_google == "REQUEST_DENIED":
         _geocoding_recusado_em = time.monotonic()
         logger.warning(
-            "Geocoding API recusada (provavelmente nao ativada no projeto). "
-            "Sem ela nenhum ponto do Google vira EXATO; todos pedem confirmacao."
+            "Geocoding API recusada: %s. Sem ela nenhum ponto do Google vira "
+            "EXATO; todos pedem confirmacao.",
+            _causa_da_recusa(dados.get("error_message", "")),
         )
     return None
+
+
+def _causa_da_recusa(mensagem: str) -> str:
+    """A recusa tem tres causas comuns, e cada uma se resolve num lugar.
+
+    A primeira versao deste log dizia "provavelmente nao ativada" para
+    todas. Em 21/09/2026 a API foi ativada e a recusa continuou — a causa
+    tinha passado a ser faturamento, e o log apontava para o lugar errado.
+    """
+    texto = mensagem.lower()
+    if "billing" in texto:
+        return "o projeto do Google esta sem faturamento ativo"
+    if "not authorized" in texto:
+        return "a chave nao tem a Geocoding API nas restricoes de API"
+    if "not activated" in texto or "not been used" in texto or "disabled" in texto:
+        return "a Geocoding API nao esta ativada no projeto"
+    return "o Google recusou sem causa conhecida"
 
 
 def detalhar(place_id: str, sessao: str | None) -> Lugar:

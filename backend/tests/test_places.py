@@ -307,3 +307,20 @@ def test_sem_geocoding_api_nao_adivinha(google) -> None:
     assert primeiro.numero == "1500"
     assert segundo.precision == GeocodePrecision.RUA
     assert google["chamadas_geocoding"] == 1
+
+
+@pytest.mark.parametrize(
+    ("mensagem", "causa"),
+    [
+        ("You must enable Billing on the Google Cloud Project", "faturamento"),
+        ("This API key is not authorized to use this service or API.", "restricoes"),
+        ("This API is not activated on your API project.", "nao esta ativada"),
+    ],
+)
+def test_recusa_da_geocoding_diz_a_causa_certa(mensagem, causa) -> None:
+    """Cada causa se resolve num lugar diferente do console do Google.
+
+    Um log generico ja mandou procurar o problema no lugar errado: a API
+    estava ativada e a recusa era por faturamento.
+    """
+    assert causa in places._causa_da_recusa(mensagem)
