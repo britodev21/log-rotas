@@ -383,6 +383,70 @@ def test_entrega_sem_coordenada_recusa_o_calculo(
     assert resposta.json()["detalhes"]["total"] == 1
 
 
+def test_pino_aproximado_recusa_o_calculo(
+    client: TestClient, admin, base, frota, db
+) -> None:
+    """Coordenada de nivel de RUA nao entra em rota.
+
+    Este e o caso comum, nao o raro: em Campo Grande o OpenStreetMap tem
+    numero de porta em cerca de 530 predios, e o provedor resolve no nivel
+    da rua quase sempre. "Avenida Afonso Pena, 3000" com precisao RUA e um
+    ponto qualquer de uma avenida de 10 km.
+
+    O plano calculado em cima disso nao parece errado — tem quilometragem,
+    tem horario, tem sequencia. So o motorista descobre, parado na frente
+    do predio errado.
+    """
+    db.add(
+        Delivery(
+            address="Avenida Afonso Pena, 3000",
+            latitude=-20.4697,
+            longitude=-54.6201,
+            geocode_status="OK",
+            geocode_precision="RUA",
+            scheduled_date=HOJE,
+            status="PENDENTE",
+        )
+    )
+    db.commit()
+
+    resposta = calcular(client, admin, base, frota)
+
+    assert resposta.status_code == 422
+    corpo = resposta.json()
+    assert corpo["detalhes"]["total"] == 1
+    assert corpo["detalhes"]["entregas"][0]["precisao"] == "RUA"
+    # A mensagem precisa dizer o que fazer, nao so que falhou.
+    assert "ponto exato" in corpo["mensagem"]
+
+
+def test_pino_do_numero_do_predio_e_aceito(
+    client: TestClient, admin, base, frota, motoristas, db
+) -> None:
+    """A barreira e contra imprecisao, nao contra geocodificacao automatica.
+
+    Quando o provedor resolve no numero do predio, ninguem precisa conferir
+    a mao — exigir isso transformaria a protecao em burocracia.
+    """
+    db.add(
+        Delivery(
+            address="Rua Bahia, 500",
+            latitude=-20.4697,
+            longitude=-54.6201,
+            geocode_status="OK",
+            geocode_precision="EXATO",
+            scheduled_date=HOJE,
+            status="PENDENTE",
+        )
+    )
+    db.commit()
+
+    resposta = calcular(client, admin, base, frota, motoristas)
+
+    assert resposta.status_code == 201
+    assert len(resposta.json()["routes"]) == 1
+
+
 def test_base_sem_coordenada_recusa_o_calculo(client: TestClient, admin, frota, db) -> None:
     sem_pino = BaseLocation(name="Deposito novo", address="Rua X")
     db.add(sem_pino)

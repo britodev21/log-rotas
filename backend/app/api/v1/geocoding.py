@@ -24,6 +24,7 @@ from app.schemas.geocoding import (
     LoteResultado,
     PendenteRead,
 )
+from app.services import precisao
 from app.services.delivery_service import DeliveryService
 
 router = APIRouter(prefix="/geocodificacao", tags=["Geocodificacao"])
@@ -31,6 +32,10 @@ router = APIRouter(prefix="/geocodificacao", tags=["Geocodificacao"])
 #: Situações que exigem intervenção humana. `PENDENTE` entra porque, sem
 #: coordenada, a entrega não pode ser planejada — e o administrador precisa
 #: saber disso antes de tentar montar a rota, não durante.
+#: Estados que o processamento em lote tenta resolver automaticamente.
+#: Diferente do que a FILA mostra: a fila lista tudo que nao esta confiavel
+#: (ver precisao.filtro_sql), inclusive OK com precisao de rua, que o lote
+#: nao adianta reprocessar — o provedor devolveria a mesma rua de novo.
 PRECISAM_ATENCAO = [
     GeocodeStatus.PENDENTE.value,
     GeocodeStatus.AMBIGUO.value,
@@ -51,9 +56,18 @@ def pendentes(
 ) -> list[PendenteRead]:
     """Fila de revisão de endereços.
 
-    Reúne o que não virou coordenada confiável: sem endereço resolvido, a
-    entrega não entra no planejamento. Esta tela existe para o problema
-    aparecer antes de o administrador tentar calcular as rotas.
+    Reúne tudo que não tem coordenada confiável — a mesma regra que o
+    planejamento aplica, vinda do mesmo lugar (`precisao.filtro_sql`).
+
+    Inclui, de propósito, o registro que o provedor resolveu com status OK
+    mas só no nível da rua. Em Campo Grande esse é o caso comum, não a
+    exceção: o OpenStreetMap tem número de porta em cerca de 530 prédios da
+    cidade. Um pino desses aponta para um lugar qualquer da via, e a rota
+    calculada em cima dele parece perfeita até o motorista chegar.
+
+    A fila listava apenas PENDENTE, AMBIGUO e FALHOU, e esses registros não
+    apareciam em tela nenhuma — o planejamento os recusava e não havia onde
+    resolvê-los.
     """
     resultado: list[PendenteRead] = []
 
@@ -70,7 +84,7 @@ def pendentes(
         stmt = (
             select(modelo)
             .where(
-                modelo.geocode_status.in_(PRECISAM_ATENCAO),
+                precisao.filtro_sql(modelo),
                 # Registro sem endereço nenhum não é problema de
                 # geocodificação — é cadastro incompleto, e aparecer aqui
                 # só poluiria a fila.
@@ -90,6 +104,8 @@ def pendentes(
                     titulo=titulo(registro),
                     address=registro.address,
                     geocode_status=registro.geocode_status,
+                    geocode_precision=registro.geocode_precision,
+                    motivo=precisao.motivo(registro),
                     geocode_error=registro.geocode_error,
                     latitude=float(registro.latitude) if registro.latitude else None,
                     longitude=float(registro.longitude) if registro.longitude else None,
@@ -169,6 +185,8 @@ def consultar_cep(
         cidade=endereco.cidade,
         uf=endereco.uf,
         endereco_montado=endereco.montar(numero),
+        latitude=endereco.latitude,
+        longitude=endereco.longitude,
     )
 
 

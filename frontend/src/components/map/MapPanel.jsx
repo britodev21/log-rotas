@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, ZoomControl, useMap } from "react-leaflet";
+import { Layers, Map as MapaIcone } from "lucide-react";
 
 import "leaflet/dist/leaflet.css";
 import "./MapPanel.css";
@@ -63,6 +64,34 @@ const BASES = {
   },
 };
 
+/**
+ * Satélite.
+ *
+ * Existe por um motivo específico e medido: o OpenStreetMap tem número de
+ * porta em cerca de 530 prédios de Campo Grande, numa cidade de ~900 mil
+ * habitantes. Nenhum geocodificador gratuito acha o número — quem acha é a
+ * pessoa, olhando o telhado, o portão e a esquina.
+ *
+ * Sem imagem de satélite, "marque o ponto exato" é um pedido impossível:
+ * num mapa cinza todas as casas do quarteirão são o mesmo retângulo.
+ *
+ * Limites conferidos na fonte em 2026-09-21, no centro e num bairro
+ * afastado: imagem real até o zoom 19; no 20 a Esri devolve um ladrilho
+ * chapado de 2.521 bytes. Por isso `maxZoom` é 19 aqui — deixar 20 daria
+ * uma tela cinza sem explicação.
+ *
+ * Os rótulos de rua vêm de World_Transportation. A camada de nomes de
+ * lugar (World_Boundaries_and_Places) foi testada e volta vazia nestes
+ * zooms; carregá-la seria requisição sem retorno.
+ */
+const SATELITE = {
+  url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  rotulos:
+    "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+  atribuicao: "Imagens &copy; Esri, Maxar, Earthstar Geographics",
+  zoomMaximo: 19,
+};
+
 const URL_CONFIGURADA = import.meta.env.VITE_MAP_TILE_URL;
 const ATRIBUICAO_CONFIGURADA = import.meta.env.VITE_MAP_ATTRIBUTION;
 
@@ -89,11 +118,19 @@ export function MapPanel({
   altura = 420,
   sobreposicao,
   rodape,
+  // Ligado onde o objetivo é marcar um ponto na porta certa. Fica desligado
+  // no painel e no acompanhamento de rota, onde a imagem só polui.
+  permitirSatelite = false,
   children,
 }) {
-  const base = URL_CONFIGURADA
+  const [satelite, setSatelite] = useState(false);
+
+  const cartografia = URL_CONFIGURADA
     ? { url: URL_CONFIGURADA, atribuicao: ATRIBUICAO_CONFIGURADA ?? "" }
     : (BASES[tema] ?? BASES.claro);
+  const base = satelite ? SATELITE : cartografia;
+  const zoomMaximo = base.zoomMaximo ?? 19;
+  const camada = satelite ? "satelite" : tema;
 
   return (
     <div className={`mapa mapa--${tema}`} style={{ height: altura }}>
@@ -114,12 +151,22 @@ export function MapPanel({
         {/* A chave troca a camada ao mudar de tema; sem ela o Leaflet mantém
             os ladrilhos antigos em cache e o mapa fica claro dentro da
             interface escura. */}
-        <TileLayer key={tema} url={base.url} attribution={base.atribuicao} maxZoom={19} />
+        <TileLayer
+          key={camada}
+          url={base.url}
+          attribution={base.atribuicao}
+          maxZoom={zoomMaximo}
+        />
         {/* Rótulos por cima dos marcadores não: `pane="shadowPane"` mantém
             os nomes acima do mapa e abaixo das paradas, que precisam ficar
             sempre clicáveis. */}
         {base.rotulos && (
-          <TileLayer key={`${tema}-rotulos`} url={base.rotulos} maxZoom={19} pane="shadowPane" />
+          <TileLayer
+            key={`${camada}-rotulos`}
+            url={base.rotulos}
+            maxZoom={zoomMaximo}
+            pane="shadowPane"
+          />
         )}
         {/* Sem isto, e com a roda desabilitada, não haveria nenhuma forma de
             aproximar — o que inviabiliza marcar um ponto com precisão na
@@ -128,6 +175,23 @@ export function MapPanel({
         <AjustarAoContainer />
         {children}
       </MapContainer>
+
+      {permitirSatelite && (
+        <button
+          type="button"
+          className="mapa__vista"
+          onClick={() => setSatelite((v) => !v)}
+          aria-pressed={satelite}
+          title={
+            satelite
+              ? "Voltar ao mapa de ruas"
+              : "Ver por satélite para achar o prédio certo"
+          }
+        >
+          {satelite ? <MapaIcone size={14} strokeWidth={2} /> : <Layers size={14} strokeWidth={2} />}
+          <span>{satelite ? "Mapa" : "Satélite"}</span>
+        </button>
+      )}
 
       {sobreposicao && <div className="mapa__sobreposicao">{sobreposicao}</div>}
       {rodape && <div className="mapa__rodape">{rodape}</div>}

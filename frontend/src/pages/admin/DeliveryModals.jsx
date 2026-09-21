@@ -70,6 +70,7 @@ export function ModalEntrega({ alvo, clientes, dataPadrao, onFechar, onSalvo }) 
             postal_code: alvo.postal_code ?? "",
             latitude: alvo.latitude,
             longitude: alvo.longitude,
+            geocode_status: alvo.geocode_status,
           }
         : {},
     );
@@ -95,6 +96,10 @@ export function ModalEntrega({ alvo, clientes, dataPadrao, onFechar, onSalvo }) 
       postal_code: endereco.postal_code || null,
       latitude: endereco.latitude ?? null,
       longitude: endereco.longitude ?? null,
+      // Só o que uma pessoa marcou no mapa vale como confirmado. Sem esta
+      // linha o backend guardaria o palpite do geocodificador como MANUAL,
+      // e a entrega entraria em rota apontando para a quadra errada.
+      ponto_confirmado: Boolean(endereco.ponto_confirmado),
       description: form.description || null,
       order_number: form.order_number || null,
       weight_kg: numeroOuNulo(form.weight_kg),

@@ -55,6 +55,7 @@ export function Bases() {
         postal_code: base.postal_code ?? "",
         latitude: base.latitude,
         longitude: base.longitude,
+        geocode_status: base.geocode_status,
       });
       setModal(base);
     } else {
@@ -78,6 +79,7 @@ export function Bases() {
       postal_code: endereco.postal_code || null,
       latitude: endereco.latitude ?? null,
       longitude: endereco.longitude ?? null,
+      ponto_confirmado: Boolean(endereco.ponto_confirmado),
       phone: form.phone || null,
       notes: form.notes || null,
     };

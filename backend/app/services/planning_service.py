@@ -45,7 +45,7 @@ from app.repositories.company_settings_repository import CompanySettingsReposito
 from app.repositories.delivery_repository import DeliveryRepository
 from app.routing import Ponto, RoutingService
 from app.schemas.planning import CalcularRequest, ConfirmarRequest
-from app.services import status_machine
+from app.services import precisao, status_machine
 from app.services.delivery_service import DeliveryService
 from app.services.stop_grouping import agrupar, desagrupar_excedentes
 
@@ -332,17 +332,43 @@ class PlanningService:
         # Recusa explicita, com a lista. Ignorar em silencio faria entregas
         # sumirem do plano sem ninguem perceber — e elas so reapareceriam
         # quando o cliente ligasse cobrando.
-        sem_coordenada = [e for e in entregas if e.latitude is None or e.longitude is None]
-        if sem_coordenada:
+        # A barreira nao e so "tem coordenada": e "a coordenada aponta o
+        # lugar certo". Em Campo Grande o OpenStreetMap tem numero de porta
+        # em cerca de 530 predios, entao o provedor resolve no nivel da RUA
+        # quase sempre. Uma coordenada dessas colocada numa rota parece
+        # perfeita — tem quilometragem, tem horario — e manda o caminhao
+        # para qualquer ponto de uma avenida de 10 km.
+        #
+        # Planejar com pino aproximado e o que produz entrega errada, e
+        # nenhum calculo posterior corrige isso. A regra vive em
+        # app/services/precisao.py, junto com a medicao que a justifica.
+        imprecisas = [(e, precisao.motivo(e)) for e in entregas]
+        imprecisas = [(e, m) for e, m in imprecisas if m is not None]
+        if imprecisas:
+            sem_ponto = sum(1 for _, m in imprecisas if m == "sem coordenada")
+            aproximadas = len(imprecisas) - sem_ponto
+            partes = []
+            if sem_ponto:
+                partes.append(f"{sem_ponto} sem coordenada")
+            if aproximadas:
+                partes.append(f"{aproximadas} com posicao aproximada")
             raise ValidationError(
-                f"{len(sem_coordenada)} entrega(s) ainda nao tem coordenada e nao podem "
-                "ser planejadas. Resolva os enderecos na fila de revisao.",
+                f"{len(imprecisas)} entrega(s) nao podem ser planejadas "
+                f"({', '.join(partes)}). Marque o ponto exato na tela de "
+                "Enderecos — uma vez por endereco, e ele nao e perguntado "
+                "de novo.",
                 details={
                     "entregas": [
-                        {"id": e.id, "endereco": e.address, "situacao": e.geocode_status}
-                        for e in sem_coordenada[:20]
+                        {
+                            "id": e.id,
+                            "endereco": e.address,
+                            "situacao": e.geocode_status,
+                            "precisao": e.geocode_precision,
+                            "motivo": m,
+                        }
+                        for e, m in imprecisas[:20]
                     ],
-                    "total": len(sem_coordenada),
+                    "total": len(imprecisas),
                 },
             )
 

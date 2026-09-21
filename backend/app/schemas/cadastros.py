@@ -53,6 +53,14 @@ class BaseLocationCreate(BaseModel):
     phone: Telefone = None
     latitude: Latitude = None
     longitude: Longitude = None
+    #: True somente quando uma pessoa marcou o ponto no mapa — clicou,
+    #: arrastou o pino ou escolheu um candidato conferindo onde caiu.
+    #: O pino que o formulario busca sozinho NAO conta: em Campo Grande o
+    #: geocodificador gratuito resolve no nivel da rua quase sempre, e
+    #: aceitar esse palpite como confirmado foi o defeito que permitia uma
+    #: entrega ser planejada para um ponto qualquer da avenida.
+    #: Ver app/services/precisao.py.
+    ponto_confirmado: bool = False
     is_default: bool = False
     active: bool = True
     notes: Observacao = None
@@ -73,6 +81,14 @@ class BaseLocationUpdate(BaseModel):
     phone: Telefone = None
     latitude: Latitude = None
     longitude: Longitude = None
+    #: True somente quando uma pessoa marcou o ponto no mapa — clicou,
+    #: arrastou o pino ou escolheu um candidato conferindo onde caiu.
+    #: O pino que o formulario busca sozinho NAO conta: em Campo Grande o
+    #: geocodificador gratuito resolve no nivel da rua quase sempre, e
+    #: aceitar esse palpite como confirmado foi o defeito que permitia uma
+    #: entrega ser planejada para um ponto qualquer da avenida.
+    #: Ver app/services/precisao.py.
+    ponto_confirmado: bool = False
     is_default: bool | None = None
     active: bool | None = None
     notes: Observacao = None
@@ -199,6 +215,10 @@ class CustomerCreate(BaseModel):
     postal_code: Cep = None
     latitude: Latitude = None
     longitude: Longitude = None
+    #: True so quando uma pessoa marcou o ponto no mapa. O pino que o
+    #: formulario acha sozinho nao conta — ver app/schemas/delivery.py e
+    #: app/services/precisao.py.
+    ponto_confirmado: bool = False
     active: bool = True
     notes: Observacao = None
 
@@ -218,6 +238,10 @@ class CustomerUpdate(BaseModel):
     postal_code: Cep = None
     latitude: Latitude = None
     longitude: Longitude = None
+    #: True so quando uma pessoa marcou o ponto no mapa. O pino que o
+    #: formulario acha sozinho nao conta — ver app/schemas/delivery.py e
+    #: app/services/precisao.py.
+    ponto_confirmado: bool = False
     active: bool | None = None
     notes: Observacao = None
 

@@ -206,7 +206,7 @@ export function GeocodeQueue() {
     <>
       <PageHeader
         titulo="Endereços"
-        descricao="O que ainda não virou coordenada confiável. Sem isso, a entrega não entra no planejamento."
+        descricao="O que ainda não tem ponto confirmado. Sem isso, a entrega não entra no planejamento."
         acoes={
           <Button icone={Wand2} onClick={processarLote} carregando={processando}>
             Geocodificar pendentes
@@ -214,11 +214,18 @@ export function GeocodeQueue() {
         }
       />
 
-      <Alert tom="info" titulo="Como o sistema decide">
-        Quando o provedor devolve vários endereços possíveis, o Log Rotas{" "}
-        <strong>não escolhe sozinho</strong> — escolher no escuro é o caminho
-        mais curto para entregar no lugar errado. O registro fica aqui até
-        alguém marcar o ponto certo.
+      <Alert tom="info" titulo="Por que quase tudo cai aqui">
+        Em Campo Grande o OpenStreetMap tem número de porta em cerca de{" "}
+        <strong>530 prédios</strong>. Em oito endereços reais das avenidas
+        principais, o provedor gratuito acertou o número em{" "}
+        <strong>nenhum</strong> — ele acha a rua, não a casa. Um pino desses
+        numa rota parece perfeito e manda o caminhão para um ponto qualquer
+        da via.
+        <br />
+        Por isso o ponto automático vale como <strong>provisório</strong>. Use
+        o botão <strong>Satélite</strong> para enxergar o prédio, marque o
+        portão e grave: é uma vez por endereço, e o sistema não pergunta de
+        novo.
       </Alert>
 
       <div className="fila-enderecos">
@@ -266,8 +273,10 @@ export function GeocodeQueue() {
                     <span className="fila-item__endereco">
                       {item.address ?? "sem endereço cadastrado"}
                     </span>
-                    {item.geocode_error && (
-                      <span className="fila-item__erro">{item.geocode_error}</span>
+                    {(item.motivo || item.geocode_error) && (
+                      <span className="fila-item__erro">
+                        {item.geocode_error || item.motivo}
+                      </span>
                     )}
                   </div>
                   <GeocodeBadge
@@ -285,7 +294,13 @@ export function GeocodeQueue() {
           descricao={selecionado?.address ?? "Clique num registro à esquerda."}
           semPadding
         >
-          <MapPanel tema={tema} centro={centro} zoom={pino ? 16 : 12} altura={400}>
+          <MapPanel
+            tema={tema}
+            centro={centro}
+            zoom={pino ? 18 : 12}
+            altura={400}
+            permitirSatelite
+          >
             <CliqueNoMapa aoClicar={setPino} />
             {pino && (
               <Marker
@@ -360,7 +375,7 @@ export function GeocodeQueue() {
               <>
                 <p className="texto-3">
                   {pino
-                    ? "Arraste o pino ou clique no mapa para ajustar."
+                    ? "Arraste o pino até o portão. Ligue o satélite para ver o prédio."
                     : "Clique no mapa onde fica este endereço."}
                 </p>
                 <div className="acoes-direita">

@@ -38,6 +38,15 @@ class _DeliveryBase(BaseModel):
     postal_code: Cep = None
     latitude: Latitude = None
     longitude: Longitude = None
+    #: True somente quando uma pessoa marcou o ponto no mapa — clicou,
+    #: arrastou o pino ou escolheu um candidato conferindo onde caiu.
+    #: O pino que o formulario busca sozinho NAO conta: em Campo Grande o
+    #: OpenStreetMap tem numero de porta em cerca de 530 predios, e o
+    #: geocodificador resolve no nivel da rua quase sempre. Aceitar esse
+    #: palpite como confirmado foi o defeito que deixava uma entrega ser
+    #: planejada para um ponto qualquer de uma avenida de 10 km.
+    #: A barreira esta em app/services/precisao.py.
+    ponto_confirmado: bool = False
 
     weight_kg: Medida = None
     volume_m3: Medida = None

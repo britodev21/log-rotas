@@ -57,6 +57,11 @@ class PendenteRead(BaseModel):
     titulo: str
     address: str | None
     geocode_status: GeocodeStatus
+    geocode_precision: GeocodePrecision | None = None
+    #: Por que este registro esta na fila, em uma linha, escrito para quem
+    #: vai resolver. "sem coordenada" e "posicao aproximada: ..." exigem
+    #: acoes diferentes, e um rotulo generico esconderia isso.
+    motivo: str | None = None
     geocode_error: str | None
     latitude: float | None
     longitude: float | None
@@ -74,6 +79,12 @@ class EnderecoCepRead(BaseModel):
     #: Endereco de uma linha ja montado na ordem que o geocodificador espera.
     #: O numero entra pela query, porque o CEP sozinho nao o conhece.
     endereco_montado: str
+
+    #: Centro do TRECHO de rua do CEP, para o mapa abrir na quadra certa.
+    #: Nao e o ponto da entrega: aponta a quadra, nao a porta, e nao passa
+    #: na regra de app/services/precisao.py. Nulo quando a fonte nao sabe.
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 class BuscaResultado(BaseModel):

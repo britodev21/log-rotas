@@ -152,3 +152,43 @@
     padding: var(--e-2);
   }
 }
+
+/* --- Troca de vista: mapa ou satélite ------------------------------------ */
+
+/* Fica no alto à direita: o canto superior esquerdo é das cápsulas de
+   número e o inferior direito é do zoom. */
+.mapa__vista {
+  position: absolute;
+  top: var(--e-3);
+  right: var(--e-3);
+  z-index: var(--z-mapa-painel);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+  padding: var(--e-2) var(--e-3);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  color: var(--texto-2);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  box-shadow: var(--sombra-1);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--curva), color var(--dur-1) var(--curva);
+}
+
+.mapa__vista:hover {
+  background: var(--superficie-2);
+  color: var(--texto);
+}
+
+.mapa__vista:focus-visible {
+  outline: 2px solid var(--marca);
+  outline-offset: 2px;
+}
+
+/* Sobre a imagem de satélite os créditos precisam de fundo opaco: texto
+   cinza sobre telhado não se lê. */
+.mapa__creditos {
+  background: color-mix(in srgb, var(--superficie) 92%, transparent);
+}

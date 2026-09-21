@@ -145,10 +145,46 @@ muito mais.
 O campo de texto livre continua ali para quem não sabe o CEP, com aviso de que o resultado
 costuma ser menos preciso.
 
-**Limite conhecido:** o Nominatim frequentemente resolve o endereço no nível da RUA, não do
-número. O pino cai na via certa, podendo estar algumas dezenas de metros fora. A interface
-avisa quando isso acontece e o pino é arrastável — o ajuste manual vira `MANUAL` e não é mais
-sobrescrito. Um provedor pago resolveria no número, e é a primeira troca que vale o dinheiro.
+### O número da porta não existe no OpenStreetMap de Campo Grande
+
+Esta é a limitação mais séria do sistema, e ela não é de código.
+
+Medido em 21/09/2026, via Overpass, na área urbana de Campo Grande:
+
+| | |
+|---|---|
+| Ruas com nome | 13.864 |
+| Prédios mapeados | 17.404 |
+| **Prédios com número de porta** | **530** |
+
+Numa cidade de cerca de 900 mil habitantes. Em oito endereços reais das avenidas principais,
+com CEP conferido, o Nominatim resolveu o número em **zero** deles — testado com consulta de
+texto livre **e** com consulta estruturada (`street`/`city`/`postalcode`), que é o formato
+recomendado para casa e número.
+
+**Consequência:** "Avenida Afonso Pena, 3000" vira um ponto qualquer de uma avenida de 10 km.
+
+**O que isso descarta:** trocar o Nominatim por Photon, LocationIQ, MapTiler ou Stadia não
+resolve. Todos leem o mesmo OpenStreetMap. O problema é o dado, não o provedor.
+
+**O que o sistema faz a respeito**, em `app/services/precisao.py`:
+
+- Coordenada só entra em rota se for `MANUAL` (alguém marcou no mapa) ou `EXATO` (o provedor
+  resolveu no número do prédio). Precisão de rua, bairro ou cidade é **recusada** pelo
+  planejamento, com a lista de quais endereços e por quê.
+- A fila de Endereços lista exatamente o mesmo conjunto, pela mesma função. As duas regras
+  vêm do mesmo arquivo de propósito: quando discordaram, o planejamento recusava registros
+  que não apareciam em tela nenhuma.
+- O CEP posiciona o mapa na quadra certa (o CEP brasileiro é por trecho de rua; em dez CEPs
+  conferidos por geocodificação reversa, nove caem na rua correta), e o satélite da Esri
+  permite ver o prédio. Confirmar leva segundos e é uma vez por endereço — cliente cadastrado
+  propaga a confirmação para as próximas entregas.
+
+**O custo honesto:** hoje, praticamente todo endereço novo exige um clique de confirmação.
+Isso não é burocracia inventada; é o preço de não ter o dado. A alternativa é um provedor
+com base própria de endereços (Google, HERE, Azure/TomTom), que resolve no número e dispensa
+a confirmação — a porta está aberta em `app/geocoding/`, e nada além de um arquivo novo e uma
+variável de ambiente muda.
 
 **O pino não é instantâneo.** Medido no navegador, em endereços de Campo Grande nunca
 consultados antes: **3,8 s e 5,6 s** entre a última tecla e o pino no mapa. Desse tempo,

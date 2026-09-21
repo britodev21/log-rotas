@@ -17,7 +17,11 @@ from app.repositories.cadastros_repository import CustomerRepository
 from app.repositories.delivery_repository import DeliveryRepository
 from app.schemas.delivery import DeliveryCreate, DeliveryStatusChange, DeliveryUpdate
 from app.services import status_machine
-from app.services.cadastros_service import _aplicar, _reavaliar_geocodificacao
+from app.services.cadastros_service import (
+    _aplicar,
+    _reavaliar_geocodificacao,
+    tirar_confirmacao,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +78,10 @@ class DeliveryService:
     def criar(self, payload: DeliveryCreate, *, actor: User | None = None) -> Delivery:
         dados = payload.model_dump()
         self._herdar_do_cliente(dados)
+        confirmado = tirar_confirmacao(dados)
 
         entrega = Delivery(**dados, status=DeliveryStatus.PENDENTE.value)
-        _reavaliar_geocodificacao(entrega, dados)
+        _reavaliar_geocodificacao(entrega, dados, confirmado)
 
         self.repo.add(entrega)
         self._registrar(entrega, None, DeliveryStatus.PENDENTE.value, actor=actor)
@@ -90,6 +95,7 @@ class DeliveryService:
     ) -> Delivery:
         entrega = self.get(delivery_id)
         dados = payload.model_dump(exclude_unset=True)
+        confirmado = tirar_confirmacao(dados)
 
         # Trava explicita, com mensagem que diz o que fazer. Deixar passar
         # mudaria o peso de uma carga que ja esta no caminhao.
@@ -104,9 +110,10 @@ class DeliveryService:
 
         if "customer_id" in dados:
             self._herdar_do_cliente(dados, forcar=False)
+            confirmado = confirmado or tirar_confirmacao(dados)
 
         _aplicar(entrega, dados)
-        _reavaliar_geocodificacao(entrega, dados)
+        _reavaliar_geocodificacao(entrega, dados, confirmado)
 
         self.session.commit()
         return entrega
@@ -166,6 +173,12 @@ class DeliveryService:
             if cliente.latitude is not None and cliente.longitude is not None:
                 dados["latitude"] = float(cliente.latitude)
                 dados["longitude"] = float(cliente.longitude)
+                # A confirmacao viaja junto com a coordenada, e e o que faz
+                # "conferir uma vez" valer a pena: quem ja marcou o portao
+                # deste cliente nao marca de novo a cada pedido. Sem isto,
+                # cliente recorrente voltaria para a fila toda semana.
+                if cliente.geocode_status == GeocodeStatus.MANUAL.value:
+                    dados["ponto_confirmado"] = True
 
         if forcar and not dados.get("recipient_name"):
             dados["recipient_name"] = cliente.name

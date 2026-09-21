@@ -12,26 +12,34 @@ import "./CampoEndereco.css";
 /**
  * Entrada de endereço brasileiro: CEP, número, complemento e o ponto no mapa.
  *
- * Existe porque digitar endereço por extenso é a pior entrada possível para
- * geocodificação — "Av. Calógeras 1500" tem dezenas de grafias, e o
- * resultado é um pino no lugar errado ou nenhum resultado.
+ * O fluxo tem três passos e o terceiro é obrigatório:
  *
- * O fluxo é o contrário: o CEP traz logradouro, bairro, cidade e UF já
- * normalizados dos Correios; a pessoa digita o número; e **o mapa se move
- * sozinho** até o ponto, sem nenhum botão no meio. Achou, mostrou.
+ *   1. CEP    → rua, bairro, cidade e UF vêm dos Correios, e o mapa pula
+ *               para a quadra do trecho antes de qualquer digitação.
+ *   2. Número → o sistema procura sozinho e põe um pino provisório.
+ *   3. Você   → arrasta o pino até o portão e confirma.
  *
- * O único clique que sobra é o de correção: arrastar o pino quando o
- * endereço cai alguns metros fora — o que acontece em loteamento novo.
+ * O passo 3 existe porque o passo 2 não é confiável em Campo Grande, e isso
+ * foi medido, não suposto: o OpenStreetMap tem número de porta em cerca de
+ * 530 prédios da cidade. Em oito endereços reais das avenidas principais,
+ * com CEP conferido, o provedor acertou o número em ZERO.
  *
- * Devolve ao formulário pai: endereço montado, CEP e coordenada.
+ * Quer dizer que "Avenida Afonso Pena, 3000" vira um ponto qualquer de uma
+ * avenida de 10 km. Mostrar isso com um selo verde de "localizado" — que é
+ * o que esta tela fazia — é a forma mais eficiente de produzir entrega no
+ * endereço errado: ninguém confere o que o sistema diz que já está certo.
+ *
+ * Por isso o pino automático aparece como PROVISÓRIO, e só o que uma pessoa
+ * marcou conta como confirmado. O planejamento recusa o resto
+ * (app/services/precisao.py no backend).
+ *
+ * Devolve ao pai: endereço montado, CEP, coordenada e `ponto_confirmado`.
  */
 
 /** Espera antes de consultar o provedor.
  *
  *  Não é enfeite: o Nominatim permite UMA requisição por segundo, e buscar
- *  a cada tecla digitada queimaria o limite e bloquearia o IP. Novecentos
- *  milissegundos depois da última tecla dá a sensação de automático sem
- *  passar do que o provedor aceita. */
+ *  a cada tecla digitada queimaria o limite e bloquearia o IP. */
 const ESPERA_MS = 900;
 
 /** Abaixo disto o texto não identifica lugar nenhum e a busca só gastaria
@@ -48,7 +56,7 @@ function formatarCep(valor) {
   return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
 }
 
-export function CampoEndereco({ valor, aoMudar, alturaMapa = 240 }) {
+export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
   const { tema } = useTheme();
 
   const [cep, setCep] = useState(formatarCep(valor?.postal_code ?? ""));
@@ -62,18 +70,21 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 240 }) {
   const [erroCep, setErroCep] = useState("");
   const [avisoMapa, setAvisoMapa] = useState("");
   const [candidatos, setCandidatos] = useState([]);
-  const [ajustadoAMao, setAjustadoAMao] = useState(false);
 
   const [pino, setPino] = useState(
     valor?.latitude != null ? [Number(valor.latitude), Number(valor.longitude)] : null,
   );
 
+  // Um registro já gravado como MANUAL chega confirmado: alguém marcou o
+  // ponto um dia, e pedir de novo a cada edição transformaria a proteção
+  // em burocracia.
+  const [confirmado, setConfirmado] = useState(valor?.geocode_status === "MANUAL");
+
   const aoMudarRef = useRef(aoMudar);
   aoMudarRef.current = aoMudar;
 
-  // Guarda o último endereço já localizado. Sem isto, reabrir o formulário
-  // de um registro que já tem pino dispararia uma busca desnecessária e
-  // poderia mover um ponto que alguém ajustou à mão.
+  // Guarda o último endereço já procurado, para não repetir a consulta ao
+  // reabrir um registro que já tem pino.
   const jaLocalizado = useRef(valor?.latitude != null ? (valor?.address ?? "") : null);
 
   const enderecoFinal = enderecoCep
@@ -96,8 +107,16 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 240 }) {
       postal_code: cep.replace(/\D/g, "") || null,
       latitude: pino ? pino[0] : null,
       longitude: pino ? pino[1] : null,
+      ponto_confirmado: confirmado,
     });
-  }, [enderecoFinal, cep, pino]);
+  }, [enderecoFinal, cep, pino, confirmado]);
+
+  /** Marca o ponto como posto por uma pessoa. */
+  const marcarAMao = useCallback((posicao) => {
+    setPino(posicao);
+    setConfirmado(true);
+    setAvisoMapa("");
+  }, []);
 
   // ------------------------------------------------------------------ CEP
   const buscarCep = useCallback(async (valorCep) => {
@@ -110,6 +129,13 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 240 }) {
       const dados = await api.cep(digitos);
       setEnderecoCep(dados);
       setManual("");
+
+      // O CEP brasileiro é por TRECHO de rua, então esta coordenada já põe
+      // o mapa na quadra certa — antes mesmo do número. Ela entra como
+      // pino PROVISÓRIO: aponta a quadra, não a porta.
+      if (dados.latitude != null && !confirmado) {
+        setPino([dados.latitude, dados.longitude]);
+      }
     } catch (e) {
       console.error("Falha ao consultar CEP", e);
       setEnderecoCep(null);
@@ -117,10 +143,8 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 240 }) {
     } finally {
       setBuscandoCep(false);
     }
-  }, []);
+  }, [confirmado]);
 
-  // Assim que o CEP fica completo, consulta. Fazer a pessoa clicar num botão
-  // depois de digitar oito dígitos é atrito sem motivo.
   useEffect(() => {
     const digitos = cep.replace(/\D/g, "");
     if (digitos.length === 8 && digitos !== enderecoCep?.cep) {
@@ -148,17 +172,12 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 240 }) {
 
       const [primeiro] = resultado.candidatos;
       setPino([primeiro.latitude, primeiro.longitude]);
-      setAjustadoAMao(false);
+      setConfirmado(false);
 
       if (resultado.candidatos.length > 1) {
-        // Mais de um lugar possível: o mapa já vai para o primeiro, mas a
-        // lista fica visível. Quem escolhe é a pessoa — o sistema não
-        // decide no escuro.
+        // Mais de um lugar possível: o mapa vai para o primeiro, mas a
+        // lista fica visível. Quem escolhe é a pessoa.
         setCandidatos(resultado.candidatos);
-      } else if (primeiro.precision === "RUA") {
-        setAvisoMapa(
-          "Encontramos a rua, mas não o número exato. Confira o pino e ajuste se precisar.",
-        );
       }
     } catch (e) {
       console.error("Falha ao localizar endereço", e);
@@ -169,27 +188,24 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 240 }) {
   }, []);
 
   /**
-   * Localização automática.
+   * Localização automática: terminou de digitar, o pino provisório aparece.
    *
-   * Roda sempre que o endereço muda e fica completo o bastante. É o que faz
-   * a tela se comportar como um mapa de verdade: terminou de digitar, o
-   * ponto aparece.
-   *
-   * O ponto ajustado à mão é descartado quando o ENDEREÇO muda — o pino
-   * antigo apontaria para outro lugar. Enquanto o endereço não muda, o
-   * ajuste manual é preservado.
+   * Não roda quando o ponto já foi confirmado à mão — mover um pino que
+   * alguém conferiu seria desfazer trabalho humano com um palpite.
    */
   useEffect(() => {
     const texto = enderecoFinal?.trim() ?? "";
     if (texto.length < MINIMO_PARA_BUSCAR) return;
     if (texto === jaLocalizado.current) return;
+    if (confirmado) return;
 
     const id = setTimeout(() => localizar(texto), ESPERA_MS);
     return () => clearTimeout(id);
-  }, [enderecoFinal, localizar]);
+  }, [enderecoFinal, localizar, confirmado]);
 
   const semPino = !pino;
   const estaProcurando = buscandoCep || localizando;
+  const precisaConfirmar = Boolean(pino) && !confirmado;
 
   return (
     <div className="endereco">
@@ -240,15 +256,15 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 240 }) {
         {estaProcurando ? (
           <>
             <Spinner tamanho={13} />
-            <span>{buscandoCep ? "Consultando CEP..." : "Localizando no mapa..."}</span>
+            <span>{buscandoCep ? "Consultando CEP..." : "Procurando no mapa..."}</span>
           </>
         ) : enderecoFinal ? (
           <>
             <MapPin size={13} strokeWidth={2} aria-hidden="true" />
             <span className="endereco__texto">{enderecoFinal}</span>
             {pino && (
-              <Badge tom={ajustadoAMao ? "info" : "sucesso"} ponto>
-                {ajustadoAMao ? "ajustado à mão" : "localizado"}
+              <Badge tom={confirmado ? "sucesso" : "atencao"} ponto>
+                {confirmado ? "ponto confirmado" : "provisório"}
               </Badge>
             )}
           </>
@@ -271,10 +287,7 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 240 }) {
               className={`endereco__candidato ${
                 pino && pino[0] === c.latitude ? "endereco__candidato--ativo" : ""
               }`}
-              onClick={() => {
-                setPino([c.latitude, c.longitude]);
-                setAjustadoAMao(false);
-              }}
+              onClick={() => setPino([c.latitude, c.longitude])}
             >
               {pino && pino[0] === c.latitude && (
                 <Check size={13} strokeWidth={3} aria-hidden="true" />
@@ -290,14 +303,10 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 240 }) {
           tema={tema}
           altura={alturaMapa}
           centro={pino ?? undefined}
-          zoom={pino ? 17 : 12}
+          zoom={pino ? 18 : 12}
+          permitirSatelite
         >
-          <CliqueNoMapa
-            aoClicar={(p) => {
-              setPino(p);
-              setAjustadoAMao(true);
-            }}
-          />
+          <CliqueNoMapa aoClicar={marcarAMao} />
           {pino && (
             <Marker
               position={pino}
@@ -305,8 +314,7 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 240 }) {
               eventHandlers={{
                 dragend: (e) => {
                   const { lat, lng } = e.target.getLatLng();
-                  setPino([lat, lng]);
-                  setAjustadoAMao(true);
+                  marcarAMao([lat, lng]);
                 },
               }}
             />
@@ -322,13 +330,27 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 240 }) {
         )}
       </div>
 
+      {/* O pedido de confirmação é o centro desta tela, não um rodapé.
+          Diz o que fazer, por que, e o que acontece se não fizer. */}
+      {precisaConfirmar && (
+        <div className="endereco__confirmar">
+          <Crosshair size={16} strokeWidth={2} aria-hidden="true" />
+          <div>
+            <strong>Este pino é provisório.</strong> Ele veio do CEP ou da busca, que
+            em Campo Grande acertam a rua mas quase nunca o número.{" "}
+            <strong>Arraste o pino até o portão</strong> — use o botão Satélite para
+            enxergar o prédio. Sem confirmar, esta entrega não entra no planejamento.
+          </div>
+        </div>
+      )}
+
       <div className="endereco__rodape">
         <span className="texto-3">
-          {pino
-            ? "Arraste o pino se precisar corrigir. O ponto marcado à mão não é sobrescrito depois."
-            : "Sem ponto no mapa a entrega não entra no planejamento."}
+          {confirmado
+            ? "Ponto confirmado. A busca automática não mexe mais nele."
+            : "Clique no mapa ou arraste o pino para confirmar."}
         </span>
-        {enderecoFinal && (
+        {enderecoFinal && !confirmado && (
           <Button
             variante="texto"
             tamanho="sm"

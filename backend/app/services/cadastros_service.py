@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.core.enums import GeocodeStatus, Role
+from app.core.enums import GeocodePrecision, GeocodeStatus, Role
 from app.core.errors import ConflictError, NotFoundError, ValidationError
 from app.models.base_location import BaseLocation
 from app.models.customer import Customer
@@ -47,19 +47,41 @@ def _aplicar(registro: Any, dados: dict[str, Any], *, ignorar: set[str] | None =
             setattr(registro, campo, valor)
 
 
-def _reavaliar_geocodificacao(registro: Any, dados: dict[str, Any]) -> None:
+def tirar_confirmacao(dados: dict[str, Any]) -> bool:
+    """Retira `ponto_confirmado` do dicionario, porque nao e coluna.
+
+    Fica separado para ser chamado ANTES de `Modelo(**dados)`, que recusaria
+    a chave.
+    """
+    return bool(dados.pop("ponto_confirmado", False))
+
+
+def _reavaliar_geocodificacao(
+    registro: Any, dados: dict[str, Any], confirmado: bool = False
+) -> None:
     """Mantem coordenada e endereco coerentes entre si.
 
-    Duas situacoes, e a ordem importa:
+    Tres situacoes, e a ordem importa:
 
-    1. O administrador informou latitude e longitude -> e um pino posto a
-       mao. Vira MANUAL, que a geocodificacao automatica da Fase 4 nunca
-       sobrescreve.
-    2. Mudou o endereco sem informar coordenada -> a coordenada antiga
-       aponta para outro lugar. Ela e descartada e o registro volta para
-       PENDENTE, entrando na fila de geocodificacao.
+    1. Veio coordenada E alguem confirmou o ponto no mapa -> MANUAL, que a
+       geocodificacao automatica nunca sobrescreve.
+    2. Veio coordenada sem confirmacao -> e um palpite do geocodificador.
+       Fica gravada, porque serve para abrir o mapa no lugar certo, mas
+       marcada como aproximada — e o planejamento a recusa.
+    3. Mudou o endereco sem coordenada nenhuma -> a antiga aponta para outro
+       lugar. E descartada e o registro volta para PENDENTE.
 
-    Sem a regra 2, editar "Rua A, 100" para "Rua B, 500" manteria o pino na
+    A distincao entre 1 e 2 e recente e corrige um defeito serio: o
+    formulario de entrega localiza o endereco sozinho, e o resultado era
+    gravado como MANUAL. O sistema registrava "um humano marcou este ponto"
+    quando nenhum humano tinha olhado para o mapa — e era justamente essa
+    marca que autorizava a entrega a entrar em rota.
+
+    Em Campo Grande isso nao e hipotese: o provedor gratuito resolve no
+    nivel da RUA quase sempre (ver app/services/precisao.py), entao o pino
+    automatico costuma estar a quarteiroes do portao.
+
+    Sem a regra 3, editar "Rua A, 100" para "Rua B, 500" manteria o pino na
     Rua A, e a rota seria calculada para o endereco errado sem nenhum aviso.
     """
     informou_coordenada = (
@@ -68,8 +90,15 @@ def _reavaliar_geocodificacao(registro: Any, dados: dict[str, Any]) -> None:
     mudou_endereco = "address" in dados
 
     if informou_coordenada:
-        registro.geocode_status = GeocodeStatus.MANUAL.value
-        registro.geocode_precision = None
+        if confirmado:
+            registro.geocode_status = GeocodeStatus.MANUAL.value
+            registro.geocode_precision = None
+        else:
+            # RUA e o piso honesto: sem saber a origem, tratar como
+            # aproximado. Errar para "impreciso" custa uma confirmacao;
+            # errar para "exato" custa uma entrega.
+            registro.geocode_status = GeocodeStatus.OK.value
+            registro.geocode_precision = GeocodePrecision.RUA.value
         registro.geocode_provider = None
         registro.geocode_error = None
         return
@@ -103,6 +132,7 @@ class BaseLocationService:
 
     def criar(self, payload: BaseLocationCreate) -> BaseLocation:
         dados = payload.model_dump()
+        confirmado = tirar_confirmacao(dados)
         # A primeira base cadastrada vira padrao sozinha: um sistema com uma
         # unica base e nenhuma marcada como padrao so geraria atrito no
         # planejador, sem informar nada.
@@ -110,7 +140,7 @@ class BaseLocationService:
         dados["is_default"] = dados["is_default"] or primeira
 
         base = BaseLocation(**dados)
-        _reavaliar_geocodificacao(base, dados)
+        _reavaliar_geocodificacao(base, dados, confirmado)
 
         if base.is_default:
             self.repo.limpar_padrao()
@@ -123,9 +153,10 @@ class BaseLocationService:
     def atualizar(self, base_id: int, payload: BaseLocationUpdate) -> BaseLocation:
         base = self.get(base_id)
         dados = payload.model_dump(exclude_unset=True)
+        confirmado = tirar_confirmacao(dados)
 
         _aplicar(base, dados)
-        _reavaliar_geocodificacao(base, dados)
+        _reavaliar_geocodificacao(base, dados, confirmado)
 
         # Base inativa nao pode continuar sendo a padrao: o planejador a
         # ofereceria por default e falharia ao montar a rota.
@@ -264,10 +295,11 @@ class CustomerService:
 
     def criar(self, payload: CustomerCreate) -> Customer:
         dados = payload.model_dump()
+        confirmado = tirar_confirmacao(dados)
         self._garantir_documento_livre(dados.get("document"))
 
         cliente = Customer(**dados)
-        _reavaliar_geocodificacao(cliente, dados)
+        _reavaliar_geocodificacao(cliente, dados, confirmado)
 
         self.repo.add(cliente)
         self.session.commit()
@@ -277,12 +309,13 @@ class CustomerService:
     def atualizar(self, customer_id: int, payload: CustomerUpdate) -> Customer:
         cliente = self.get(customer_id)
         dados = payload.model_dump(exclude_unset=True)
+        confirmado = tirar_confirmacao(dados)
 
         if "document" in dados and dados["document"] != cliente.document:
             self._garantir_documento_livre(dados["document"], excluir_id=cliente.id)
 
         _aplicar(cliente, dados)
-        _reavaliar_geocodificacao(cliente, dados)
+        _reavaliar_geocodificacao(cliente, dados, confirmado)
 
         self.session.commit()
         return cliente

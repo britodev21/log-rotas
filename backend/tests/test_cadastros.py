@@ -96,7 +96,7 @@ def test_coordenada_pela_metade_e_recusada(client: TestClient, admin) -> None:
 # --------------------------------------------------------------------------- #
 # Coordenada x endereco — a regra que mais evita rota errada
 # --------------------------------------------------------------------------- #
-def test_informar_coordenada_marca_como_manual(client: TestClient, admin) -> None:
+def test_ponto_confirmado_marca_como_manual(client: TestClient, admin) -> None:
     """Pino posto a mao nunca pode ser sobrescrito pela geocodificacao."""
     resposta = client.post(
         "/api/v1/clientes",
@@ -106,11 +106,37 @@ def test_informar_coordenada_marca_como_manual(client: TestClient, admin) -> Non
             "address": "Rua 14 de Julho, 1500",
             "latitude": -20.4697,
             "longitude": -54.6201,
+            "ponto_confirmado": True,
         },
     )
 
     assert resposta.status_code == 201, resposta.text
     assert resposta.json()["geocode_status"] == "MANUAL"
+
+
+def test_coordenada_sem_confirmacao_nao_vira_manual(client: TestClient, admin) -> None:
+    """Coordenada sozinha nao prova que alguem olhou o mapa.
+
+    O formulario de cadastro localiza o endereco sozinho, e o resultado era
+    gravado como MANUAL — o sistema registrava "um humano marcou este ponto"
+    sem nenhum humano ter olhado. Como MANUAL e justamente o que autoriza a
+    entrega a entrar em rota, a protecao de precisao se anulava pela porta
+    da frente.
+    """
+    resposta = client.post(
+        "/api/v1/clientes",
+        headers=admin,
+        json={
+            "name": "Marcenaria Sao Jorge",
+            "address": "Avenida Afonso Pena, 3000",
+            "latitude": -20.4697,
+            "longitude": -54.6201,
+        },
+    )
+
+    corpo = resposta.json()
+    assert corpo["geocode_status"] == "OK"
+    assert corpo["geocode_precision"] == "RUA"
 
 
 def test_trocar_endereco_descarta_a_coordenada_antiga(client: TestClient, admin) -> None:
@@ -124,6 +150,7 @@ def test_trocar_endereco_descarta_a_coordenada_antiga(client: TestClient, admin)
             "address": "Rua A, 100",
             "latitude": -20.4697,
             "longitude": -54.6201,
+            "ponto_confirmado": True,
         },
     ).json()
     assert cliente["geocode_status"] == "MANUAL"
@@ -150,7 +177,12 @@ def test_trocar_endereco_com_coordenada_nova_continua_manual(client: TestClient,
     resposta = client.patch(
         f"/api/v1/clientes/{cliente['id']}",
         headers=admin,
-        json={"address": "Rua B, 200", "latitude": -20.5, "longitude": -54.6},
+        json={
+            "address": "Rua B, 200",
+            "latitude": -20.5,
+            "longitude": -54.6,
+            "ponto_confirmado": True,
+        },
     )
 
     assert resposta.json()["geocode_status"] == "MANUAL"
@@ -166,6 +198,7 @@ def test_alterar_outro_campo_nao_mexe_na_coordenada(client: TestClient, admin) -
             "address": "Rua A, 100",
             "latitude": -20.4697,
             "longitude": -54.6201,
+            "ponto_confirmado": True,
         },
     ).json()
 

@@ -233,6 +233,59 @@ def test_fila_de_pendentes_lista_quem_precisa_de_atencao(
     assert any(p["tipo"] == "cliente" and p["id"] == cliente.id for p in pendentes)
 
 
+def test_fila_mostra_pino_aproximado(client: TestClient, admin, db) -> None:
+    """O caso comum em Campo Grande precisa aparecer em algum lugar.
+
+    A fila listava so PENDENTE, AMBIGUO e FALHOU. Um registro OK com
+    precisao RUA — que e o que o provedor devolve para quase todo endereco
+    da cidade — nao aparecia em tela nenhuma. Quando o planejamento passou
+    a recusar esses registros, a pessoa ficaria travada: erro ao calcular a
+    rota e nenhuma tela mostrando qual endereco resolver.
+
+    A fila e o planejamento usam a mesma regra, do mesmo arquivo. Este
+    teste existe para elas nao se separarem de novo.
+    """
+    aproximado = Customer(
+        name="Construtora Beta",
+        address="Avenida Afonso Pena, 3000",
+        latitude=-20.4697,
+        longitude=-54.6201,
+        geocode_status="OK",
+        geocode_precision="RUA",
+    )
+    db.add(aproximado)
+    db.commit()
+
+    pendentes = client.get("/api/v1/geocodificacao/pendentes", headers=admin).json()
+
+    achado = next(
+        (p for p in pendentes if p["tipo"] == "cliente" and p["id"] == aproximado.id),
+        None,
+    )
+    assert achado is not None, "pino aproximado precisa aparecer na fila"
+    assert achado["geocode_precision"] == "RUA"
+    assert "aproximada" in achado["motivo"]
+
+
+def test_fila_aceita_pino_do_numero_do_predio(client: TestClient, admin, db) -> None:
+    """Precisao EXATO nao precisa de conferencia humana, e exigi-la
+    transformaria a protecao em fila infinita."""
+    exato = Customer(
+        name="Loja Central",
+        address="Rua Bahia, 500",
+        latitude=-20.4697,
+        longitude=-54.6201,
+        geocode_status="OK",
+        geocode_precision="EXATO",
+    )
+    db.add(exato)
+    db.commit()
+
+    pendentes = client.get("/api/v1/geocodificacao/pendentes", headers=admin).json()
+
+    assert not any(p["tipo"] == "cliente" and p["id"] == exato.id for p in pendentes)
+
+
 def test_fila_ignora_quem_ja_tem_coordenada(client: TestClient, admin, cliente, db) -> None:
     GeocodingService(db, ProviderFalso(resultado_ok())).aplicar(cliente)
     db.commit()

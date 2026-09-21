@@ -23,8 +23,8 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 
-from app.core.enums import GeocodePrecision, GeocodeStatus
 from app.models.delivery import Delivery
+from app.services.precisao import confiavel as precisao_confiavel
 
 logger = logging.getLogger(__name__)
 
@@ -126,11 +126,6 @@ def _normalizar(texto: str | None) -> str:
     return " ".join(re.sub(r"[^\w\s]", " ", t.lower()).split())
 
 
-#: Situacoes em que a coordenada e confiavel o bastante para agrupar por
-#: posicao pura. EXATO veio do numero do predio; MANUAL foi o administrador
-#: que marcou o ponto no mapa.
-PRECISAO_CONFIAVEL = {GeocodePrecision.EXATO.value}
-STATUS_CONFIAVEL = {GeocodeStatus.MANUAL.value}
 
 
 def _chave_de_agrupamento(entrega: Delivery, precisao: int) -> str:
@@ -152,11 +147,7 @@ def _chave_de_agrupamento(entrega: Delivery, precisao: int) -> str:
     lat = round(float(entrega.latitude), precisao)
     lon = round(float(entrega.longitude), precisao)
 
-    confiavel = (
-        entrega.geocode_status in STATUS_CONFIAVEL
-        or entrega.geocode_precision in PRECISAO_CONFIAVEL
-    )
-    if confiavel:
+    if precisao_confiavel(entrega):
         return f"{lat}|{lon}"
     return f"{lat}|{lon}|{_normalizar(entrega.address)[:60]}"
 

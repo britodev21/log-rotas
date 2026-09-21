@@ -182,6 +182,7 @@ def test_entrega_herda_endereco_do_cliente(client: TestClient, admin) -> None:
             "phone": "67999990000",
             "latitude": -20.47,
             "longitude": -54.62,
+            "ponto_confirmado": True,
         },
     ).json()
 
@@ -196,6 +197,8 @@ def test_entrega_herda_endereco_do_cliente(client: TestClient, admin) -> None:
     assert corpo["address"] == "Avenida Bandeirantes, 900"
     assert corpo["recipient_name"] == "Marcenaria Alfa"
     assert corpo["latitude"] == -20.47
+    # A confirmacao viaja junto com a coordenada: quem ja marcou o portao
+    # deste cliente nao marca de novo a cada pedido.
     assert corpo["geocode_status"] == "MANUAL"
 
 
