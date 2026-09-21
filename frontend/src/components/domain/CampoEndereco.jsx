@@ -103,6 +103,11 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
   const pontoInicial =
     valor?.latitude != null ? [Number(valor.latitude), Number(valor.longitude)] : null;
   const [pino, setPino] = useState(pontoInicial);
+  // Onde o MAPA deve ir, separado de onde o PINO esta. O sistema move os
+  // dois (busca, CEP, escolha no Google); a pessoa move so o pino. Se o
+  // mapa seguisse o pino, arrastar para conferir o portao tiraria o zoom
+  // de quem esta olhando o telhado.
+  const [enquadrar, setEnquadrar] = useState(pontoInicial);
 
   // Registro já gravado como MANUAL chega confirmado; como EXATO, chega
   // provado. Pedir de novo a cada edição transformaria a proteção em
@@ -177,6 +182,7 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
     setCandidatos([]);
     setAvisoMapa("");
     setPino([escolhido.latitude, escolhido.longitude]);
+    setEnquadrar([escolhido.latitude, escolhido.longitude]);
     setConfirmado(false);
     exatoSalvo.current = null;
   }, []);
@@ -204,6 +210,7 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
         // não a porta.
         if (dados.latitude != null && !confirmado) {
           setPino([dados.latitude, dados.longitude]);
+          setEnquadrar([dados.latitude, dados.longitude]);
         }
       } catch (e) {
         console.error("Falha ao consultar CEP", e);
@@ -237,6 +244,7 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
       }
       const [primeiro] = resultado.candidatos;
       setPino([primeiro.latitude, primeiro.longitude]);
+      setEnquadrar([primeiro.latitude, primeiro.longitude]);
       setConfirmado(false);
       if (resultado.candidatos.length > 1) setCandidatos(resultado.candidatos);
     } catch (e) {
@@ -410,7 +418,10 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
               className={`endereco__candidato ${
                 pino && pino[0] === c.latitude ? "endereco__candidato--ativo" : ""
               }`}
-              onClick={() => setPino([c.latitude, c.longitude])}
+              onClick={() => {
+                setPino([c.latitude, c.longitude]);
+                setEnquadrar([c.latitude, c.longitude]);
+              }}
             >
               {pino && pino[0] === c.latitude && (
                 <Check size={13} strokeWidth={3} aria-hidden="true" />
@@ -442,7 +453,11 @@ export function CampoEndereco({ valor, aoMudar, alturaMapa = 260 }) {
               }}
             />
           )}
-          <AjustarLimites pontos={pino ? [pino] : []} ativo={Boolean(pino)} />
+          <AjustarLimites
+            pontos={enquadrar ? [enquadrar] : []}
+            ativo={Boolean(enquadrar)}
+            zoomUnico={18}
+          />
         </MapPanel>
 
         {semPino && !estaProcurando && (

@@ -223,4 +223,5 @@ devolve dataclasses puras — é o que permite testá-lo sem banco e trocá-lo s
 | [docs/BANCO.md](docs/BANCO.md) | Modelo de dados atual e o modelo planejado |
 | [docs/API.md](docs/API.md) | Endpoints disponíveis |
 | [docs/LIMITACOES.md](docs/LIMITACOES.md) | **O que ainda não existe e o que é estimativa** |
+| [docs/SERVICOS_EXTERNOS.md](docs/SERVICOS_EXTERNOS.md) | Cada serviço externo: para quê, chave, custo, o que acontece quando cai |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Fases do projeto e o que entra em cada uma |

@@ -158,24 +158,36 @@ export function ParadasDaRota({ rota, cor, destacada = true, aoSelecionar }) {
  * Sem isto o mapa abre num zoom fixo e a operação pode ficar fora da tela —
  * especialmente com uma entrega distante puxando a área para longe.
  */
-export function AjustarLimites({ pontos, ativo = true }) {
+export function AjustarLimites({ pontos, ativo = true, zoomUnico = 15 }) {
   const mapa = useMap();
 
-  useEffect(() => {
-    if (!ativo || !pontos?.length) return;
+  // A dependencia e o CONTEUDO dos pontos, nao o array.
+  //
+  // A versao anterior dependia do array, e quem chama cria um array novo a
+  // cada renderizacao. O efeito era um mapa que nao deixava ninguem dar
+  // zoom: no painel, que recarrega a cada 15 s, quem aproximava um bairro
+  // era jogado de volta para a cidade inteira (medido: zoom 16 -> 13); no
+  // cadastro, arrastar o pino para conferir o portao tirava o zoom (17 ->
+  // 15) justamente quando ele era necessario.
+  //
+  // Ordenada para que a mesma lista vinda em outra ordem do servidor nao
+  // conte como mudanca.
+  const chave = (pontos ?? [])
+    .filter(([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon))
+    .map(([lat, lon]) => `${Number(lat).toFixed(6)},${Number(lon).toFixed(6)}`)
+    .sort()
+    .join("|");
 
-    const validos = pontos.filter(
-      ([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon),
-    );
-    if (validos.length === 0) return;
+  useEffect(() => {
+    if (!ativo || !chave) return;
+    const validos = chave.split("|").map((p) => p.split(",").map(Number));
 
     if (validos.length === 1) {
-      mapa.setView(validos[0], 15);
+      mapa.setView(validos[0], zoomUnico);
       return;
     }
-
     mapa.fitBounds(L.latLngBounds(validos), { padding: [48, 48], maxZoom: 16 });
-  }, [mapa, pontos, ativo]);
+  }, [mapa, chave, ativo, zoomUnico]);
 
   return null;
 }

@@ -52,6 +52,13 @@ export function GeocodeQueue() {
   const [tipo, setTipo] = useState("");
   const [selecionado, setSelecionado] = useState(null);
   const [pino, setPino] = useState(null);
+  // Onde o mapa vai. So o sistema o move; o clique e o arrasto da pessoa
+  // mexem no pino e deixam o zoom como ela deixou.
+  const [enquadrar, setEnquadrar] = useState(null);
+  const apontar = useCallback((p) => {
+    setPino(p);
+    setEnquadrar(p);
+  }, []);
   const [salvando, setSalvando] = useState(false);
   const [processando, setProcessando] = useState(false);
   const [busca, setBusca] = useState("");
@@ -85,7 +92,7 @@ export function GeocodeQueue() {
         // obrigaria a pessoa a um clique a mais só para ver onde caiu.
         if (resultado.candidatos.length > 0) {
           const c = resultado.candidatos[0];
-          setPino([c.latitude, c.longitude]);
+          apontar([c.latitude, c.longitude]);
         } else {
           toast.atencao(
             "Nada encontrado",
@@ -99,7 +106,7 @@ export function GeocodeQueue() {
         setBuscando(false);
       }
     },
-    [toast],
+    [toast, apontar],
   );
 
   // Procura sozinho quando a digitacao para. A espera nao e enfeite: o
@@ -123,7 +130,7 @@ export function GeocodeQueue() {
     setBusca(item.address ?? "");
 
     if (item.latitude) {
-      setPino([item.latitude, item.longitude]);
+      apontar([item.latitude, item.longitude]);
       return;
     }
 
@@ -314,7 +321,11 @@ export function GeocodeQueue() {
                 }}
               />
             )}
-            <AjustarLimites pontos={pino ? [pino] : []} ativo={Boolean(pino)} />
+            <AjustarLimites
+              pontos={enquadrar ? [enquadrar] : []}
+              ativo={Boolean(enquadrar)}
+              zoomUnico={18}
+            />
           </MapPanel>
 
           <div className="fila-busca">
@@ -355,7 +366,7 @@ export function GeocodeQueue() {
                     className={`fila-candidato ${
                       pino && pino[0] === c.latitude ? "fila-candidato--ativo" : ""
                     }`}
-                    onClick={() => setPino([c.latitude, c.longitude])}
+                    onClick={() => apontar([c.latitude, c.longitude])}
                   >
                     <MapPin size={13} strokeWidth={2} aria-hidden="true" />
                     <span>{c.display_name}</span>
