@@ -150,6 +150,17 @@ número. O pino cai na via certa, podendo estar algumas dezenas de metros fora. 
 avisa quando isso acontece e o pino é arrastável — o ajuste manual vira `MANUAL` e não é mais
 sobrescrito. Um provedor pago resolveria no número, e é a primeira troca que vale o dinheiro.
 
+**O pino não é instantâneo.** Medido no navegador, em endereços de Campo Grande nunca
+consultados antes: **3,8 s e 5,6 s** entre a última tecla e o pino no mapa. Desse tempo,
+0,9 s é a espera deliberada do debounce e o resto é o Nominatim. Endereço já consultado
+antes responde do cache em menos de 1 s.
+
+O comportamento é o do Google Maps — digitou, achou, sem clicar em nada — mas a resposta
+leva alguns segundos, e é por isso que a tela mostra "Localizando no mapa..." em vez de
+ficar parada. Encurtar o debounce não ajuda: o gargalo é o provedor, que permite uma
+consulta por segundo. Quem quiser a resposta instantânea troca o provedor, não o código —
+o `GeocodingProvider` existe para isso.
+
 ### 3.7 Limitador de taxa em memória
 
 O limite de 1 req/s do Nominatim é respeitado por um lock de processo. Com vários workers isso

@@ -295,12 +295,68 @@ Transição impossível responde **409** dizendo quais status eram possíveis.
 | Método | Caminho | |
 |---|---|---|
 | `GET` | `/api/v1/geocodificacao/pendentes` | Fila de revisão |
+| `GET` | `/api/v1/geocodificacao/cep/{cep}` | Endereço dos Correios |
+| `GET` | `/api/v1/geocodificacao/buscar?endereco=...` | Candidatos para o mapa |
 | `POST` | `/api/v1/geocodificacao/testar?endereco=...` | Consulta sem gravar |
+| `POST` | `/api/v1/geocodificacao/lote` | Processa uma fila |
 | `POST` | `/api/v1/geocodificacao/{tipo}/{id}` | Geocodifica um registro |
 | `PUT` | `/api/v1/geocodificacao/{tipo}/{id}/coordenada` | Grava o pino manual |
-| `POST` | `/api/v1/geocodificacao/lote` | Processa uma fila |
 
 `tipo` é `entrega`, `cliente` ou `base`.
+
+> **A ordem desta tabela é a ordem do código, e isso importa.** `/{tipo}/{id}` casa com
+> qualquer coisa de dois segmentos, inclusive `/cep/79002000`. Registrar a rota genérica
+> antes das fixas devolve **405** num caminho que existe. Há teste de regressão para as duas.
+
+### `GET /cep/{cep}`
+
+Consulta o ViaCEP e devolve logradouro, bairro, cidade e UF já normalizados. Aceita o CEP com
+ou sem máscara.
+
+```json
+{
+  "cep": "79002000",
+  "cep_formatado": "79002-000",
+  "logradouro": "Avenida Calógeras",
+  "bairro": "Centro",
+  "cidade": "Campo Grande",
+  "uf": "MS",
+  "endereco_montado": "Avenida Calógeras, Centro, Campo Grande - MS, 79002-000"
+}
+```
+
+Com `?numero=1500`, `endereco_montado` já vem com o número na posição certa — a interface não
+precisa saber montar endereço brasileiro.
+
+CEP inexistente devolve **404**. A pegadinha está do lado do provedor: o ViaCEP responde
+`200` com `{"erro": true}`, um status de sucesso carregando uma falha — quem olhasse só o
+código HTTP gravaria um endereço vazio.
+
+O CEP **não traz coordenada**: os Correios dão o logradouro, não o número. A posição vem do
+`/buscar` com o endereço já montado.
+
+### `GET /buscar`
+
+Geocodifica sem gravar nada e devolve **todos** os candidatos, para a interface mostrar o
+primeiro no mapa e deixar a lista à vista quando houver mais de um.
+
+```json
+{
+  "consulta": "Avenida Calógeras, 1500, Centro, Campo Grande - MS",
+  "candidatos": [
+    {
+      "latitude": -20.4697,
+      "longitude": -54.6201,
+      "display_name": "Avenida Calógeras, Centro, Campo Grande - MS",
+      "precision": "RUA"
+    }
+  ]
+}
+```
+
+`precision` é `EXATO`, `RUA`, `BAIRRO` ou `CIDADE`. `RUA` significa que o pino está na via
+certa e pode estar algumas dezenas de metros do número — a tela avisa em vez de fingir
+precisão. Gravar é um passo separado, por `PUT .../coordenada`.
 
 **Quatro desfechos, e a distinção importa:**
 
