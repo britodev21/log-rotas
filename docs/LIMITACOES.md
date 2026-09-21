@@ -181,10 +181,39 @@ resolve. Todos leem o mesmo OpenStreetMap. O problema é o dado, não o provedor
   propaga a confirmação para as próximas entregas.
 
 **O custo honesto:** hoje, praticamente todo endereço novo exige um clique de confirmação.
-Isso não é burocracia inventada; é o preço de não ter o dado. A alternativa é um provedor
-com base própria de endereços (Google, HERE, Azure/TomTom), que resolve no número e dispensa
-a confirmação — a porta está aberta em `app/geocoding/`, e nada além de um arquivo novo e uma
-variável de ambiente muda.
+Isso não é burocracia inventada; é o preço de não ter o dado.
+
+### Trocar por um provedor que acha o número
+
+Os adaptadores de **Google** e **HERE** já estão escritos (`app/geocoding/google.py` e
+`here.py`). A troca é só configuração:
+
+```
+GEOCODING_PROVIDER=google      # ou here
+GEOCODING_PROVIDER_KEY=<chave>
+```
+
+Os dois mantêm base própria de endereços e resolvem no número na maior parte do Brasil
+urbano — a confirmação manual deixa de ser a regra e volta a ser a exceção.
+
+Os dois pedem cartão no cadastro. A HERE tem cota diária gratuita, o que costuma bastar para
+uma operação do tamanho da Britto; o Google tende a ter cobertura melhor no Brasil, e a
+diferença aparece justamente em loteamento novo e chácara, que é onde o sistema mais sofre.
+**Não dá para escolher entre os dois no escrito:** configure um, rode uma semana de endereços
+reais e conte quantos caem na fila de conferência.
+
+Em ambos os adaptadores, o resultado *interpolado* (`RANGE_INTERPOLATED` no Google,
+`houseNumberType: interpolated` na HERE) é tratado como **nível de rua**, não como exato. O
+provedor estimou o ponto entre os números conhecidos das pontas da quadra; cai perto, e perto
+não é o portão. Aceitar isso como exato repetiria o defeito do Nominatim — com uma fatura
+junto.
+
+**Limite desta afirmação:** os dois adaptadores foram testados contra respostas gravadas, não
+contra as APIs reais — não havia chave disponível quando foram escritos. A leitura das
+respostas tem teste (`tests/test_geocoding_pagos.py`), inclusive os casos de cota estourada e
+chave inválida, que não podem virar "endereço não encontrado". O que **não** foi exercitado é
+a conversa de rede real. Na primeira vez que uma chave for configurada, confira um endereço
+conhecido na tela antes de confiar.
 
 **O pino não é instantâneo.** Medido no navegador, em endereços de Campo Grande nunca
 consultados antes: **3,8 s e 5,6 s** entre a última tecla e o pino no mapa. Desse tempo,

@@ -14,6 +14,8 @@ from app.core.config import get_settings
 from app.core.enums import GeocodePrecision, GeocodeStatus
 from app.core.errors import NotFoundError, ValidationError
 from app.geocoding.base import GeocodeResult, GeocodingProvider
+from app.geocoding.google import GoogleProvider
+from app.geocoding.here import HereProvider
 from app.geocoding.nominatim import NominatimProvider
 from app.models.base_location import BaseLocation
 from app.models.customer import Customer
@@ -44,15 +46,38 @@ def chave_cache(endereco: str) -> str:
     return hashlib.sha256(normalizar_endereco(endereco).encode("utf-8")).hexdigest()
 
 
+#: Adaptadores disponiveis.
+#:
+#: `nominatim` e gratuito e nao acha o numero da porta em Campo Grande --
+#: cerca de 530 predios da cidade tem numero no OpenStreetMap, e o efeito
+#: pratico e que quase todo endereco novo precisa de conferencia manual
+#: (ver app/services/precisao.py).
+#:
+#: `google` e `here` mantem base propria e resolvem no numero. Custam, e
+#: e por isso que a troca e uma variavel de ambiente e nao uma decisao
+#: tomada dentro do codigo.
+PROVEDORES = {
+    "nominatim": NominatimProvider,
+    "google": GoogleProvider,
+    "here": HereProvider,
+}
+
+
 def construir_provider() -> GeocodingProvider:
     """Escolhe o adaptador conforme a configuracao."""
     nome = get_settings().geocoding_provider.lower()
-    if nome == "nominatim":
-        return NominatimProvider()
-    raise ValidationError(
-        f"Provedor de geocodificacao desconhecido: {nome}.",
-        details={"disponiveis": ["nominatim"]},
-    )
+    classe = PROVEDORES.get(nome)
+    if classe is None:
+        raise ValidationError(
+            f"Provedor de geocodificacao desconhecido: {nome}.",
+            details={"disponiveis": sorted(PROVEDORES)},
+        )
+    try:
+        return classe()
+    except ValueError as exc:
+        # Chave faltando. A mensagem precisa dizer o que fazer: um
+        # ValueError cru aqui viraria 500 sem explicacao no dia da troca.
+        raise ValidationError(str(exc)) from exc
 
 
 class GeocodingService:
