@@ -78,6 +78,7 @@ Placa = Annotated[str, AfterValidator(_normalizar_placa)]
 Telefone = Annotated[str | None, Field(max_length=30), AfterValidator(_somente_digitos)]
 Documento = Annotated[str | None, Field(max_length=20), AfterValidator(_somente_digitos)]
 Endereco = Annotated[str | None, Field(max_length=255), AfterValidator(_limpar)]
+Cep = Annotated[str | None, Field(max_length=9), AfterValidator(_somente_digitos)]
 Observacao = Annotated[str | None, Field(max_length=500), AfterValidator(_limpar)]
 TextoOpcional = Annotated[str | None, Field(max_length=160), AfterValidator(_limpar)]
 

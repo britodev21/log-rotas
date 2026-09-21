@@ -262,3 +262,40 @@ def test_motorista_nao_geocodifica(client: TestClient, criar_usuario, autenticar
     criar_usuario(email="mot@britto.com.br", role=Role.MOTORISTA)
     cabecalho = autenticar("mot@britto.com.br")
     assert client.get("/api/v1/geocodificacao/pendentes", headers=cabecalho).status_code == 403
+
+
+# --------------------------------------------------------------------------- #
+# Ordem das rotas
+# --------------------------------------------------------------------------- #
+def test_cep_nao_e_engolido_pela_rota_generica(client: TestClient, admin) -> None:
+    """Regressao de um bug real.
+
+    `/geocodificacao/cep/79002000` casa com `/geocodificacao/{tipo}/{registro_id}`
+    — com tipo="cep". Quando a rota generica estava registrada primeiro, o
+    FastAPI achava o caminho, nao achava o metodo e respondia 405, numa falha
+    que nao parece ter relacao nenhuma com ordenacao de rotas.
+
+    O teste nao consulta os Correios: um CEP com formato invalido ja separa
+    os dois desfechos. 405 significa que a rota generica voltou a vir antes.
+    """
+    resposta = client.get("/api/v1/geocodificacao/cep/123", headers=admin)
+
+    assert resposta.status_code != 405, (
+        "a rota de CEP foi capturada por /{tipo}/{registro_id}; "
+        "rotas de caminho fixo precisam ser registradas antes das genericas"
+    )
+    assert resposta.status_code == 422  # CEP com 3 digitos
+
+
+def test_busca_nao_e_engolida_pela_rota_generica(client: TestClient, admin) -> None:
+    resposta = client.get(
+        "/api/v1/geocodificacao/buscar", headers=admin, params={"endereco": "x"}
+    )
+    assert resposta.status_code != 405
+    assert resposta.status_code == 422  # menos de 3 caracteres
+
+
+def test_cep_invalido_e_recusado_sem_consultar_os_correios(client: TestClient, admin) -> None:
+    for invalido in ("123", "abcdefgh", "123456789012"):
+        resposta = client.get(f"/api/v1/geocodificacao/cep/{invalido}", headers=admin)
+        assert resposta.status_code == 422, invalido

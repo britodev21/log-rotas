@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Marker, useMapEvents } from "react-leaflet";
 import { MapPin, MapPinned, Search, Wand2 } from "lucide-react";
 
@@ -13,6 +13,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  InputField,
   PageHeader,
   SelectField,
   SkeletonList,
@@ -53,6 +54,10 @@ export function GeocodeQueue() {
   const [pino, setPino] = useState(null);
   const [salvando, setSalvando] = useState(false);
   const [processando, setProcessando] = useState(false);
+  const [busca, setBusca] = useState("");
+  const [candidatos, setCandidatos] = useState([]);
+  const [buscando, setBuscando] = useState(false);
+  const ultimaBusca = useRef(null);
 
   const carregar = useCallback(async () => {
     setErro("");
@@ -68,9 +73,65 @@ export function GeocodeQueue() {
     carregar();
   }, [carregar]);
 
+  const buscarNoMapa = useCallback(
+    async (texto) => {
+      if (!texto || texto.trim().length < 3) return;
+      setBuscando(true);
+      setCandidatos([]);
+      try {
+        const resultado = await api.buscar(texto.trim());
+        setCandidatos(resultado.candidatos);
+        // Aponta o primeiro na hora. Devolver uma lista sem mexer no mapa
+        // obrigaria a pessoa a um clique a mais só para ver onde caiu.
+        if (resultado.candidatos.length > 0) {
+          const c = resultado.candidatos[0];
+          setPino([c.latitude, c.longitude]);
+        } else {
+          toast.atencao(
+            "Nada encontrado",
+            "Marque o ponto clicando direto no mapa.",
+          );
+        }
+      } catch (e) {
+        console.error("Falha ao buscar endereço", e);
+        toast.erro("Não foi possível buscar", mensagemDeErro(e));
+      } finally {
+        setBuscando(false);
+      }
+    },
+    [toast],
+  );
+
+  // Procura sozinho quando a digitacao para. A espera nao e enfeite: o
+  // Nominatim permite UMA consulta por segundo, e buscar a cada tecla
+  // queimaria o limite e bloquearia o IP.
+  useEffect(() => {
+    const texto = busca.trim();
+    if (texto.length < 8) return;
+    if (texto === ultimaBusca.current) return;
+
+    const id = setTimeout(() => {
+      ultimaBusca.current = texto;
+      buscarNoMapa(texto);
+    }, 900);
+    return () => clearTimeout(id);
+  }, [busca, buscarNoMapa]);
+
   function selecionar(item) {
     setSelecionado(item);
-    setPino(item.latitude ? [item.latitude, item.longitude] : null);
+    setCandidatos([]);
+    setBusca(item.address ?? "");
+
+    if (item.latitude) {
+      setPino([item.latitude, item.longitude]);
+      return;
+    }
+
+    // Sem coordenada, o endereço vai para o campo de busca e o efeito
+    // acima o localiza sozinho: o objetivo da tela é ver onde ele cai, e
+    // esperar um clique para isso é atrito puro.
+    setPino(null);
+    ultimaBusca.current = null;
   }
 
   async function tentarGeocodificar(item) {
@@ -241,6 +302,55 @@ export function GeocodeQueue() {
             <AjustarLimites pontos={pino ? [pino] : []} ativo={Boolean(pino)} />
           </MapPanel>
 
+          <div className="fila-busca">
+            <div className="crescer">
+              <InputField
+                label="Buscar endereço no mapa"
+                placeholder="Rua, número, bairro, cidade"
+                ajuda="Procura sozinho ao parar de digitar."
+                icone={Search}
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    buscarNoMapa(busca);
+                  }
+                }}
+              />
+            </div>
+            <Button
+              variante="secundario"
+              icone={Search}
+              onClick={() => buscarNoMapa(busca)}
+              carregando={buscando}
+              disabled={busca.trim().length < 3}
+              title="A busca acontece sozinha ao parar de digitar; use para repetir."
+            >
+              Buscar
+            </Button>
+          </div>
+
+          {candidatos.length > 0 && (
+            <ul className="fila-candidatos">
+              {candidatos.map((c, i) => (
+                <li key={i}>
+                  <button
+                    type="button"
+                    className={`fila-candidato ${
+                      pino && pino[0] === c.latitude ? "fila-candidato--ativo" : ""
+                    }`}
+                    onClick={() => setPino([c.latitude, c.longitude])}
+                  >
+                    <MapPin size={13} strokeWidth={2} aria-hidden="true" />
+                    <span>{c.display_name}</span>
+                    {c.precision && <Badge tom="neutro">{c.precision.toLowerCase()}</Badge>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
           <div className="fila-acoes">
             {!selecionado ? (
               <p className="texto-3">
@@ -256,11 +366,12 @@ export function GeocodeQueue() {
                 <div className="acoes-direita">
                   <Button
                     variante="secundario"
-                    icone={Search}
+                    icone={Wand2}
                     onClick={() => tentarGeocodificar(selecionado)}
                     carregando={processando}
+                    title="Grava automaticamente se o provedor tiver certeza."
                   >
-                    Tentar localizar
+                    Resolver automático
                   </Button>
                   <Button
                     icone={MapPin}

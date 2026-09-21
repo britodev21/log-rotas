@@ -22,7 +22,8 @@ Em ordem de urgência.
 |---|---|---|---|
 | **Nominatim** | Geocodificação | 1 requisição/s, uso pesado proibido | Plano pago, LocationIQ ou Google |
 | **OSRM público** | Distância e tempo | Servidor de demonstração, sem garantia | OSRM próprio na VPS com extrato de MS |
-| **OpenStreetMap** | Ladrilhos do mapa | Política de uso proíbe volume comercial | CARTO, MapTiler ou Stadia (todos com chave) |
+| **Esri** | Ladrilhos do mapa | Uso comercial pede conta ArcGIS | CARTO, MapTiler ou Stadia (todos com chave) |
+| **ViaCEP** | Consulta de CEP | Sem limite documentado | — |
 
 Nenhum deles custa nada hoje e todos funcionam para desenvolvimento. Todos são trocáveis por
 configuração: o código fala com `GeocodingProvider` e `MatrixProvider`, nunca com o serviço, e
@@ -134,14 +135,20 @@ criar índices, ajustar repositórios) — um a dois dias.
 O painel atualiza a cada 15 segundos. Suficiente para poucos motoristas; vira SSE quando
 houver GPS contínuo.
 
-### 3.6 Base cartográfica sem estilo próprio
+### 3.6 Endereço: CEP é o caminho principal, não o texto livre
 
-Os ladrilhos do OpenStreetMap são coloridos. O visual dessaturado do sistema — e o tema
-escuro — vêm de **filtro CSS** aplicado ao ladrilho, não do estilo do provedor.
+O cadastro começa pelo CEP porque endereço brasileiro digitado por extenso é a pior entrada
+possível para geocodificação — "Av. Calógeras 1500" tem dezenas de grafias. O ViaCEP devolve
+logradouro, bairro, cidade e UF normalizados, e o endereço montado a partir disso acerta
+muito mais.
 
-Funciona bem e não depende de chave, mas é uma aproximação: um provedor com estilo próprio
-(CARTO, MapTiler) entrega rótulos pensados para fundo escuro, enquanto o filtro apenas inverte
-os que existem. Definir `VITE_MAP_TILE_URL` desliga o filtro automaticamente.
+O campo de texto livre continua ali para quem não sabe o CEP, com aviso de que o resultado
+costuma ser menos preciso.
+
+**Limite conhecido:** o Nominatim frequentemente resolve o endereço no nível da RUA, não do
+número. O pino cai na via certa, podendo estar algumas dezenas de metros fora. A interface
+avisa quando isso acontece e o pino é arrastável — o ajuste manual vira `MANUAL` e não é mais
+sobrescrito. Um provedor pago resolveria no número, e é a primeira troca que vale o dinheiro.
 
 ### 3.7 Limitador de taxa em memória
 

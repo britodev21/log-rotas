@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { mensagemDeErro } from "../../api/client";
 import { entregas as api } from "../../api/operacao";
+import { CampoEndereco } from "../../components/domain";
 import {
   Alert,
   Button,
@@ -20,7 +21,6 @@ const VAZIO = {
   customer_id: "",
   recipient_name: "",
   recipient_phone: "",
-  address: "",
   description: "",
   order_number: "",
   weight_kg: "",
@@ -45,6 +45,7 @@ export function ModalEntrega({ alvo, clientes, dataPadrao, onFechar, onSalvo }) 
   const editando = alvo && alvo !== "nova";
 
   const [form, setForm] = useState({ ...VAZIO, scheduled_date: dataPadrao });
+  const [endereco, setEndereco] = useState({});
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
@@ -62,6 +63,16 @@ export function ModalEntrega({ alvo, clientes, dataPadrao, onFechar, onSalvo }) 
     } else {
       setForm({ ...VAZIO, scheduled_date: dataPadrao });
     }
+    setEndereco(
+      editando
+        ? {
+            address: alvo.address ?? "",
+            postal_code: alvo.postal_code ?? "",
+            latitude: alvo.latitude,
+            longitude: alvo.longitude,
+          }
+        : {},
+    );
   }, [alvo, editando, dataPadrao]);
 
   const alterar = (campo) => (e) =>
@@ -80,7 +91,10 @@ export function ModalEntrega({ alvo, clientes, dataPadrao, onFechar, onSalvo }) 
       customer_id: form.customer_id ? Number(form.customer_id) : null,
       recipient_name: form.recipient_name || null,
       recipient_phone: form.recipient_phone || null,
-      address: form.address || null,
+      address: endereco.address || null,
+      postal_code: endereco.postal_code || null,
+      latitude: endereco.latitude ?? null,
+      longitude: endereco.longitude ?? null,
       description: form.description || null,
       order_number: form.order_number || null,
       weight_kg: numeroOuNulo(form.weight_kg),
@@ -147,14 +161,23 @@ export function ModalEntrega({ alvo, clientes, dataPadrao, onFechar, onSalvo }) 
           ))}
         </SelectField>
 
-        <InputField
-          label="Endereço de entrega"
-          placeholder="Rua, número, bairro"
-          value={form.address}
-          onChange={alterar("address")}
-          ajuda="Deixe vazio para usar o endereço do cliente selecionado."
-          disabled={travada}
-        />
+        {travada ? (
+          <InputField
+            label="Endereço de entrega"
+            value={endereco.address ?? ""}
+            disabled
+            ajuda="Não pode ser alterado com a entrega em rota."
+          />
+        ) : (
+          <>
+            <span className="rotulo-secao">Endereço de entrega</span>
+            <CampoEndereco
+              key={alvo?.id ?? "nova"}
+              valor={endereco}
+              aoMudar={setEndereco}
+            />
+          </>
+        )}
 
         <div className="form-grade">
           <InputField

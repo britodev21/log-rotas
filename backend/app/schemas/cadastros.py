@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from app.core.enums import GeocodePrecision, GeocodeStatus
 from app.schemas.common import (
+    Cep,
     Documento,
     Endereco,
     Latitude,
@@ -34,6 +35,7 @@ class GeocodeRead(ORMModel):
     """Bloco de geocodificacao devolvido junto de quem tem endereco."""
 
     address: str | None
+    postal_code: str | None
     latitude: float | None
     longitude: float | None
     geocode_status: GeocodeStatus
@@ -47,6 +49,7 @@ class GeocodeRead(ORMModel):
 class BaseLocationCreate(BaseModel):
     name: NomeCurto
     address: Endereco = None
+    postal_code: Cep = None
     phone: Telefone = None
     latitude: Latitude = None
     longitude: Longitude = None
@@ -66,6 +69,7 @@ class BaseLocationCreate(BaseModel):
 class BaseLocationUpdate(BaseModel):
     name: NomeCurto | None = None
     address: Endereco = None
+    postal_code: Cep = None
     phone: Telefone = None
     latitude: Latitude = None
     longitude: Longitude = None
@@ -192,6 +196,7 @@ class CustomerCreate(BaseModel):
     email: TextoOpcional = None
     document: Documento = None
     address: Endereco = None
+    postal_code: Cep = None
     latitude: Latitude = None
     longitude: Longitude = None
     active: bool = True
@@ -210,6 +215,7 @@ class CustomerUpdate(BaseModel):
     email: TextoOpcional = None
     document: Documento = None
     address: Endereco = None
+    postal_code: Cep = None
     latitude: Latitude = None
     longitude: Longitude = None
     active: bool | None = None

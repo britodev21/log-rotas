@@ -60,3 +60,24 @@ class PendenteRead(BaseModel):
     geocode_error: str | None
     latitude: float | None
     longitude: float | None
+
+
+class EnderecoCepRead(BaseModel):
+    """Endereco resolvido a partir do CEP."""
+
+    cep: str
+    cep_formatado: str
+    logradouro: str | None
+    bairro: str | None
+    cidade: str
+    uf: str
+    #: Endereco de uma linha ja montado na ordem que o geocodificador espera.
+    #: O numero entra pela query, porque o CEP sozinho nao o conhece.
+    endereco_montado: str
+
+
+class BuscaResultado(BaseModel):
+    """Candidatos de uma busca livre, para a pessoa escolher no mapa."""
+
+    consulta: str
+    candidatos: list[CandidatoRead]

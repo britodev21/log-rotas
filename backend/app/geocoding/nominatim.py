@@ -85,6 +85,27 @@ class NominatimProvider:
         self.user_agent = user_agent or settings.nominatim_user_agent
         self._limitador = _LimitadorDeTaxa(INTERVALO_MINIMO_S)
 
+    def buscar(self, endereco: str, limite: int = 5) -> list[Candidato]:
+        """Lista os candidatos de um endereco, sem decidir nada.
+
+        Diferente de `geocode`, que resolve num resultado so. Aqui a escolha
+        e da pessoa — e por isso a busca na tela de enderecos aponta cada
+        candidato no mapa em vez de adivinhar qual e o certo.
+        """
+        resultado = self.geocode(endereco)
+        if resultado.candidatos:
+            return resultado.candidatos[:limite]
+        if resultado.sucesso:
+            return [
+                Candidato(
+                    latitude=resultado.latitude,
+                    longitude=resultado.longitude,
+                    display_name=resultado.normalized_address or endereco,
+                    precision=resultado.precision,
+                )
+            ]
+        return []
+
     def geocode(self, endereco: str) -> GeocodeResult:
         if not endereco or not endereco.strip():
             return GeocodeResult.nao_encontrado(provider=self.nome)

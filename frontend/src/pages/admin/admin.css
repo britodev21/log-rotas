@@ -847,3 +847,53 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* --- Busca de endereco na fila ------------------------------------------- */
+
+.fila-busca {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--e-3);
+  padding: var(--e-4) var(--e-5) 0;
+}
+
+.fila-candidatos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  padding: var(--e-3) var(--e-5) 0;
+}
+
+.fila-candidato {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  width: 100%;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+  background: var(--superficie);
+  font-size: var(--t-12);
+  line-height: var(--lh-normal);
+  color: var(--texto-2);
+  text-align: left;
+  transition:
+    border-color var(--tempo-rapido) var(--curva),
+    background-color var(--tempo-rapido) var(--curva);
+}
+
+.fila-candidato:hover {
+  background: var(--superficie-hover);
+}
+
+.fila-candidato--ativo {
+  border-color: var(--primaria);
+  background: var(--primaria-suave);
+  color: var(--primaria);
+  font-weight: var(--p-500);
+}
+
+.fila-candidato svg {
+  flex-shrink: 0;
+  color: var(--texto-4);
+}

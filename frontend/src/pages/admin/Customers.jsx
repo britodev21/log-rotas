@@ -3,7 +3,7 @@ import { MoreHorizontal, Pencil, Power, Users } from "lucide-react";
 
 import { mensagemDeErro } from "../../api/client";
 import { clientes as api } from "../../api/cadastros";
-import { CadastroPage, GeocodeBadge } from "../../components/domain";
+import { CadastroPage, CampoEndereco, GeocodeBadge } from "../../components/domain";
 import {
   Alert,
   Avatar,
@@ -32,7 +32,6 @@ const VAZIO = {
   phone: "",
   email: "",
   document: "",
-  address: "",
   notes: "",
 };
 
@@ -43,12 +42,11 @@ export function Customers() {
 
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(VAZIO);
+  const [endereco, setEndereco] = useState({});
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   const editando = modal && modal !== "novo";
-  const trocouEndereco =
-    editando && modal.address && form.address !== (modal.address ?? "");
 
   function abrir(cliente) {
     setErro("");
@@ -56,9 +54,16 @@ export function Customers() {
       setForm(
         Object.fromEntries(Object.keys(VAZIO).map((k) => [k, cliente[k] ?? ""])),
       );
+      setEndereco({
+        address: cliente.address ?? "",
+        postal_code: cliente.postal_code ?? "",
+        latitude: cliente.latitude,
+        longitude: cliente.longitude,
+      });
       setModal(cliente);
     } else {
       setForm(VAZIO);
+      setEndereco({});
       setModal("novo");
     }
   }
@@ -76,7 +81,10 @@ export function Customers() {
       phone: form.phone || null,
       email: form.email || null,
       document: form.document || null,
-      address: form.address || null,
+      address: endereco.address || null,
+      postal_code: endereco.postal_code || null,
+      latitude: endereco.latitude ?? null,
+      longitude: endereco.longitude ?? null,
       notes: form.notes || null,
     };
 
@@ -209,21 +217,13 @@ export function Customers() {
             required
             obrigatorio
           />
-
-          <InputField
-            label="Endereço"
-            placeholder="Rua, número, bairro, cidade"
-            value={form.address}
-            onChange={alterar("address")}
-            ajuda="Será convertido em coordenada quando a geocodificação entrar (Fase 4)."
+          <span className="rotulo-secao">Endereço</span>
+          <CampoEndereco
+            key={editando ? modal.id : "novo"}
+            valor={endereco}
+            aoMudar={setEndereco}
           />
 
-          {trocouEndereco && (
-            <Alert tom="atencao" titulo="A localização será recalculada">
-              Como o endereço mudou, a coordenada atual é descartada — ela
-              apontaria para o lugar anterior.
-            </Alert>
-          )}
 
           <div className="form-grade">
             <InputField label="Telefone" value={form.phone} onChange={alterar("phone")} />

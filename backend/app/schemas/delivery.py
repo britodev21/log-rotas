@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, model_validator
 from app.core.enums import DeliveryStatus, FailureReason, Priority
 from app.schemas.cadastros import GeocodeRead
 from app.schemas.common import (
+    Cep,
     Endereco,
     Latitude,
     Longitude,
@@ -34,6 +35,7 @@ class _DeliveryBase(BaseModel):
 
     description: Endereco = None
     address: Endereco = None
+    postal_code: Cep = None
     latitude: Latitude = None
     longitude: Longitude = None
 

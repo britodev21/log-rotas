@@ -3,7 +3,7 @@ import { MapPin, MoreHorizontal, Pencil, Power, Star } from "lucide-react";
 
 import { mensagemDeErro } from "../../api/client";
 import { bases as api } from "../../api/cadastros";
-import { CadastroPage, GeocodeBadge } from "../../components/domain";
+import { CadastroPage, CampoEndereco, GeocodeBadge } from "../../components/domain";
 import {
   Alert,
   Badge,
@@ -27,7 +27,7 @@ import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { useToast } from "../../hooks/useToast";
 import "./admin.css";
 
-const VAZIO = { name: "", address: "", phone: "", notes: "" };
+const VAZIO = { name: "", phone: "", notes: "" };
 
 export function Bases() {
   useDocumentTitle("Bases");
@@ -36,27 +36,30 @@ export function Bases() {
 
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(VAZIO);
+  const [endereco, setEndereco] = useState({});
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   const editando = modal && modal !== "nova";
-  // Endereço alterado descarta a coordenada no backend; avisar antes evita
-  // que a pessoa descubra isso depois, olhando o mapa.
-  const trocouEndereco =
-    editando && modal.address && form.address !== (modal.address ?? "");
 
   function abrir(base) {
     setErro("");
     if (base) {
       setForm({
         name: base.name ?? "",
-        address: base.address ?? "",
         phone: base.phone ?? "",
         notes: base.notes ?? "",
+      });
+      setEndereco({
+        address: base.address ?? "",
+        postal_code: base.postal_code ?? "",
+        latitude: base.latitude,
+        longitude: base.longitude,
       });
       setModal(base);
     } else {
       setForm(VAZIO);
+      setEndereco({});
       setModal("nova");
     }
   }
@@ -71,7 +74,10 @@ export function Bases() {
 
     const dados = {
       name: form.name,
-      address: form.address || null,
+      address: endereco.address || null,
+      postal_code: endereco.postal_code || null,
+      latitude: endereco.latitude ?? null,
+      longitude: endereco.longitude ?? null,
       phone: form.phone || null,
       notes: form.notes || null,
     };
@@ -216,6 +222,7 @@ export function Bases() {
         titulo={editando ? "Editar base" : "Nova base"}
         descricao={editando ? modal.name : "Ponto de partida e retorno das rotas."}
         onFechar={() => setModal(null)}
+        tamanho="lg"
       >
         <form className="form-modal" onSubmit={enviar} noValidate>
           {erro && <Alert tom="erro">{erro}</Alert>}
@@ -228,21 +235,13 @@ export function Bases() {
             required
             obrigatorio
           />
-
-          <InputField
-            label="Endereço"
-            placeholder="Rua, número, bairro, cidade"
-            value={form.address}
-            onChange={alterar("address")}
-            ajuda="Será convertido em coordenada quando a geocodificação entrar (Fase 4)."
+          <span className="rotulo-secao">Endereço</span>
+          <CampoEndereco
+            key={editando ? modal.id : "novo"}
+            valor={endereco}
+            aoMudar={setEndereco}
           />
 
-          {trocouEndereco && (
-            <Alert tom="atencao" titulo="A localização será recalculada">
-              Como o endereço mudou, a coordenada atual é descartada — ela
-              apontaria para o lugar anterior.
-            </Alert>
-          )}
 
           <InputField
             label="Telefone"

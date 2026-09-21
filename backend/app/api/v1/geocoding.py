@@ -9,12 +9,16 @@ from sqlalchemy import or_, select
 
 from app.api.deps import AdminUser, DbSession
 from app.core.enums import GeocodeStatus
+from app.geocoding import cep as cep_service
 from app.geocoding.service import ALVOS, GeocodingService
 from app.models.base_location import BaseLocation
 from app.models.customer import Customer
 from app.models.delivery import Delivery
 from app.schemas.geocoding import (
+    BuscaResultado,
+    CandidatoRead,
     CoordenadaManual,
+    EnderecoCepRead,
     GeocodeTentativaRead,
     LoteRequest,
     LoteResultado,
@@ -110,6 +114,104 @@ def testar(
     return GeocodeTentativaRead(**resultado.__dict__)
 
 
+@router.post("/lote", response_model=LoteResultado, summary="Geocodificar em lote")
+def lote(payload: LoteRequest, session: DbSession, _: AdminUser) -> LoteResultado:
+    """Processa uma fila de endereços pendentes.
+
+    **Demora.** O Nominatim permite uma requisição por segundo, então 50
+    endereços levam cerca de um minuto — endereços já vistos saem do cache e
+    não contam. Um endereço que falha não interrompe os demais.
+    """
+    modelo = ALVOS[payload.tipo]
+
+    if payload.tipo == "entrega":
+        registros = DeliveryService(session).repo.para_geocodificar(payload.limite)
+    else:
+        estados = PRECISAM_ATENCAO if not payload.forcar else [*PRECISAM_ATENCAO, "OK"]
+        stmt = (
+            select(modelo)
+            .where(modelo.address.is_not(None), modelo.geocode_status.in_(estados))
+            .limit(payload.limite)
+        )
+        registros = list(session.scalars(stmt).unique())
+
+    contagem = GeocodingService(session).geocodificar_lote(registros, forcar=payload.forcar)
+    return LoteResultado(processados=len(registros), **contagem)
+
+
+@router.get("/cep/{cep}", response_model=EnderecoCepRead, summary="Consultar um CEP")
+def consultar_cep(
+    cep: str,
+    _: AdminUser,
+    numero: Annotated[
+        str | None, Query(max_length=20, description="Número, se já souber.")
+    ] = None,
+) -> EnderecoCepRead:
+    """Busca logradouro, bairro, cidade e UF pelo CEP.
+
+    Endereço brasileiro digitado por extenso é a pior entrada possível para
+    geocodificação — "Av. Calógeras 1500" tem dezenas de grafias. CEP mais
+    número acerta muito mais, e é por isso que o cadastro começa por aqui.
+
+    Informando `numero`, a resposta já traz o endereço montado na ordem que
+    o geocodificador espera.
+
+    Responde **404** para CEP inexistente. O ViaCEP devolve 200 com
+    `{"erro": true}` nesse caso — um status de sucesso carregando uma falha;
+    tratar só o código HTTP faria o sistema aceitar um endereço vazio.
+    """
+    endereco = cep_service.consultar(cep)
+    return EnderecoCepRead(
+        cep=endereco.cep,
+        cep_formatado=cep_service.formatar_cep(endereco.cep),
+        logradouro=endereco.logradouro,
+        bairro=endereco.bairro,
+        cidade=endereco.cidade,
+        uf=endereco.uf,
+        endereco_montado=endereco.montar(numero),
+    )
+
+
+@router.get("/buscar", response_model=BuscaResultado, summary="Buscar um endereço")
+def buscar(
+    endereco: Annotated[str, Query(min_length=3, max_length=255)],
+    session: DbSession,
+    _: AdminUser,
+) -> BuscaResultado:
+    """Lista os lugares possíveis para um texto, com coordenada.
+
+    Não decide nada: devolve os candidatos para a pessoa apontar no mapa e
+    escolher. É o que permite buscar um endereço e ver **onde ele cai**
+    antes de gravar.
+    """
+    servico = GeocodingService(session)
+    candidatos = servico.provider.buscar(endereco)
+    session.commit()  # a consulta alimentou o cache
+    return BuscaResultado(
+        consulta=endereco,
+        candidatos=[
+            CandidatoRead(
+                latitude=c.latitude,
+                longitude=c.longitude,
+                display_name=c.display_name,
+                precision=c.precision,
+            )
+            for c in candidatos
+        ],
+    )
+
+
+# --------------------------------------------------------------------------- #
+# ORDEM IMPORTA: as rotas de caminho fixo precisam vir ANTES das que usam
+# parametro no lugar do primeiro segmento.
+#
+# `/geocodificacao/cep/79002000` casa com `/geocodificacao/{tipo}/{registro_id}`
+# — com tipo="cep" e registro_id="79002000". Registrada primeiro, a rota
+# generica faz o FastAPI achar o caminho, nao achar o metodo e responder 405,
+# numa falha que nao parece ter relacao nenhuma com ordenacao.
+# --------------------------------------------------------------------------- #
+
+
 @router.post(
     "/{tipo}/{registro_id}",
     response_model=GeocodeTentativaRead,
@@ -151,28 +253,3 @@ def definir_coordenada(
         longitude=float(registro.longitude),
         provider="manual",
     )
-
-
-@router.post("/lote", response_model=LoteResultado, summary="Geocodificar em lote")
-def lote(payload: LoteRequest, session: DbSession, _: AdminUser) -> LoteResultado:
-    """Processa uma fila de endereços pendentes.
-
-    **Demora.** O Nominatim permite uma requisição por segundo, então 50
-    endereços levam cerca de um minuto — endereços já vistos saem do cache e
-    não contam. Um endereço que falha não interrompe os demais.
-    """
-    modelo = ALVOS[payload.tipo]
-
-    if payload.tipo == "entrega":
-        registros = DeliveryService(session).repo.para_geocodificar(payload.limite)
-    else:
-        estados = PRECISAM_ATENCAO if not payload.forcar else [*PRECISAM_ATENCAO, "OK"]
-        stmt = (
-            select(modelo)
-            .where(modelo.address.is_not(None), modelo.geocode_status.in_(estados))
-            .limit(payload.limite)
-        )
-        registros = list(session.scalars(stmt).unique())
-
-    contagem = GeocodingService(session).geocodificar_lote(registros, forcar=payload.forcar)
-    return LoteResultado(processados=len(registros), **contagem)

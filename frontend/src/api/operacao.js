@@ -35,6 +35,19 @@ export const painel = {
 
 // --- Geocodificacao --------------------------------------------------------
 export const geocodificacao = {
+  // CEP dos Correios: traz logradouro, bairro, cidade e UF normalizados.
+  cep: (cep, numero) =>
+    api
+      .get(`/geocodificacao/cep/${cep}`, { params: numero ? { numero } : {} })
+      .then((r) => r.data),
+
+  // Candidatos de uma busca livre, com coordenada, para apontar no mapa.
+  // Nao decide nada: quem escolhe e a pessoa.
+  buscar: (endereco) =>
+    api
+      .get("/geocodificacao/buscar", { params: { endereco }, timeout: 30000 })
+      .then((r) => r.data),
+
   pendentes: (filtros = {}) =>
     api.get("/geocodificacao/pendentes", { params: filtros }).then((r) => r.data),
   testar: (endereco) =>

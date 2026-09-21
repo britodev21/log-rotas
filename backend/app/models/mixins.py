@@ -29,6 +29,11 @@ class GeocodableMixin:
 
     address: Mapped[str | None] = mapped_column(String(255))
 
+    # Guardado so com digitos, como telefone e documento. Endereco brasileiro
+    # digitado por extenso e a pior entrada possivel para geocodificacao;
+    # CEP mais numero acerta muito mais.
+    postal_code: Mapped[str | None] = mapped_column(String(8))
+
     # NUMERIC, nao float: coordenada e valor exato de identificacao, e a
     # precisao de 6 casas resolve cerca de 11 cm — mais do que suficiente
     # para encontrar um portao.

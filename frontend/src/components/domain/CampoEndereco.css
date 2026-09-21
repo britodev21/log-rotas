@@ -1,0 +1,126 @@
+/* Entrada de endereco brasileiro: CEP, numero e o ponto no mapa. */
+
+.endereco {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  padding: var(--e-4);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  background: var(--superficie-2);
+}
+
+.endereco__linha {
+  display: grid;
+  /* CEP tem largura fixa porque tem tamanho fixo; o complemento fica com a
+     sobra, que e o campo que mais varia. */
+  grid-template-columns: 150px 110px minmax(0, 1fr);
+  gap: var(--e-3);
+}
+
+/* Uma linha unica que troca de conteudo conforme o estado. Empilhar avisos
+   faria o formulario pular de altura a cada tecla digitada. */
+.endereco__estado {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  min-height: 34px;
+  padding: var(--e-2) var(--e-3);
+  border-radius: var(--r-md);
+  background: var(--superficie-3);
+  font-size: var(--t-13);
+  color: var(--texto-2);
+}
+
+.endereco__estado > svg,
+.endereco__estado > .spinner {
+  flex-shrink: 0;
+  color: var(--texto-4);
+}
+
+.endereco__texto {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.endereco__rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+}
+
+/* --- Candidatos ---------------------------------------------------------- */
+
+.endereco__candidatos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+}
+
+.endereco__candidato {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  width: 100%;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+  background: var(--superficie);
+  font-size: var(--t-12);
+  color: var(--texto-2);
+  text-align: left;
+  line-height: var(--lh-normal);
+  transition:
+    border-color var(--tempo-rapido) var(--curva),
+    background-color var(--tempo-rapido) var(--curva);
+}
+
+.endereco__candidato:hover {
+  background: var(--superficie-hover);
+}
+
+.endereco__candidato--ativo {
+  border-color: var(--primaria);
+  background: var(--primaria-suave);
+  color: var(--primaria);
+  font-weight: var(--p-500);
+}
+
+.endereco__mapa {
+  position: relative;
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+/* Sem ponto, o mapa nao fica so um retangulo mudo: ele diz o que vai
+   acontecer ali. */
+.endereco__mapa-vazio {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-mapa-painel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e-2);
+  padding: var(--e-4);
+  text-align: center;
+  background: color-mix(in srgb, var(--superficie) 74%, transparent);
+  backdrop-filter: blur(1px);
+  font-size: var(--t-12);
+  color: var(--texto-3);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .endereco__linha {
+    grid-template-columns: 1fr 1fr;
+  }
+  .endereco__complemento {
+    grid-column: 1 / -1;
+  }
+}

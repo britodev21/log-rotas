@@ -16,32 +16,6 @@
   z-index: var(--z-base);
 }
 
-/* --- Estilo da base cartográfica ---------------------------------------- */
-
-/* Os ladrilhos vêm do OpenStreetMap, que é colorido. O visual dessaturado
-   do sistema é obtido aqui, por filtro, e não pelo estilo do provedor —
-   assim o mapa não depende de nenhuma chave de API para ter a aparência
-   certa.
-
-   O filtro é aplicado ao ladrilho, não ao container: aplicar ao container
-   afetaria também marcadores e trajetos, apagando justamente as cores de
-   status que precisam se destacar. */
-.mapa--claro .leaflet-tile {
-  filter: saturate(0.62) brightness(1.04) contrast(0.96);
-}
-
-/* Inverter mais girar a matiz é o caminho conhecido para transformar uma
-   base clara em escura sem trocar de provedor: o mapa escurece, mas o verde
-   continua verde e a água continua azul. */
-.mapa--escuro .leaflet-tile {
-  filter: invert(1) hue-rotate(180deg) saturate(0.55) brightness(0.92) contrast(0.92);
-}
-
-/* Provedor com estilo próprio (CARTO, MapTiler) já entrega a base pronta. */
-.mapa--sem-filtro .leaflet-tile {
-  filter: none;
-}
-
 /* --- Camadas flutuantes -------------------------------------------------- */
 
 .mapa__sobreposicao {
