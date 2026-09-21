@@ -14,6 +14,8 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 
 from app.api.deps import DbSession, DriverUser
+from app.core.enums import RouteStatus
+from app.core.errors import ValidationError
 from app.schemas.driver import (
     ChegadaRequest,
     EntregaRealizadaRequest,
@@ -21,7 +23,15 @@ from app.schemas.driver import (
     RotaMotoristaRead,
 )
 from app.schemas.planning import ParadaRead
+from app.schemas.rastreamento import (
+    EnvioPosicoes,
+    ManobraRead,
+    NavegacaoRead,
+    ParadaNavegacaoRead,
+    ResultadoEnvioRead,
+)
 from app.services.execution_service import ExecutionService, progresso
+from app.services.rastreamento import PosicaoRecebida, RastreamentoService
 
 router = APIRouter(prefix="/motorista", tags=["Motorista"])
 
@@ -157,3 +167,99 @@ def finalizar(rota_id: int, session: DbSession, usuario: DriverUser) -> RotaMoto
     """
     servico = ExecutionService(session, usuario)
     return _montar(servico.finalizar_rota(rota_id), servico)
+
+
+# --------------------------------------------------------------------------- #
+# Rastreamento e navegacao
+# --------------------------------------------------------------------------- #
+@router.post(
+    "/rotas/{rota_id}/posicoes",
+    response_model=ResultadoEnvioRead,
+    summary="Enviar posicoes do GPS",
+)
+def enviar_posicoes(
+    rota_id: int, payload: EnvioPosicoes, session: DbSession, usuario: DriverUser
+) -> ResultadoEnvioRead:
+    """Recebe o GPS do celular em lote.
+
+    Lote porque o celular guarda o que nao conseguiu mandar num trecho sem
+    sinal. Ponto ruim (GPS impreciso, relogio adiantado) e descartado e
+    CONTADO, com o motivo — nunca derruba o lote inteiro.
+
+    Com a rota fora de execucao, tudo e descartado: a posicao do motorista
+    so e assunto do sistema durante a rota.
+    """
+    rota = ExecutionService(session, usuario).rota(rota_id)
+    resultado = RastreamentoService(session).registrar(
+        rota,
+        [
+            PosicaoRecebida(
+                latitude=p.latitude,
+                longitude=p.longitude,
+                registrada_em=p.registrada_em,
+                precisao_m=p.precisao_m,
+                velocidade_mps=p.velocidade_mps,
+                direcao_graus=p.direcao_graus,
+            )
+            for p in payload.posicoes
+        ],
+    )
+    return ResultadoEnvioRead(
+        aceitas=resultado.aceitas,
+        descartadas=resultado.descartadas,
+        motivos=resultado.motivos,
+    )
+
+
+@router.get(
+    "/rotas/{rota_id}/navegacao",
+    response_model=NavegacaoRead,
+    summary="Rota ate a proxima parada",
+)
+def navegacao(
+    rota_id: int,
+    session: DbSession,
+    usuario: DriverUser,
+    latitude: Annotated[float, Query(ge=-90, le=90)],
+    longitude: Annotated[float, Query(ge=-180, le=180)],
+) -> NavegacaoRead:
+    """Da posicao atual ate a proxima parada, com as manobras em portugues.
+
+    O destino e o ponto na rua do endereco mais proximo do pino, e nao o
+    pino: o pino fica no lote, e a rua mais proxima dele pode ser a de tras.
+    """
+    rota = ExecutionService(session, usuario).rota(rota_id)
+    if rota.status != RouteStatus.INICIADA.value:
+        raise ValidationError("Inicie a rota para navegar.")
+
+    dados = RastreamentoService(session).navegar(rota, (latitude, longitude))
+    if dados["concluida"]:
+        return NavegacaoRead(concluida=True)
+
+    parada = dados["parada"]
+    trajeto = dados["trajeto"]
+    manobras = trajeto.pernas[0].manobras if trajeto.pernas else []
+    return NavegacaoRead(
+        concluida=False,
+        parada=ParadaNavegacaoRead(
+            id=parada.id,
+            tipo=parada.stop_type,
+            sequencia=parada.sequence,
+            rotulo=parada.label,
+            endereco=parada.address,
+            latitude=float(parada.latitude),
+            longitude=float(parada.longitude),
+            status=parada.status,
+            entregas=len(parada.items),
+        ),
+        latitude_chegada=dados["ponto_chegada"][0],
+        longitude_chegada=dados["ponto_chegada"][1],
+        geometria=trajeto.geometria,
+        manobras=[ManobraRead(**vars(m)) for m in manobras],
+        distancia_m=trajeto.distancia_m,
+        duracao_s=dados["duracao_s"],
+        chegada_prevista=dados["chegada_prevista"],
+        com_transito=dados["com_transito"],
+        estimada=trajeto.estimada,
+        aviso=trajeto.aviso,
+    )

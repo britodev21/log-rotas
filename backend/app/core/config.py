@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     #: Autocomplete) no cadastro de endereco. Vazia, o sistema volta ao
     #: fluxo por CEP. Fica so no servidor: o navegador nunca a recebe.
     google_maps_api_key: str = ""
+    #: "google" liga o trânsito na previsão de chegada (Routes API, com a
+    #: GOOGLE_MAPS_API_KEY). Vazio: previsão com via livre, e a tela diz isso.
+    traffic_provider: str = ""
+    #: De quanto em quanto tempo, no máximo, o Google é consultado por rota.
+    #: Cada consulta é paga; nos intervalos o fator de trânsito é reusado.
+    traffic_refresh_s: int = 300
     matrix_provider: str = "osrm"
     osrm_base_url: str = "https://router.project-osrm.org"
     map_provider_key: str = ""

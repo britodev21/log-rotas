@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Query
@@ -15,7 +15,17 @@ from app.core.enums import DeliveryStatus, RouteStatus
 from app.models.base_location import BaseLocation
 from app.models.delivery import Delivery
 from app.models.route import Route
+from app.routing import transito
 from app.schemas.planning import RotaRead
+from app.schemas.rastreamento import (
+    AoVivoRead,
+    PosicaoRead,
+    PrevisaoParadaRead,
+    PrevisaoRead,
+    RotaAoVivoRead,
+)
+from app.services.execution_service import progresso
+from app.services.rastreamento import RastreamentoService
 
 router = APIRouter(prefix="/painel", tags=["Painel"])
 
@@ -197,3 +207,60 @@ def painel(
         bases=bases,
         entregas_no_mapa=entregas_mapa,
     )
+
+
+def _numero(valor) -> float | None:
+    return float(valor) if valor is not None else None
+
+
+@router.get("/ao-vivo", response_model=AoVivoRead, summary="Caminhoes em rota agora")
+def ao_vivo(session: DbSession, _: AdminUser) -> AoVivoRead:
+    """Onde cada caminhao em rota esta e quando chega em cada parada.
+
+    Separado do painel porque o ritmo e outro: o painel muda a cada poucos
+    minutos, o caminhao a cada poucos segundos. A tela consulta isto com
+    mais frequencia sem recarregar os indicadores do dia.
+
+    A previsao nao e recalculada a cada consulta — ha uma memoria de ate
+    45 s por rota (ver app/services/rastreamento.py). Recalcular a cada 5 s
+    martelaria o servico de rotas e, com transito ligado, a conta do Google.
+    """
+    servico = RastreamentoService(session)
+    agora = datetime.now(UTC)
+    rotas = []
+    for rota in servico.rotas_em_andamento():
+        ultima = servico.ultima(rota.id)
+        previsao = servico.previsao(rota, ultima)
+        andamento = progresso(rota)
+        proxima = previsao.proxima
+        rotas.append(
+            RotaAoVivoRead(
+                rota_id=rota.id,
+                motorista=rota.driver.name if rota.driver else None,
+                veiculo=rota.vehicle.name if rota.vehicle else None,
+                placa=rota.vehicle.plate if rota.vehicle else None,
+                situacao=servico.situacao(rota, ultima, agora),
+                posicao=PosicaoRead(
+                    latitude=float(ultima.latitude),
+                    longitude=float(ultima.longitude),
+                    precisao_m=_numero(ultima.accuracy_m),
+                    velocidade_mps=_numero(ultima.speed_mps),
+                    direcao_graus=_numero(ultima.heading_deg),
+                    registrada_em=ultima.recorded_at,
+                    recebida_em=ultima.received_at,
+                )
+                if ultima
+                else None,
+                idade_s=int((agora - ultima.recorded_at).total_seconds()) if ultima else None,
+                rastro=[
+                    [float(p.latitude), float(p.longitude)] for p in servico.rastro(rota.id)
+                ],
+                proxima=PrevisaoParadaRead.model_validate(proxima, from_attributes=True)
+                if proxima
+                else None,
+                feitas=andamento["concluidas"],
+                total=andamento["total"],
+                previsao=PrevisaoRead.model_validate(previsao, from_attributes=True),
+            )
+        )
+    return AoVivoRead(rotas=rotas, transito_configurado=transito.disponivel(), gerado_em=agora)

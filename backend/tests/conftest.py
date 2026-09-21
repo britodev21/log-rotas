@@ -28,6 +28,11 @@ os.environ.setdefault("DEBUG", "false")
 # Sem isto a suite tentaria falar com o OSRM publico: testes ficariam
 # lentos, dependeriam de rede e falhariam quando o servico estivesse fora.
 os.environ.setdefault("MATRIX_PROVIDER", "haversine")
+# Sem isto a suite leria o .env da maquina e chamaria o Google de verdade —
+# com a chave real, gastando cota a cada rodada de testes. Atribuicao, nao
+# setdefault: precisa vencer o .env.
+os.environ["TRAFFIC_PROVIDER"] = ""
+os.environ["GOOGLE_MAPS_API_KEY"] = ""
 
 from collections.abc import Iterator
 

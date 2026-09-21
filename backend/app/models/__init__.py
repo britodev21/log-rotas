@@ -13,6 +13,7 @@ from app.models.delivery_event import DeliveryEvent
 from app.models.driver import Driver
 from app.models.geocode_cache import GeocodeCache
 from app.models.route import Route, RoutePlan, RouteStop, RouteStopDelivery
+from app.models.route_position import RoutePosition
 from app.models.user import User
 from app.models.vehicle import Vehicle
 
@@ -28,6 +29,7 @@ __all__ = [
     "GeocodeCache",
     "Route",
     "RoutePlan",
+    "RoutePosition",
     "RouteStop",
     "RouteStopDelivery",
     "User",
