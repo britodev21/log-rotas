@@ -1,0 +1,78 @@
+# Log Rotas em produção: banco, API e tela.
+#
+# Quem recebe a internet é o Traefik que já roda na VPS — ele cuida do
+# HTTPS e encaminha o domínio para o contêiner da tela. Banco e API ficam
+# numa rede fechada, sem porta publicada: não há como alcançá-los de fora.
+#
+# Tudo que muda de uma instalação para outra (domínio, senha do banco,
+# chave do Google) está no arquivo `.env`, que NUNCA vai para o repositório.
+# Veja `.env.example` e `docs/DEPLOY.md`.
+
+name: log-rotas
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-logrotas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-log_rotas}
+      TZ: ${TZ:-America/Campo_Grande}
+    volumes:
+      - dados-do-banco:/var/lib/postgresql/data
+    healthcheck:
+      # A API só sobe depois que o banco aceita conexão. Sem isto, a
+      # migração na primeira subida falha e o contêiner reinicia em laço.
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-logrotas} -d ${POSTGRES_DB:-log_rotas}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - interna
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Montada aqui, e não no .env, para a senha aparecer uma vez só.
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-logrotas}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-log_rotas}
+      ENVIRONMENT: production
+      DEBUG: "false"
+      TZ: ${TZ:-America/Campo_Grande}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - interna
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    networks:
+      - interna
+      - traefik
+    labels:
+      - traefik.enable=true
+      # Com o contêiner em duas redes, o Traefik precisa saber por qual
+      # delas falar com ele.
+      - traefik.docker.network=${REDE_TRAEFIK:-traefik}
+      - traefik.http.routers.logrotas.rule=Host(`${DOMINIO:?defina DOMINIO no .env}`)
+      - traefik.http.routers.logrotas.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
+      - traefik.http.routers.logrotas.tls=true
+      - traefik.http.routers.logrotas.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      - traefik.http.services.logrotas.loadbalancer.server.port=80
+
+volumes:
+  dados-do-banco:
+
+networks:
+  interna:
+  traefik:
+    external: true
+    name: ${REDE_TRAEFIK:-traefik}
