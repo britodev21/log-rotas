@@ -153,6 +153,20 @@ def nao_entregue(
 
 
 @router.post(
+    "/paradas/{parada_id}/recarga", response_model=ParadaRead, summary="Recarga concluida"
+)
+def recarga(parada_id: int, session: DbSession, usuario: DriverUser) -> ParadaRead:
+    """O caminhão foi recarregado na base e sai para a próxima viagem.
+
+    Exige a chegada na base registrada antes, e toda entrega da viagem
+    anterior resolvida (entregue ou não entregue) — **422** com a lista
+    caso contrário. As entregas da viagem seguinte passam a `EM_ROTA`.
+    """
+    parada = ExecutionService(session, usuario).concluir_recarga(parada_id)
+    return ParadaRead.model_validate(parada)
+
+
+@router.post(
     "/rotas/{rota_id}/finalizar",
     response_model=RotaMotoristaRead,
     summary="Finalizar rota",

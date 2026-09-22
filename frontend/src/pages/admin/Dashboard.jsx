@@ -491,7 +491,11 @@ function InfoAoVivo({ vivo }) {
       {proxima && (
         <div className="ao-vivo__linha">
           <span className="ao-vivo__proxima">
-            {proxima.tipo === "BASE_RETORNO" ? "Volta à base" : `Próxima: ${proxima.rotulo ?? "entrega"}`}
+            {proxima.tipo === "BASE_RETORNO"
+              ? "Volta à base"
+              : proxima.tipo === "BASE_RECARGA"
+                ? "Recarga na base"
+                : `Próxima: ${proxima.rotulo ?? "entrega"}`}
             {proxima.chegada_prevista && (
               <>
                 {" "}

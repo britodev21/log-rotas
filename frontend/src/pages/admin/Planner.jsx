@@ -58,6 +58,8 @@ export function Planner() {
   const [inicioTurno, setInicioTurno] = useState("08:00");
   const [opcoes, setOpcoes] = useState(null);
   const [considerarTransito, setConsiderarTransito] = useState(true);
+  const [maxViagens, setMaxViagens] = useState(1);
+  const [recargaMin, setRecargaMin] = useState(30);
 
   const [carregando, setCarregando] = useState(true);
   const [erroCarga, setErroCarga] = useState("");
@@ -185,6 +187,8 @@ export function Planner() {
         inicio_turno: inicioTurno,
         limite_tempo_s: 15,
         considerar_transito: comTransito,
+        max_viagens: maxViagens,
+        recarga_min: recargaMin,
       });
       setEtapa(2);
       setPlano(resultado);
@@ -367,6 +371,32 @@ export function Planner() {
                   </p>
                 )
               )}
+
+              <div className="form-grade">
+                <SelectField
+                  label="Viagens por veículo"
+                  value={String(maxViagens)}
+                  onChange={(e) => setMaxViagens(Number(e.target.value))}
+                  disabled={Boolean(plano)}
+                  ajuda="Quantas vezes cada caminhão pode sair da base no dia. Ele só volta para recarregar quando a carga não cabe de uma vez."
+                >
+                  <option value="1">1 — sai uma vez</option>
+                  <option value="2">2 — pode voltar e recarregar</option>
+                  <option value="3">3 viagens</option>
+                </SelectField>
+                {maxViagens > 1 && (
+                  <InputField
+                    label="Recarga na base (min)"
+                    type="number"
+                    min="0"
+                    max="240"
+                    value={recargaMin}
+                    onChange={(e) => setRecargaMin(Number(e.target.value))}
+                    disabled={Boolean(plano)}
+                    ajuda="Tempo parado na base entre uma viagem e a próxima."
+                  />
+                )}
+              </div>
 
               {semCoordenada.length > 0 && (
                 <Alert
@@ -758,6 +788,11 @@ function ResumoTransito({ transito }) {
   );
 }
 
+/** Quantas vezes o caminhão sai da base: uma, mais uma por recarga. */
+function viagensDaRota(rota) {
+  return 1 + rota.stops.filter((p) => p.stop_type === "BASE_RECARGA").length;
+}
+
 function ResultadoPlano({
   plano,
   motoristas,
@@ -835,6 +870,7 @@ function ResultadoPlano({
                   {rota.stops.filter((p) => p.stop_type === "ENTREGA").length} paradas ·{" "}
                   {distancia(rota.total_distance_m)} · {duracao(rota.estimated_duration_s)}
                   {rota.planned_weight_kg ? ` · ${peso(rota.planned_weight_kg)}` : ""}
+                  {viagensDaRota(rota) > 1 ? ` · ${viagensDaRota(rota)} viagens` : ""}
                 </span>
               </div>
 
@@ -866,7 +902,12 @@ function ResultadoPlano({
             {plano.routes
               .find((r) => r.id === rotaSelecionada)
               ?.stops.map((parada) => (
-                <li className="sequencia__item" key={parada.id}>
+                <li
+                  className={`sequencia__item ${
+                    parada.stop_type === "BASE_RECARGA" ? "sequencia__item--recarga" : ""
+                  }`}
+                  key={parada.id}
+                >
                   <span className="sequencia__ordem numero">
                     {parada.stop_type === "ENTREGA" ? parada.sequence : "—"}
                   </span>

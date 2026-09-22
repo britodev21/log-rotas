@@ -113,13 +113,31 @@ opcional e só vira restrição quando preenchido dos dois lados — na entrega 
 
 ## 3. Decisões de escopo
 
-### 3.1 Uma viagem por rota
+### 3.1 Mais de uma viagem por dia
 
-O MVP gera `BASE_SAIDA → ENTREGA* → BASE_RETORNO`. Voltar à base no meio do dia para
-recarregar **não** está implementado.
+O planejamento aceita `max_viagens` (1 a 4) e `recarga_min`. Com mais de uma, a rota sai
+`BASE_SAIDA → ENTREGA* → BASE_RECARGA → ENTREGA* → BASE_RETORNO`: o caminhão volta à base,
+recarrega e sai de novo.
 
-O modelo já comporta: `route_stops` tem `stop_type` (com `BASE_RECARGA`) e `trip_number`.
-Implementar é trabalho no solver, não migração destrutiva na tabela que mais terá linhas.
+As regras, e por quê:
+
+- **A viagem seguinte só sai depois de a anterior voltar mais o tempo de recarga.** No solver,
+  cada viagem é um veículo próprio, e o relógio é um só — encadeados por restrição.
+- **A jornada vale para o dia, não por viagem.** Duas viagens de 5 h não cabem numa jornada de
+  8 h, e o plano deixa entregas de fora em vez de prometer um dia que não existe.
+- **Cada viagem sai com o caminhão cheio:** a capacidade volta ao total depois da recarga. É o
+  que torna a segunda viagem útil — é a carga que não cabia.
+- **Viagem que não precisa não acontece.** Liberar 3 viagens não faz o caminhão voltar à base à
+  toa: ele só volta quando a carga (ou o número de paradas) do dia não cabe de uma vez.
+- **Carga que está na base não está no caminhão.** Ao iniciar a rota, só as entregas da viagem 1
+  entram em `EM_ROTA`. As das viagens seguintes ficam `PLANEJADA` até o motorista registrar a
+  recarga — senão o painel mostraria como "a caminho" o que ainda está no depósito.
+- **A recarga só é concluída com as entregas da viagem anterior registradas.** O caminhão está
+  na base, e a entrega que voltou precisa ser dita "não entregue", com motivo, em vez de sumir.
+
+**O que ainda não existe:** preferência entre "menos caminhões" e "menos viagens". O
+planejamento minimiza tempo total; se duas soluções empatam, ele não sabe que um caminhão a
+menos economiza uma equipe no dia. Enquanto isso, quem decide é a seleção de veículos na tela.
 
 ### 3.2 Janela de horário
 

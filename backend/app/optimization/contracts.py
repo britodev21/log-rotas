@@ -96,6 +96,12 @@ class OpcoesOtimizacao:
     permitir_dispensar: bool = True
     #: Segundos desde a meia-noite em que o turno comeca.
     inicio_turno_s: int = 8 * 3600
+    #: Quantas vezes cada veiculo pode sair da base no dia. Com mais de uma,
+    #: ele volta, recarrega e sai de novo — tudo dentro da mesma jornada.
+    max_viagens: int = 1
+    #: Tempo parado na base entre uma viagem e a proxima (carregar o
+    #: caminhao de novo).
+    recarga_s: int = 30 * 60
 
 
 @dataclass(frozen=True)
@@ -149,6 +155,22 @@ class ParadaResolvida:
     chegada_estimada_s: int
     distancia_do_anterior_m: int
     duracao_do_anterior_s: int
+    #: Em qual saida da base o veiculo leva esta parada (1, 2, ...).
+    viagem: int = 1
+
+
+@dataclass
+class RecargaResolvida:
+    """A volta a base entre duas viagens."""
+
+    #: A viagem que comeca depois desta recarga (2, 3, ...).
+    viagem: int
+    #: Chega na base: fim da viagem anterior.
+    chegada_s: int
+    #: Sai de novo, carregado: inicio desta viagem.
+    saida_s: int
+    distancia_do_anterior_m: int
+    duracao_do_anterior_s: int
 
 
 @dataclass
@@ -159,10 +181,20 @@ class RotaResolvida:
     duracao_total_s: int
     carga_peso_kg: float
     carga_volume_m3: float
+    recargas: list[RecargaResolvida] = field(default_factory=list)
+    #: Sai da base (inicio da primeira viagem) e volta de vez (fim da ultima).
+    saida_s: int = 0
+    chegada_base_s: int | None = None
+    retorno_distancia_m: int = 0
+    retorno_duracao_s: int = 0
 
     @property
     def quantidade_paradas(self) -> int:
         return len(self.paradas)
+
+    @property
+    def quantidade_viagens(self) -> int:
+        return len(self.recargas) + 1
 
 
 @dataclass

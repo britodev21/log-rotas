@@ -427,3 +427,10 @@
   flex-basis: 100%;
   color: var(--texto-3);
 }
+
+/* Recarga na base: a parada que nao e entrega. */
+.mot-lista__item--recarga .mot-lista__ordem {
+  background: var(--info-suave);
+  border-color: var(--info-borda);
+  color: var(--info);
+}

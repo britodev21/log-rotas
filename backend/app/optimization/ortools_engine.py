@@ -14,6 +14,14 @@ tempo total, respeitando a jornada, economiza um dia de equipe.
 A escolha tambem e robusta a estarmos errados: se a entrega for so
 descarregar e ir embora, o tempo de servico vira dez minutos e o mesmo
 modelo continua correto.
+
+MAIS DE UMA VIAGEM. Com `max_viagens` > 1, cada veiculo vira N "viagens" no
+modelo — copias dele que saem e voltam a base. A viagem k+1 so pode sair
+depois de a k voltar mais o tempo de recarga, e todas dividem a mesma
+jornada (o tempo do modelo e um relogio so, contado do inicio do turno).
+A recarga devolve a capacidade inteira: cada viagem sai com o caminhao
+cheio. Uma viagem que nao e usada nao atrasa nada — a recarga so conta
+quando a viagem seguinte existe.
 """
 
 from __future__ import annotations
@@ -28,6 +36,7 @@ from app.optimization.contracts import (
     OptimizationResult,
     ParadaDispensada,
     ParadaResolvida,
+    RecargaResolvida,
     RotaResolvida,
     SolverStatus,
 )
@@ -68,7 +77,13 @@ class OrToolsEngine:
 
         inicio = time.monotonic()
         n = len(pedido.paradas) + 1  # +1 pelo deposito
-        k = len(pedido.veiculos)
+        # Cada veiculo do modelo e uma VIAGEM: (indice do veiculo, numero).
+        self._viagens = [
+            (v, numero)
+            for v in range(len(pedido.veiculos))
+            for numero in range(1, max(1, pedido.opcoes.max_viagens) + 1)
+        ]
+        k = len(self._viagens)
 
         gestor = pywrapcp.RoutingIndexManager(n, k, 0)
         modelo = pywrapcp.RoutingModel(gestor)
@@ -79,6 +94,7 @@ class OrToolsEngine:
         self._configurar_max_paradas(modelo, gestor, pedido)
         self._configurar_equipe(modelo, gestor, pedido)
         self._configurar_janelas(modelo, gestor, pedido)
+        self._encadear_viagens(modelo, pedido)
 
         if pedido.opcoes.permitir_dispensar:
             self._permitir_dispensar(modelo, gestor, pedido)
@@ -137,15 +153,51 @@ class OrToolsEngine:
         self._callback_tempo = modelo.RegisterTransitCallback(custo)
         modelo.SetArcCostEvaluatorOfAllVehicles(self._callback_tempo)
 
+    def _veiculo(self, pedido, viagem_idx: int):
+        return pedido.veiculos[self._viagens[viagem_idx][0]]
+
     def _configurar_jornada(self, modelo, gestor, pedido) -> None:
-        """Limita cada rota a duracao do turno do veiculo."""
+        """Limita cada rota a duracao do turno do veiculo.
+
+        O limite e sobre o RELOGIO (segundos desde o inicio do turno), nao
+        sobre a duracao de cada viagem: a segunda viagem de um veiculo
+        comeca onde a primeira terminou, e as duas cabem na mesma jornada.
+        """
         modelo.AddDimensionWithVehicleCapacity(
             self._callback_tempo,
             HORIZONTE_S,  # espera permitida (usada pelas janelas)
-            [v.jornada_s for v in pedido.veiculos],
+            [self._veiculo(pedido, i).jornada_s for i in range(len(self._viagens))],
             False,  # nao forca inicio em zero: o turno comeca quando comeca
             "Tempo",
         )
+
+    def _encadear_viagens(self, modelo, pedido) -> None:
+        """Viagem k+1 sai depois de a k voltar e recarregar.
+
+        A recarga multiplica a ATIVIDADE da viagem seguinte: se ela nao for
+        usada, nao ha recarga, e a viagem vazia nao empurra o relogio. E a
+        viagem k+1 so e usada se a k for — sem isso, "viagem 1 vazia e
+        viagem 2 cheia" seria a mesma solucao com outro nome, e o solver
+        perderia tempo com ela.
+        """
+        if pedido.opcoes.max_viagens <= 1:
+            return
+        tempo = modelo.GetDimensionOrDie("Tempo")
+        solver = modelo.solver()
+        for i in range(1, len(self._viagens)):
+            (v_ant, _), (v, numero) = self._viagens[i - 1], self._viagens[i]
+            if v != v_ant or numero == 1:
+                continue
+            ativa = modelo.ActiveVehicleVar(i)
+            solver.Add(
+                tempo.CumulVar(modelo.Start(i))
+                >= tempo.CumulVar(modelo.End(i - 1)) + ativa * pedido.opcoes.recarga_s
+            )
+            solver.Add(ativa <= modelo.ActiveVehicleVar(i - 1))
+        # Cada viagem sai assim que pode: sem isto, a hora de saida da
+        # segunda viagem ficaria em qualquer valor que cumprisse as regras.
+        for i in range(len(self._viagens)):
+            modelo.AddVariableMinimizedByFinalizer(tempo.CumulVar(modelo.Start(i)))
 
     def _configurar_capacidades(self, modelo, gestor, pedido) -> None:
         """Peso e volume, cada um como sua propria dimensao.
@@ -175,10 +227,15 @@ class OrToolsEngine:
                 return round(valor * mult)
 
             cb = modelo.RegisterUnaryTransitCallback(callback)
+            # Cada viagem sai com o caminhao cheio: a capacidade vale por
+            # viagem, e a carga comeca em zero em cada uma.
             modelo.AddDimensionWithVehicleCapacity(
                 cb,
                 0,
-                [round(c * escala) if c is not None else 10**9 for c in capacidades],
+                [
+                    round(capacidades[v] * escala) if capacidades[v] is not None else 10**9
+                    for v, _ in self._viagens
+                ],
                 True,
                 nome,
             )
@@ -191,10 +248,16 @@ class OrToolsEngine:
             return 0 if gestor.IndexToNode(indice) == 0 else 1
 
         cb = modelo.RegisterUnaryTransitCallback(conta)
+        # Por viagem, como a capacidade: e quanto cabe no caminhao de uma vez.
         modelo.AddDimensionWithVehicleCapacity(
             cb,
             0,
-            [v.max_paradas if v.max_paradas is not None else 10**6 for v in pedido.veiculos],
+            [
+                self._veiculo(pedido, i).max_paradas
+                if self._veiculo(pedido, i).max_paradas is not None
+                else 10**6
+                for i in range(len(self._viagens))
+            ],
             True,
             "Paradas",
         )
@@ -214,9 +277,9 @@ class OrToolsEngine:
 
         for no, parada in exigem_mais:
             permitidos = [
-                v
-                for v, veiculo in enumerate(pedido.veiculos)
-                if veiculo.tamanho_equipe >= parada.demanda.equipe
+                i
+                for i in range(len(self._viagens))
+                if self._veiculo(pedido, i).tamanho_equipe >= parada.demanda.equipe
             ]
             modelo.VehicleVar(gestor.NodeToIndex(no)).SetValues(permitidos)
 
@@ -232,7 +295,7 @@ class OrToolsEngine:
 
         # O inicio de cada veiculo tambem precisa estar dentro do horizonte,
         # senao o solver nao consegue posicionar a primeira parada.
-        for v in range(len(pedido.veiculos)):
+        for v in range(len(self._viagens)):
             dimensao.CumulVar(modelo.Start(v)).SetRange(0, HORIZONTE_S)
             modelo.AddVariableMinimizedByFinalizer(dimensao.CumulVar(modelo.Start(v)))
             modelo.AddVariableMinimizedByFinalizer(dimensao.CumulVar(modelo.End(v)))
@@ -268,56 +331,77 @@ class OrToolsEngine:
         visitados: set[int] = set()
 
         for v, veiculo in enumerate(pedido.veiculos):
-            indice = modelo.Start(v)
-            paradas: list[ParadaResolvida] = []
-            distancia = 0
-            duracao = 0
-            peso = 0.0
-            volume = 0.0
+            rota: RotaResolvida | None = None
             ordem = 0
+            numero_da_viagem = 0
 
-            while not modelo.IsEnd(indice):
-                no = gestor.IndexToNode(indice)
-                proximo = solucao.Value(modelo.NextVar(indice))
-                no_proximo = gestor.IndexToNode(proximo)
+            for i, (dono, _) in enumerate(self._viagens):
+                if dono != v:
+                    continue
+                trechos = self._ler_viagem(modelo, gestor, solucao, pedido, i)
+                if not trechos:
+                    # Viagem vazia nao vira nada: nem rota, nem recarga.
+                    continue
+                numero_da_viagem += 1
+                saida = solucao.Value(dimensao_tempo.CumulVar(modelo.Start(i)))
+                chegada = solucao.Value(dimensao_tempo.CumulVar(modelo.End(i)))
+                ultimo_no = trechos[-1][0]
 
-                trecho_m = pedido.distancias[no][no_proximo]
-                trecho_s = pedido.duracoes[no][no_proximo]
-                distancia += trecho_m
-                duracao += trecho_s
+                if rota is None:
+                    rota = RotaResolvida(
+                        veiculo_id=veiculo.id,
+                        paradas=[],
+                        distancia_total_m=0,
+                        duracao_total_s=0,
+                        carga_peso_kg=0.0,
+                        carga_volume_m3=0.0,
+                        saida_s=saida,
+                    )
+                else:
+                    rota.recargas.append(
+                        RecargaResolvida(
+                            viagem=numero_da_viagem,
+                            chegada_s=rota.chegada_base_s,
+                            saida_s=saida,
+                            distancia_do_anterior_m=rota.retorno_distancia_m,
+                            duracao_do_anterior_s=rota.retorno_duracao_s,
+                        )
+                    )
+                    rota.duracao_total_s += pedido.opcoes.recarga_s
 
-                if no_proximo != 0:
-                    parada = pedido.paradas[no_proximo - 1]
-                    visitados.add(no_proximo)
+                for no, indice, trecho_m, trecho_s in trechos:
+                    parada = pedido.paradas[no - 1]
+                    visitados.add(no)
                     ordem += 1
-                    paradas.append(
+                    rota.paradas.append(
                         ParadaResolvida(
                             parada_id=parada.id,
                             ordem=ordem,
-                            chegada_estimada_s=solucao.Value(dimensao_tempo.CumulVar(proximo)),
+                            chegada_estimada_s=solucao.Value(dimensao_tempo.CumulVar(indice)),
                             distancia_do_anterior_m=trecho_m,
                             duracao_do_anterior_s=trecho_s,
+                            viagem=numero_da_viagem,
                         )
                     )
-                    duracao += parada.tempo_servico_s
-                    peso += parada.demanda.peso_kg or 0
-                    volume += parada.demanda.volume_m3 or 0
+                    rota.distancia_total_m += trecho_m
+                    rota.duracao_total_s += trecho_s + parada.tempo_servico_s
+                    rota.carga_peso_kg = round(
+                        rota.carga_peso_kg + (parada.demanda.peso_kg or 0), 2
+                    )
+                    rota.carga_volume_m3 = round(
+                        rota.carga_volume_m3 + (parada.demanda.volume_m3 or 0), 3
+                    )
 
-                indice = proximo
+                rota.retorno_distancia_m = pedido.distancias[ultimo_no][0]
+                rota.retorno_duracao_s = pedido.duracoes[ultimo_no][0]
+                rota.distancia_total_m += rota.retorno_distancia_m
+                rota.duracao_total_s += rota.retorno_duracao_s
+                rota.chegada_base_s = chegada
 
             # Veiculo que nao recebeu parada nenhuma nao vira rota vazia no
             # planejamento — ele simplesmente nao sai.
-            if paradas:
-                rotas.append(
-                    RotaResolvida(
-                        veiculo_id=veiculo.id,
-                        paradas=paradas,
-                        distancia_total_m=distancia,
-                        duracao_total_s=duracao,
-                        carga_peso_kg=round(peso, 2),
-                        carga_volume_m3=round(volume, 3),
-                    )
-                )
+            if rota is not None:
+                rotas.append(rota)
 
         dispensadas = [
             ParadaDispensada(
@@ -352,7 +436,29 @@ class OrToolsEngine:
             estatisticas={
                 "veiculos_usados": len(rotas),
                 "veiculos_disponiveis": len(pedido.veiculos),
+                "viagens": sum(r.quantidade_viagens for r in rotas),
                 "paradas_atendidas": len(visitados),
                 "paradas_totais": len(pedido.paradas),
             },
         )
+
+    @staticmethod
+    def _ler_viagem(modelo, gestor, solucao, pedido, viagem_idx):
+        """[(no, indice, metros do anterior, segundos do anterior)] da viagem."""
+        trechos = []
+        indice = modelo.Start(viagem_idx)
+        while not modelo.IsEnd(indice):
+            no = gestor.IndexToNode(indice)
+            proximo = solucao.Value(modelo.NextVar(indice))
+            no_proximo = gestor.IndexToNode(proximo)
+            if no_proximo != 0:
+                trechos.append(
+                    (
+                        no_proximo,
+                        proximo,
+                        pedido.distancias[no][no_proximo],
+                        pedido.duracoes[no][no_proximo],
+                    )
+                )
+            indice = proximo
+        return trechos

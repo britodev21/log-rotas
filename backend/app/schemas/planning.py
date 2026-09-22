@@ -31,6 +31,11 @@ class CalcularRequest(BaseModel):
     #: Tempo de deslocamento com o transito previsto (Google) em vez da rua
     #: livre. Sem efeito quando o servidor nao tem transito configurado.
     considerar_transito: bool = True
+    #: Quantas vezes cada veiculo pode sair da base no dia. Com 2 ou mais, ele
+    #: volta para recarregar quando a carga do dia nao cabe de uma vez.
+    max_viagens: Annotated[int, Field(ge=1, le=4)] = 1
+    #: Minutos parado na base entre uma viagem e a proxima.
+    recarga_min: Annotated[int, Field(ge=0, le=240)] = 30
 
 
 class EntregaNaParada(ORMModel):

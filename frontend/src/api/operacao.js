@@ -99,6 +99,8 @@ export const motorista = {
   finalizar: (id) => api.post(`/motorista/rotas/${id}/finalizar`).then((r) => r.data),
   cheguei: (paradaId, coordenada = {}) =>
     api.post(`/motorista/paradas/${paradaId}/cheguei`, coordenada).then((r) => r.data),
+  recarga: (paradaId) =>
+    api.post(`/motorista/paradas/${paradaId}/recarga`).then((r) => r.data),
   entregue: (itemId, dados) =>
     api.post(`/motorista/entregas/${itemId}/entregue`, dados).then((r) => r.data),
   naoEntregue: (itemId, dados) =>

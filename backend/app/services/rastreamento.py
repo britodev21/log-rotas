@@ -157,6 +157,20 @@ def _inicio_da_janela(parada: RouteStop, fuso: ZoneInfo, dia: date) -> datetime 
     return datetime.combine(dia, max(inicios), tzinfo=fuso).astimezone(UTC)
 
 
+def _servico(parada: RouteStop, padrao_s: int) -> int:
+    """Quanto tempo o caminhão fica parado ali.
+
+    Entrega: o tempo dela, ou o padrão da empresa. Recarga na base: o tempo
+    planejado para recarregar — sem ele, a previsão da segunda viagem
+    sairia adiantada exatamente esse tempo. Base de saída e de retorno: zero.
+    """
+    if parada.stop_type == StopType.ENTREGA.value:
+        return parada.service_time_s or padrao_s
+    if parada.stop_type == StopType.BASE_RECARGA.value:
+        return parada.service_time_s or 0
+    return 0
+
+
 def calcular_previsao(
     rota: Route,
     posicao: tuple[float, float] | None,
@@ -209,7 +223,7 @@ def calcular_previsao(
     # Motorista parado numa entrega: a chegada já aconteceu; falta o serviço.
     primeira = abertas[0]
     if primeira.status == StopStatus.CHEGOU.value:
-        servico = primeira.service_time_s or servico_padrao_s
+        servico = _servico(primeira, servico_padrao_s)
         ja_passou = (agora - primeira.arrived_at).total_seconds() if primeira.arrived_at else 0
         relogio = agora + timedelta(seconds=max(0.0, servico - ja_passou))
         origem = chegada(primeira)
@@ -268,7 +282,7 @@ def calcular_previsao(
         janela = _inicio_da_janela(s, fuso, rota.date) if e_entrega else None
         if janela and chegada_prevista < janela:
             espera = int((janela - chegada_prevista).total_seconds())
-        servico = (s.service_time_s or servico_padrao_s) if e_entrega else 0
+        servico = _servico(s, servico_padrao_s)
         relogio = chegada_prevista + timedelta(seconds=espera + servico)
         resultado.append(
             PrevisaoParada(

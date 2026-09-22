@@ -7,6 +7,7 @@ import {
   Flag,
   MapPin,
   Navigation,
+  PackageCheck,
   Play,
   X,
 } from "lucide-react";
@@ -144,7 +145,14 @@ export function DriverRoute() {
   }
 
   const paradas = rota.stops.filter((p) => p.stop_type === "ENTREGA");
-  const proxima = paradas.find((p) => p.status !== "CONCLUIDA");
+  // A recarga na base é uma parada como as outras na fila do motorista: ele
+  // navega até lá, registra a chegada e diz quando saiu com a carga nova.
+  const fila = rota.stops
+    .filter((p) => ["ENTREGA", "BASE_RECARGA"].includes(p.stop_type))
+    .sort((a, b) => a.sequence - b.sequence);
+  const proxima = fila.find((p) => p.status !== "CONCLUIDA");
+  const naRecarga = proxima?.stop_type === "BASE_RECARGA";
+  const viagens = 1 + rota.stops.filter((p) => p.stop_type === "BASE_RECARGA").length;
   const progresso = rota.progresso ?? { total: 0, concluidas: 0, percentual: 0 };
   const iniciada = rota.status === "INICIADA";
   const finalizada = rota.status === "FINALIZADA";
@@ -215,9 +223,77 @@ export function DriverRoute() {
         </Card>
       )}
 
-      {iniciada && proxima && (
+      {iniciada && naRecarga && (
         <Card>
-          <span className="rotulo-secao">Próxima parada</span>
+          <span className="rotulo-secao">
+            Viagem {proxima.trip_number - 1} de {viagens} concluída
+          </span>
+
+          <h2 className="mot-parada__titulo">Volte à base para recarregar</h2>
+          {proxima.address && <p className="mot-parada__endereco">{proxima.address}</p>}
+          {proxima.estimated_arrival && (
+            <p className="mot-parada__previsao">
+              Previsão de chegada: {hora(proxima.estimated_arrival)}
+            </p>
+          )}
+
+          {proxima.status !== "CHEGOU" ? (
+            <>
+              <Button
+                tamanho="lg"
+                larguraTotal
+                icone={Navigation}
+                onClick={() => setNavegando(true)}
+              >
+                NAVEGAR ATÉ A BASE
+              </Button>
+              <div className="mot-acoes">
+                <Button
+                  tamanho="lg"
+                  larguraTotal
+                  icone={MapPin}
+                  carregando={agindo}
+                  onClick={() =>
+                    executar(async () => {
+                      const posicao = await posicaoParaRegistro();
+                      await api.cheguei(proxima.id, posicao);
+                    }, "Chegada na base registrada")
+                  }
+                >
+                  CHEGUEI NA BASE
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="mot-acoes">
+              <p className="mot-aviso">
+                Chegada registrada às {hora(proxima.arrived_at)}. Carregue o caminhão
+                para a viagem {proxima.trip_number} e confirme abaixo.
+              </p>
+              <Button
+                tamanho="lg"
+                larguraTotal
+                icone={PackageCheck}
+                carregando={agindo}
+                onClick={() =>
+                  executar(
+                    () => api.recarga(proxima.id),
+                    `Viagem ${proxima.trip_number} iniciada`,
+                  )
+                }
+              >
+                CARREGADO — SAIR PARA A VIAGEM {proxima.trip_number}
+              </Button>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {iniciada && proxima && !naRecarga && (
+        <Card>
+          <span className="rotulo-secao">
+            Próxima parada{viagens > 1 ? ` · viagem ${proxima.trip_number} de ${viagens}` : ""}
+          </span>
 
           <h2 className="mot-parada__titulo">
             {proxima.sequence}. {proxima.label}
@@ -366,21 +442,30 @@ export function DriverRoute() {
       {/* --------------------------------------------- lista das paradas */}
       <Card titulo="Todas as paradas">
         <ol className="mot-lista">
-          {paradas.map((parada) => {
+          {fila.map((parada) => {
             const concluida = parada.status === "CONCLUIDA";
             const atual = proxima?.id === parada.id;
+            const recarga = parada.stop_type === "BASE_RECARGA";
             return (
               <li
                 className={`mot-lista__item ${concluida ? "mot-lista__item--ok" : ""} ${
                   atual ? "mot-lista__item--atual" : ""
-                }`}
+                } ${recarga ? "mot-lista__item--recarga" : ""}`}
                 key={parada.id}
               >
                 <span className="mot-lista__ordem numero">
-                  {concluida ? <Check size={12} strokeWidth={3} /> : parada.sequence}
+                  {concluida ? (
+                    <Check size={12} strokeWidth={3} />
+                  ) : recarga ? (
+                    <PackageCheck size={12} strokeWidth={2.5} />
+                  ) : (
+                    parada.sequence
+                  )}
                 </span>
                 <span className="mot-lista__texto">
-                  <strong>{parada.label}</strong>
+                  <strong>
+                    {recarga ? `Recarga na base — viagem ${parada.trip_number}` : parada.label}
+                  </strong>
                   {parada.address && <span>{parada.address}</span>}
                 </span>
                 {parada.items.length > 1 && (

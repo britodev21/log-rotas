@@ -36,6 +36,11 @@ import "./admin.css";
  * planejamento descartado continua listado de propósito: saber que um
  * cenário foi calculado e jogado fora faz parte de entender o dia.
  */
+/** Quantas vezes o caminhão sai da base: uma, mais uma por recarga. */
+function viagensDaRota(rota) {
+  return 1 + rota.stops.filter((p) => p.stop_type === "BASE_RECARGA").length;
+}
+
 export function Routes() {
   useDocumentTitle("Rotas");
   const { tema } = useTheme();
@@ -189,6 +194,7 @@ export function Routes() {
                           {rota.stops.filter((p) => p.stop_type === "ENTREGA").length}{" "}
                           paradas · {distancia(rota.total_distance_m)}
                           {rota.planned_weight_kg ? ` · ${peso(rota.planned_weight_kg)}` : ""}
+                          {viagensDaRota(rota) > 1 ? ` · ${viagensDaRota(rota)} viagens` : ""}
                         </span>
                       </div>
                       <StatusBadge tipo="rota" valor={rota.status} />

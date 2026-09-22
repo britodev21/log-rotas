@@ -432,9 +432,15 @@ O lote **demora**: o Nominatim permite uma consulta por segundo.
   "driver_ids": [1, 2],
   "inicio_turno": "08:00",
   "limite_tempo_s": 15,
-  "considerar_transito": true
+  "considerar_transito": true,
+  "max_viagens": 1,
+  "recarga_min": 30
 }
 ```
+
+`max_viagens` (1 a 4, padrão 1): quantas vezes cada veículo pode sair da base no dia. Com 2 ou
+mais, a rota pode trazer paradas `BASE_RECARGA` — a volta à base para recarregar — e
+`recarga_min` é o tempo parado nela. Ver [LIMITACOES.md](LIMITACOES.md), 3.1.
 
 `considerar_transito` (padrão `true`): tempo de cada trecho com o trânsito previsto pelo Google
 para o dia e a hora do turno. Sem efeito se o servidor não tiver trânsito configurado.
@@ -493,6 +499,7 @@ isso responde 422. Um plano confirmado não volta atrás.
 | `POST` | `/api/v1/motorista/paradas/{id}/cheguei` | Registra chegada |
 | `POST` | `/api/v1/motorista/entregas/{id}/entregue` | Conclui **uma** entrega |
 | `POST` | `/api/v1/motorista/entregas/{id}/nao-entregue` | Registra insucesso |
+| `POST` | `/api/v1/motorista/paradas/{id}/recarga` | Carregou de novo; sai para a próxima viagem |
 | `POST` | `/api/v1/motorista/rotas/{id}/finalizar` | Encerra o dia |
 
 **Isolamento:** rota de outro motorista responde **404**, não 403 — dizer "existe, mas não é
@@ -500,6 +507,12 @@ sua" confirmaria a existência de rotas alheias. Planejamento em rascunho não a
 
 **Coordenada é opcional** em todo registro: o navegador só libera geolocalização em contexto
 seguro, e nem sempre há sinal.
+
+**Recarga na base** (rotas de mais de uma viagem): só em parada `BASE_RECARGA`, e só depois da
+chegada na base registrada. **422** se alguma entrega da viagem anterior ficou sem registro, com
+a lista em `detalhes.itens` — o caminhão está na base, e a entrega que voltou precisa ser dita
+"não entregue", com motivo. Concluída a recarga, as entregas da viagem seguinte passam de
+`PLANEJADA` a `EM_ROTA`: antes disso elas estão na base, não no caminhão.
 
 **Finalizar não dá por entregue o que ficou sem registro.** Essas entregas viram
 `NAO_ENTREGUE`, com a observação de que a rota foi encerrada sem registro, e voltam para o

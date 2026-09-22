@@ -245,7 +245,8 @@ export function NavegacaoMotorista({ rota, rastreio, tela, agindo, aoSair, aoReg
   const chegada = restanteS != null ? new Date(Date.now() + restanteS * 1000) : null;
   const chegou = restanteM != null && restanteM <= CHEGADA_M;
   const parada = nav?.parada;
-  const naBase = parada?.tipo === "BASE_RETORNO";
+  const recarga = parada?.tipo === "BASE_RECARGA";
+  const naBase = parada?.tipo === "BASE_RETORNO" || recarga;
 
   // Direção do caminhão: a do GPS quando existe; senão, a do deslocamento.
   if (ponto && anterior.current && distanciaM(anterior.current, ponto) > 5) {
@@ -414,7 +415,13 @@ export function NavegacaoMotorista({ rota, rastreio, tela, agindo, aoSair, aoReg
           <div className="nav__destino">
             <MapPin size={16} strokeWidth={2.2} aria-hidden="true" />
             <div>
-              <strong>{naBase ? "Base" : `${parada.sequencia}. ${parada.rotulo ?? "Entrega"}`}</strong>
+              <strong>
+                {recarga
+                  ? "Base — recarregar o caminhão"
+                  : naBase
+                    ? "Base"
+                    : `${parada.sequencia}. ${parada.rotulo ?? "Entrega"}`}
+              </strong>
               {parada.endereco && <span>{parada.endereco}</span>}
             </div>
           </div>
@@ -442,7 +449,10 @@ export function NavegacaoMotorista({ rota, rastreio, tela, agindo, aoSair, aoReg
           </div>
         )}
 
-        {chegou && parada && !naBase && parada.status !== "CHEGOU" && (
+        {/* Na volta final não há o que registrar: a rota se finaliza na
+            tela da rota. Na recarga, sim — a chegada na base é o que libera
+            a carga da próxima viagem. */}
+        {chegou && parada && (recarga || !naBase) && parada.status !== "CHEGOU" && (
           <Button
             tamanho="lg"
             larguraTotal
@@ -450,7 +460,7 @@ export function NavegacaoMotorista({ rota, rastreio, tela, agindo, aoSair, aoReg
             carregando={agindo}
             onClick={() => aoRegistrarChegada(parada.id)}
           >
-            CHEGUEI — REGISTRAR
+            {recarga ? "CHEGUEI NA BASE — REGISTRAR" : "CHEGUEI — REGISTRAR"}
           </Button>
         )}
 

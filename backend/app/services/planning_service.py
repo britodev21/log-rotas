@@ -170,6 +170,8 @@ class PlanningService:
                 limite_tempo_s=payload.limite_tempo_s,
                 permitir_dispensar=payload.permitir_dispensar,
                 inicio_turno_s=inicio_turno_s,
+                max_viagens=payload.max_viagens,
+                recarga_s=payload.recarga_min * 60,
             ),
         )
 
@@ -522,6 +524,8 @@ class PlanningService:
                 "driver_ids": payload.driver_ids,
                 "inicio_turno": payload.inicio_turno,
                 "limite_tempo_s": payload.limite_tempo_s,
+                "max_viagens": payload.max_viagens,
+                "recarga_min": payload.recarga_min,
                 "matriz": {
                     "fonte": matriz.source.value,
                     "estimada": matriz.estimada,
@@ -545,6 +549,24 @@ class PlanningService:
         self.session.add(plano)
         self.session.flush()
 
+        def no_relogio(segundos: int | None) -> datetime | None:
+            if segundos is None:
+                return None
+            return momento_inicio + timedelta(seconds=segundos)
+
+        def parada_na_base(rota_id: int, tipo: StopType, viagem: int, sequencia: int, **extra):
+            return RouteStop(
+                route_id=rota_id,
+                stop_type=tipo.value,
+                trip_number=viagem,
+                sequence=sequencia,
+                label=base.name,
+                address=base.address,
+                latitude=base.latitude,
+                longitude=base.longitude,
+                **extra,
+            )
+
         for indice, rota_resolvida in enumerate(resultado.rotas):
             veiculo = por_id_veiculo[rota_resolvida.veiculo_id]
             motorista = motoristas[indice] if indice < len(motoristas) else None
@@ -567,28 +589,43 @@ class PlanningService:
 
             # Saida da base.
             self.session.add(
-                RouteStop(
-                    route_id=rota.id,
-                    stop_type=StopType.BASE_SAIDA.value,
-                    trip_number=1,
-                    sequence=0,
-                    label=base.name,
-                    address=base.address,
-                    latitude=base.latitude,
-                    longitude=base.longitude,
-                    estimated_arrival=momento_inicio,
+                parada_na_base(
+                    rota.id, StopType.BASE_SAIDA, 1, 0,
+                    estimated_arrival=no_relogio(rota_resolvida.saida_s),
                 )
             )
 
             coordenadas = [(float(base.latitude), float(base.longitude))]
+            recargas = {r.viagem: r for r in rota_resolvida.recargas}
+            sequencia = 0
+            viagem = 1
 
             for resolvida in rota_resolvida.paradas:
+                if resolvida.viagem != viagem:
+                    # Volta a base para recarregar antes da proxima viagem. E
+                    # uma parada de verdade: o motorista navega ate ela,
+                    # registra a chegada e diz quando saiu carregado.
+                    viagem = resolvida.viagem
+                    recarga = recargas[viagem]
+                    sequencia += 1
+                    self.session.add(
+                        parada_na_base(
+                            rota.id, StopType.BASE_RECARGA, viagem, sequencia,
+                            estimated_arrival=no_relogio(recarga.chegada_s),
+                            distance_from_previous_m=recarga.distancia_do_anterior_m,
+                            duration_from_previous_s=recarga.duracao_do_anterior_s,
+                            service_time_s=max(0, recarga.saida_s - recarga.chegada_s),
+                        )
+                    )
+                    coordenadas.append((float(base.latitude), float(base.longitude)))
+
+                sequencia += 1
                 agrupada = por_chave[resolvida.parada_id]
                 parada = RouteStop(
                     route_id=rota.id,
                     stop_type=StopType.ENTREGA.value,
-                    trip_number=1,
-                    sequence=resolvida.ordem,
+                    trip_number=viagem,
+                    sequence=sequencia,
                     label=agrupada.rotulo,
                     address=agrupada.endereco,
                     latitude=agrupada.latitude,
@@ -614,17 +651,13 @@ class PlanningService:
 
                 coordenadas.append((agrupada.latitude, agrupada.longitude))
 
-            # Retorno a base.
+            # Retorno a base, no fim da ultima viagem.
             self.session.add(
-                RouteStop(
-                    route_id=rota.id,
-                    stop_type=StopType.BASE_RETORNO.value,
-                    trip_number=1,
-                    sequence=len(rota_resolvida.paradas) + 1,
-                    label=base.name,
-                    address=base.address,
-                    latitude=base.latitude,
-                    longitude=base.longitude,
+                parada_na_base(
+                    rota.id, StopType.BASE_RETORNO, viagem, sequencia + 1,
+                    estimated_arrival=no_relogio(rota_resolvida.chegada_base_s),
+                    distance_from_previous_m=rota_resolvida.retorno_distancia_m,
+                    duration_from_previous_s=rota_resolvida.retorno_duracao_s,
                 )
             )
             coordenadas.append((float(base.latitude), float(base.longitude)))

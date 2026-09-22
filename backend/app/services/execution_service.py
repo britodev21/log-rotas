@@ -19,7 +19,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.enums import DeliveryStatus, FailureReason, RouteStatus, StopStatus
+from app.core.enums import DeliveryStatus, FailureReason, RouteStatus, StopStatus, StopType
 from app.core.errors import (
     ConflictError,
     NotFoundError,
@@ -143,10 +143,65 @@ class ExecutionService:
         rota.status = RouteStatus.INICIADA.value
         rota.started_at = datetime.now(UTC)
 
-        # As entregas da rota entram em rota junto. O motorista saiu com a
-        # carga; deixa-las PLANEJADA faria o painel mostrar como se ele
-        # ainda estivesse na base.
+        # As entregas da PRIMEIRA viagem entram em rota junto: o motorista
+        # saiu com essa carga. As das viagens seguintes ficam PLANEJADA —
+        # ainda estao na base, e o painel nao pode mostra-las como se
+        # estivessem no caminhao. Elas saem na recarga.
+        self._carregar(rota, viagem=1)
+
+        self.session.commit()
+        logger.info("Rota %s iniciada pelo motorista %s.", rota.id, rota.driver_id)
+        return rota
+
+    def concluir_recarga(self, parada_id: int) -> RouteStop:
+        """O caminhao foi recarregado na base e sai para a proxima viagem.
+
+        Recusa se alguma entrega da viagem anterior ficou sem registro: o
+        motorista esta na base com o caminhao, e a entrega que voltou precisa
+        ser dita "nao entregue", com o motivo — nao sumir.
+        """
+        parada = self.parada(parada_id)
+        rota = self.rota(parada.route_id)
+        if rota.status != RouteStatus.INICIADA.value:
+            raise ValidationError("Inicie a rota antes de registrar a recarga.")
+        if parada.stop_type != StopType.BASE_RECARGA.value:
+            raise ValidationError("Esta parada nao e uma recarga na base.")
+        if parada.status != StopStatus.CHEGOU.value:
+            raise ValidationError(
+                "Registre a chegada na base antes de concluir a recarga."
+                if parada.status == StopStatus.PENDENTE.value
+                else "Esta recarga ja foi concluida."
+            )
+
+        sem_registro = [
+            item
+            for s in rota.stops
+            if s.stop_type == StopType.ENTREGA.value and s.trip_number < parada.trip_number
+            for item in s.items
+            if item.status not in _RESOLVIDOS
+        ]
+        if sem_registro:
+            raise ValidationError(
+                f"{len(sem_registro)} entrega(s) da viagem anterior ainda sem registro. "
+                "Marque cada uma como entregue ou nao entregue antes de sair de novo.",
+                details={"itens": [i.id for i in sem_registro]},
+            )
+
+        parada.status = StopStatus.CONCLUIDA.value
+        parada.departed_at = datetime.now(UTC)
+        self._carregar(rota, viagem=parada.trip_number)
+
+        self.session.commit()
+        logger.info(
+            "Rota %s: recarga concluida, viagem %s em andamento.", rota.id, parada.trip_number
+        )
+        return parada
+
+    def _carregar(self, rota: Route, *, viagem: int) -> None:
+        """As entregas da viagem saem da base: PLANEJADA -> EM_ROTA."""
         for parada in rota.stops:
+            if parada.trip_number != viagem:
+                continue
             for item in parada.items:
                 entrega = item.delivery
                 if status_machine.pode("entrega", entrega.status, DeliveryStatus.EM_ROTA.value):
@@ -161,9 +216,30 @@ class ExecutionService:
                         route_stop_id=parada.id,
                     )
 
-        self.session.commit()
-        logger.info("Rota %s iniciada pelo motorista %s.", rota.id, rota.driver_id)
-        return rota
+    @staticmethod
+    def viagem_atual(rota: Route) -> int:
+        """A viagem em andamento: a primeira, mais uma por recarga concluida."""
+        return 1 + sum(
+            1
+            for s in rota.stops
+            if s.stop_type == StopType.BASE_RECARGA.value
+            and s.status == StopStatus.CONCLUIDA.value
+        )
+
+    def _exigir_viagem_liberada(self, rota: Route, parada: RouteStop) -> None:
+        """Parada de uma viagem que ainda nao saiu da base nao se resolve.
+
+        A recarga de uma viagem pode receber a chegada (o motorista chegou a
+        base); as entregas dela, nao — a carga ainda nao esta no caminhao.
+        """
+        atual = self.viagem_atual(rota)
+        e_recarga = parada.stop_type == StopType.BASE_RECARGA.value
+        limite = atual + 1 if e_recarga else atual
+        if parada.trip_number > limite:
+            raise ValidationError(
+                f"Esta parada e da viagem {parada.trip_number}. Volte a base e conclua "
+                "a recarga antes."
+            )
 
     def registrar_chegada(
         self, parada_id: int, *, latitude: float | None = None, longitude: float | None = None
@@ -173,6 +249,7 @@ class ExecutionService:
 
         if rota.status != RouteStatus.INICIADA.value:
             raise ValidationError("Inicie a rota antes de registrar chegada.")
+        self._exigir_viagem_liberada(rota, parada)
 
         status_machine.exigir("parada", parada.status, StopStatus.CHEGOU.value)
         parada.status = StopStatus.CHEGOU.value
@@ -333,18 +410,23 @@ class ExecutionService:
                 if rota.status == RouteStatus.PLANEJADA.value
                 else "Esta rota nao esta mais em andamento."
             )
+        self._exigir_viagem_liberada(rota, parada)
 
     def _fechar_parada_se_concluida(self, parada_id: int) -> None:
         """Fecha a parada quando todas as entregas dela foram resolvidas."""
         parada = self.session.get(RouteStop, parada_id)
-        resolvidos = {
-            DeliveryStatus.ENTREGUE.value,
-            DeliveryStatus.NAO_ENTREGUE.value,
-            DeliveryStatus.CANCELADA.value,
-        }
-        if all(i.status in resolvidos for i in parada.items):
+        if all(i.status in _RESOLVIDOS for i in parada.items):
             parada.status = StopStatus.CONCLUIDA.value
             parada.departed_at = datetime.now(UTC)
+
+
+_RESOLVIDOS = frozenset(
+    {
+        DeliveryStatus.ENTREGUE.value,
+        DeliveryStatus.NAO_ENTREGUE.value,
+        DeliveryStatus.CANCELADA.value,
+    }
+)
 
 
 def progresso(rota: Route) -> dict:

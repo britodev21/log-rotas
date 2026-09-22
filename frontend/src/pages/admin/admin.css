@@ -1137,3 +1137,9 @@
 .transito-resumo--livre > svg {
   color: var(--texto-3);
 }
+
+/* A volta a base para recarregar, na sequencia da rota. */
+.sequencia__item--recarga {
+  background: var(--superficie-2);
+  border-radius: var(--r-sm);
+}
