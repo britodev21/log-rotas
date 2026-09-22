@@ -45,7 +45,7 @@ export const GRUPOS = [
   {
     titulo: "Sistema",
     itens: [
-      { rotulo: "Relatórios", icone: BarChart3, fase: "F8" },
+      { para: "/admin/relatorios", rotulo: "Relatórios", icone: BarChart3 },
       { para: "/admin/usuarios", rotulo: "Usuários", icone: Building2 },
       { para: "/admin/seguranca", rotulo: "Segurança", icone: ShieldCheck },
       { para: "/admin/configuracoes", rotulo: "Configurações", icone: Settings },
@@ -56,6 +56,10 @@ export const GRUPOS = [
 /** Título e contexto que a topbar mostra para cada rota disponível. */
 export const CONTEXTO_ROTA = {
   "/admin": { titulo: "Painel", contexto: "Visão geral da operação" },
+  "/admin/relatorios": {
+    titulo: "Relatórios",
+    contexto: "O que foi prometido, o que aconteceu, e a diferença",
+  },
   "/admin/usuarios": { titulo: "Usuários", contexto: "Quem tem acesso ao sistema" },
   "/admin/seguranca": {
     titulo: "Segurança",

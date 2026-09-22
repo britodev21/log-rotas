@@ -64,6 +64,14 @@
   --azul-500: #2a6ce0;
   --azul-600: #2159bd;
 
+  /* Séries de gráfico. Não são cores de estado: identificam uma série, e
+     por isso precisam se distinguir POR DALTÔNICOS — verde/vermelho, que
+     seria a escolha óbvia para "entregue/não entregue", tem ΔE 3,3 em
+     deuteranopia (o par mais comum). Estas passam nas seis conferências do
+     validador de paleta, no tema claro e no escuro. */
+  --serie-1: var(--marca-600);
+  --serie-2: var(--ambar-600);
+
   /* ======================================================================
      2. PAPÉIS — tema claro
      ====================================================================== */
@@ -221,6 +229,10 @@
   --perigo-borda: color-mix(in srgb, #f07070 32%, var(--superficie));
 
   --info: #6a9ef5;
+
+  /* No escuro as séries clareiam para a faixa de luminosidade do tema. */
+  --serie-1: var(--marca-400);
+  --serie-2: #bd8626;
   --info-suave: color-mix(in srgb, #6a9ef5 16%, var(--superficie));
   --info-borda: color-mix(in srgb, #6a9ef5 32%, var(--superficie));
 

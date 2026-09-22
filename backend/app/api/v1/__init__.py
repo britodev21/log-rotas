@@ -17,6 +17,7 @@ from app.api.v1 import (
     geocoding,
     manutencao,
     planning,
+    relatorios,
     seguranca,
     setup,
     users,
@@ -29,6 +30,7 @@ api_router.include_router(auth.router)
 api_router.include_router(users.router)
 api_router.include_router(seguranca.router)
 api_router.include_router(manutencao.router)
+api_router.include_router(relatorios.router)
 
 api_router.include_router(dashboard.router)
 api_router.include_router(deliveries.router)

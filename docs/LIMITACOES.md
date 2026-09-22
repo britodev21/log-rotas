@@ -92,6 +92,22 @@ Estes valores entraram como suposição e precisam ser calibrados com a operaç�
 Os três últimos só entram em jogo quando o OSRM está fora — com ele, distância e tempo são
 medidos na malha viária.
 
+**Quem calibra é o relatório.** A tela de Relatórios compara o tempo planejado com o medido em
+duas frentes — o tempo parado na entrega e o deslocamento entre paradas, este separado por
+fonte da matriz — e diz de quantas paradas o número saiu. Abaixo de 20 paradas ela avisa que
+ainda não serve para mudar a configuração.
+
+Duas coisas envenenariam essa medição, e ficam de fora com o motivo na tela:
+
+- **Chegada e saída marcadas no mesmo minuto.** É o motorista registrando tudo de uma vez no
+  fim da parada; entrando na conta, a mediana do tempo de parada despenca e o planejamento
+  passa a prometer o impossível.
+- **Parada concluída sem hora de chegada.** Fica fora da pontualidade, e o total delas aparece
+  ao lado dos percentuais.
+
+Enquanto o registro de chegada não for hábito na operação, a amostra é pequena — e a tela
+mostra o tamanho dela justamente para ninguém decidir com três entregas.
+
 **O tempo de parada é o que mais pesa.** A operação é dentro de Campo Grande, com
 deslocamentos de 10 a 25 minutos. Se a entrega inclui instalação, o tempo de serviço domina o
 de estrada em ordem de grandeza — e o que limita o dia da equipe é quantos serviços cabem

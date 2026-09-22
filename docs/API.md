@@ -572,12 +572,47 @@ em primeiro. **409** se outra limpeza estiver em andamento. Pela linha de comand
 
 | Recurso | Observação |
 |---|---|
-| Retorno à base para recarregar | O modelo comporta (`stop_type`, `trip_number`); falta no solver |
-| Relatórios e indicadores históricos | O `delivery_events` já guarda tudo que eles precisam |
 | Importação CSV de entregas | — |
 | Foto, assinatura e código de barras | — |
 | GPS contínuo do motorista | Exige HTTPS e troca de polling por SSE |
 
+
+---
+
+## Relatórios — somente `ADMIN`
+
+### `GET /api/v1/relatorios?de=&ate=&motorista_id=`
+
+Sem datas, os últimos 30 dias; máximo de 366 (**422** acima disso, e se `de` for depois de
+`ate`). `motorista_id` filtra tudo menos o bloco `por_motorista`, que existe para comparar.
+
+| Bloco | O que traz |
+|---|---|
+| `entregas` | total, entregues, não entregues, canceladas, `taxa_sucesso` e `motivos` |
+| `rotas` | rotas que **saíram da base** (iniciadas ou finalizadas), distância, tempo em rota, viagens |
+| `pontualidade` | paradas por faixa de atraso, atraso médio e mediano, `tolerancia_s` |
+| `tempo_de_parada` | o planejado contra o real (mediana e p90), com `amostras` e `registros_em_bloco` |
+| `deslocamento` | previsto × real por fonte da matriz (`GOOGLE_TRANSITO`, `OSRM`, …) |
+| `por_motorista`, `por_dia` | os mesmos números recortados |
+| `paradas_sem_registro` | paradas concluídas sem hora de chegada — o que falta da amostra |
+
+O que **não** entra em cada conta, e por quê:
+
+- **Entrega ainda em rota** não conta como fracasso: a taxa sai sobre o que teve desfecho,
+  senão o número do dia pioraria sozinho até a noite.
+- **Rota cancelada ou em rascunho** não soma quilometragem: nenhum caminhão a rodou.
+- **Parada sem hora de chegada** fica fora da pontualidade, e aparece em
+  `paradas_sem_registro` — uma pontualidade sobre metade das paradas precisa dizer que é sobre
+  metade.
+- **Chegada e saída no mesmo minuto** ficam fora da calibração e aparecem em
+  `registros_em_bloco`: é o motorista marcando tudo de uma vez, não uma entrega de um minuto.
+- **Parada aberta de um dia para o outro** (mais de 6 h) é registro esquecido, não entrega.
+
+### `GET /api/v1/relatorios/entregas.csv?de=&ate=&motorista_id=`
+
+Uma linha por entrega, com previsto e realizado lado a lado. Separado por `;` e com BOM: é
+assim que o Excel em português abre com as colunas e os acentos certos. As horas vão no fuso da
+empresa, como aparecem na tela.
 
 ---
 

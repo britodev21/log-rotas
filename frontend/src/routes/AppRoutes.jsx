@@ -12,6 +12,7 @@ import { Customers } from "../pages/admin/Customers";
 import { Dashboard } from "../pages/admin/Dashboard";
 import { Deliveries } from "../pages/admin/Deliveries";
 import { GeocodeQueue } from "../pages/admin/GeocodeQueue";
+import { Reports } from "../pages/admin/Reports";
 import { Security } from "../pages/admin/Security";
 import { Planner } from "../pages/admin/Planner";
 import { Routes as RoutesPage } from "../pages/admin/Routes";
@@ -57,6 +58,7 @@ export function AppRoutes() {
         <Route path="bases" element={<Bases />} />
         <Route path="usuarios" element={<Users />} />
         <Route path="seguranca" element={<Security />} />
+        <Route path="relatorios" element={<Reports />} />
         <Route path="configuracoes" element={<Settings />} />
       </Route>
 

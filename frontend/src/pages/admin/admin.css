@@ -1143,3 +1143,72 @@
   background: var(--superficie-2);
   border-radius: var(--r-sm);
 }
+
+/* ------------------------------------------------------------------ */
+/* Relatorios                                                          */
+/* ------------------------------------------------------------------ */
+.relatorio-card-filtros {
+  margin-bottom: var(--e-4);
+}
+
+.relatorio-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3);
+}
+
+.relatorio-filtros > * {
+  min-width: 150px;
+}
+
+.relatorio-filtros__atalhos {
+  display: flex;
+  gap: var(--e-2);
+  margin-left: auto;
+}
+
+.relatorio-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--e-4);
+  margin-bottom: var(--e-4);
+}
+
+.relatorio-subtitulo {
+  margin: 0 0 var(--e-3);
+  font-size: var(--t-13);
+  font-weight: 650;
+  color: var(--texto);
+}
+
+/* O numero que responde a pergunta do cartao, antes do grafico. */
+.relatorio-destaque {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 var(--e-4);
+}
+
+.relatorio-destaque strong {
+  font-size: var(--t-24);
+  font-weight: 650;
+  color: var(--texto);
+}
+
+.relatorio-destaque span {
+  font-size: var(--t-13);
+  color: var(--texto-3);
+}
+
+.relatorio-razao {
+  display: block;
+  font-size: var(--t-12);
+  color: var(--texto-3);
+}
+
+@media (max-width: 720px) {
+  .relatorio-filtros__atalhos {
+    margin-left: 0;
+  }
+}

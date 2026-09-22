@@ -1,0 +1,203 @@
+/* Gráficos do relatório. Sem biblioteca: barras são caixas, e caixa o CSS
+   desenha melhor que qualquer SVG improvisado. */
+
+/* ---------------------------------------------------------------- barras */
+.gr-barras {
+  display: grid;
+  grid-template-columns: max-content 1fr max-content;
+  align-items: center;
+  gap: var(--e-2) var(--e-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-13);
+}
+
+.gr-barra {
+  display: contents;
+}
+
+.gr-barra__rotulo {
+  color: var(--texto-2);
+  white-space: nowrap;
+}
+
+.gr-barra__trilho {
+  height: 10px;
+  border-radius: var(--r-xs);
+  background: var(--superficie-3);
+  overflow: hidden;
+}
+
+.gr-barra__preenchimento {
+  display: block;
+  height: 100%;
+  /* Ponta arredondada só no fim: o começo fica ancorado na linha de base. */
+  border-radius: 0 var(--r-xs) var(--r-xs) 0;
+  transition: width var(--tempo-normal) var(--curva);
+}
+
+.gr-barra__valor {
+  font-weight: 600;
+  color: var(--texto);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gr-barra__detalhe {
+  grid-column: 2 / -1;
+  margin-top: calc(var(--e-1) * -1);
+  font-size: var(--t-12);
+  color: var(--texto-3);
+}
+
+.gr-barras--comparacao .gr-barra__trilho {
+  height: 14px;
+}
+
+/* --------------------------------------------------------------- colunas */
+.gr-colunas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.gr-colunas__area {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--e-2);
+  height: 180px;
+  padding-top: var(--e-4);
+  /* A linha de base é a única régua: o resto não compete com o dado. */
+  border-bottom: 1px solid var(--borda);
+}
+
+.gr-coluna {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 14px;
+  cursor: default;
+  border-radius: var(--r-xs);
+}
+
+.gr-coluna__pilha {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: 34px;
+  height: 100%;
+  /* Espaço entre os segmentos: sem ele, duas cores encostadas viram uma só
+     mancha para quem não as distingue. */
+  gap: 2px;
+}
+
+.gr-coluna__segmento {
+  width: 100%;
+  min-height: 3px;
+  border-radius: var(--r-xs) var(--r-xs) 0 0;
+  transition: opacity var(--tempo-rapido) var(--curva);
+}
+
+.gr-coluna__segmento:not(:last-child) {
+  border-radius: var(--r-xs);
+}
+
+.gr-coluna--ativa .gr-coluna__segmento {
+  opacity: 0.82;
+}
+
+.gr-coluna__rotulo {
+  margin-top: var(--e-2);
+  font-size: var(--t-11);
+  color: var(--texto-3);
+  white-space: nowrap;
+}
+
+.gr-dica {
+  position: absolute;
+  bottom: calc(100% + var(--e-2));
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 170px;
+  white-space: nowrap;
+  padding: var(--e-2) var(--e-3);
+  transform: translateX(-50%);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  background: var(--superficie);
+  box-shadow: var(--sombra-md);
+  font-size: var(--t-12);
+  color: var(--texto-2);
+  pointer-events: none;
+}
+
+.gr-dica strong {
+  color: var(--texto);
+}
+
+.gr-dica span {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+}
+
+.gr-dica b {
+  margin-left: auto;
+  color: var(--texto);
+}
+
+.gr-dica__total {
+  padding-top: 2px;
+  border-top: 1px solid var(--borda-suave);
+  color: var(--texto-3);
+}
+
+.gr-dica i,
+.gr-legenda i {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 3px;
+}
+
+/* -------------------------------------------------------------- legenda */
+.gr-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2) var(--e-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-12);
+  color: var(--texto-2);
+}
+
+.gr-legenda li {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+}
+
+@media (max-width: 560px) {
+  .gr-colunas__area {
+    height: 150px;
+  }
+
+  .gr-barras {
+    grid-template-columns: 1fr max-content;
+  }
+
+  .gr-barra__rotulo {
+    grid-column: 1 / -1;
+    white-space: normal;
+  }
+}
