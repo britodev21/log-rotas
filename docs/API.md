@@ -431,9 +431,13 @@ O lote **demora**: o Nominatim permite uma consulta por segundo.
   "vehicle_ids": [1, 2],
   "driver_ids": [1, 2],
   "inicio_turno": "08:00",
-  "limite_tempo_s": 15
+  "limite_tempo_s": 15,
+  "considerar_transito": true
 }
 ```
+
+`considerar_transito` (padrão `true`): tempo de cada trecho com o trânsito previsto pelo Google
+para o dia e a hora do turno. Sem efeito se o servidor não tiver trânsito configurado.
 
 **Calcular não muda a operação.** As entregas continuam `PENDENTE`, nenhuma rota fica
 disponível para motorista.
@@ -451,7 +455,26 @@ Recusas, todas com o motivo:
 | 409 | O solver não encontrou solução, com as estatísticas |
 
 A resposta traz `matrix_source`, `distancias_estimadas`, `avisos`, `solver_status`,
-`solver_time_ms` e `unassigned` — o que não coube, com o motivo.
+`solver_time_ms`, `unassigned` — o que não coube, com o motivo — e `transito`:
+
+```json
+{ "considerado": true, "partida": "2026-09-23T12:00:00+00:00",
+  "partida_do_turno": "2026-09-23T08:00:00-04:00",
+  "consultas": 17, "consultas_com_falha": 0, "pares_google": 441, "pares_do_cache": 0,
+  "pares_por_fator": 0, "fator": 1.75, "estrada_livre_s": 3235, "estrada_transito_s": 5581 }
+```
+
+- `partida` é a hora usada; difere de `partida_do_turno` quando o turno já começou (vale o
+  trânsito de agora).
+- `estrada_livre_s` e `estrada_transito_s`: deslocamento das rotas montadas, sem e com trânsito.
+- Sem trânsito: `{ "considerado": false, "motivo": "..." }` — `desligado neste calculo`,
+  `transito nao configurado`, ou a causa da falha do Google (que também vira aviso).
+- `matrix_source` passa a ser `GOOGLE_TRANSITO`.
+
+### `GET /opcoes`
+
+`{ "transito_disponivel": true, "transito_limite_consultas": 40 }` — a tela só oferece o trânsito
+quando o servidor o tem.
 
 ### `POST /{id}/confirmar`
 

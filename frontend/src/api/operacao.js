@@ -19,6 +19,7 @@ export const planejamento = {
   listar: (filtros = {}) =>
     api.get("/planejamento", { params: filtros }).then((r) => r.data),
   obter: (id) => api.get(`/planejamento/${id}`).then((r) => r.data),
+  opcoes: () => api.get("/planejamento/opcoes").then((r) => r.data),
   // O calculo pode demorar: o solver tem limite proprio e o runner impoe
   // um teto maior. O timeout padrao de 20s do cliente nao serve aqui.
   calcular: (dados) =>

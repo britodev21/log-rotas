@@ -16,6 +16,7 @@ from app.models.geocode_cache import GeocodeCache
 from app.models.route import Route
 from app.models.route_position import RoutePosition
 from app.models.seguranca import LoginAttempt, SecurityEvent
+from app.models.trafego import TrafficLeg
 from app.models.vehicle import Vehicle
 from app.services import manutencao
 from tests.conftest import engine
@@ -68,6 +69,9 @@ def test_apaga_so_o_que_passou_do_prazo(db, rota) -> None:
         _cache("b", "OK", _dias(400)),
         # Conferência do Google de 40 dias: sai, só servia na hora de salvar.
         _cache("c", "OK", _dias(40), endereco="place:ChIJxyz"),
+        # Trânsito previsto para anteontem: sai. O de amanhã fica.
+        TrafficLeg(origem="a", destino="b", partida=_dias(2), duracao_s=60, distancia_m=500),
+        TrafficLeg(origem="a", destino="b", partida=_dias(-1), duracao_s=60, distancia_m=500),
     ])
     db.flush()
 
@@ -75,12 +79,13 @@ def test_apaga_so_o_que_passou_do_prazo(db, rota) -> None:
 
     assert execucao.resultado == {
         "posicoes": 1, "tentativas_login": 1, "eventos_seguranca": 1,
-        "cache_falhas": 1, "cache_google": 1,
+        "cache_falhas": 1, "cache_google": 1, "cache_transito": 1,
     }
     assert db.query(RoutePosition).count() == 1
     assert db.query(LoginAttempt).count() == 1
     assert db.query(SecurityEvent).count() == 1
     assert [c.status for c in db.query(GeocodeCache).all()] == ["OK"]
+    assert db.query(TrafficLeg).count() == 1
 
 
 def test_agendada_roda_uma_vez_por_dia(db) -> None:

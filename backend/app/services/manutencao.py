@@ -15,6 +15,9 @@ O que apaga, e por quê:
 - LUGARES DO GOOGLE GUARDADOS PARA CONFERÊNCIA (30 dias). Servem só no
   momento de salvar a entrega (o servidor confere que o ponto é o que o
   Google devolveu); depois disso não têm uso, e cresceriam a cada busca.
+- TRECHOS COM TRÂNSITO de partidas que já passaram (1 dia). Servem para
+  recalcular o plano do mesmo dia sem consultar o Google de novo; o trânsito
+  previsto para uma terça que já passou não serve para nada.
 
 Quando roda: todo dia, no horário `limpeza_hora` (padrão 3h de Campo
 Grande), por um agendador dentro do próprio servidor — ver `Agendador`.
@@ -41,6 +44,7 @@ from app.models.geocode_cache import GeocodeCache
 from app.models.manutencao import MaintenanceRun
 from app.models.route_position import RoutePosition
 from app.models.seguranca import LoginAttempt, SecurityEvent
+from app.models.trafego import TrafficLeg
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -61,6 +65,7 @@ def limites(agora: datetime) -> dict[str, datetime]:
         "tentativas_login": agora - timedelta(days=c.retencao_tentativas_login_dias),
         "eventos_seguranca": agora - timedelta(days=c.retencao_eventos_seguranca_dias),
         "cache_falhas": agora - timedelta(days=RETENCAO_CACHE_FALHAS_DIAS),
+        "cache_transito": agora - timedelta(days=1),
     }
 
 
@@ -120,6 +125,9 @@ def limpar(
                     GeocodeCache.normalized_address.like("place:%"),
                     GeocodeCache.updated_at < corte["cache_falhas"],
                 )
+            ).rowcount,
+            "cache_transito": session.execute(
+                delete(TrafficLeg).where(TrafficLeg.partida < corte["cache_transito"])
             ).rowcount,
         }
         execucao = MaintenanceRun(

@@ -16,6 +16,7 @@ from app.models.manutencao import MaintenanceRun
 from app.models.route import Route, RoutePlan, RouteStop, RouteStopDelivery
 from app.models.route_position import RoutePosition
 from app.models.seguranca import LoginAttempt, SecurityEvent
+from app.models.trafego import TrafficLeg
 from app.models.user import User
 from app.models.vehicle import Vehicle
 
@@ -37,6 +38,7 @@ __all__ = [
     "RouteStop",
     "RouteStopDelivery",
     "SecurityEvent",
+    "TrafficLeg",
     "User",
     "Vehicle",
 ]

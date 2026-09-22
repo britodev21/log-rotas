@@ -13,6 +13,11 @@ export const api = axios.create({
   baseURL: "/api/v1",
   timeout: 20000,
   headers: { "Content-Type": "application/json" },
+  // Lista vai como `status=A&status=B`, que e o que o FastAPI le. O padrao
+  // do axios, `status[]=A`, era ignorado em silencio: o planejador listava
+  // TODAS as entregas do dia, inclusive as ja planejadas, e o calculo
+  // voltava 409.
+  paramsSerializer: { indexes: null },
 });
 
 api.interceptors.request.use((config) => {

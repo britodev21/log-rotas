@@ -28,6 +28,9 @@ class CalcularRequest(BaseModel):
     limite_tempo_s: Annotated[int, Field(ge=1, le=120)] = 10
     inicio_turno: Annotated[str, Field(pattern=r"^\d{2}:\d{2}$")] = "08:00"
     permitir_dispensar: bool = True
+    #: Tempo de deslocamento com o transito previsto (Google) em vez da rua
+    #: livre. Sem efeito quando o servidor nao tem transito configurado.
+    considerar_transito: bool = True
 
 
 class EntregaNaParada(ORMModel):
@@ -113,6 +116,10 @@ class PlanoRead(ORMModel):
     total_duration_s: int | None
     unassigned: list = Field(default_factory=list)
     avisos: list[str] = Field(default_factory=list)
+    #: Como o transito entrou no calculo: `considerado`, e ou o `motivo` de
+    #: nao ter entrado, ou `partida`, `consultas`, pares medidos e por fator,
+    #: `fator`, e o deslocamento das rotas com e sem transito.
+    transito: dict | None = None
     confirmed_at: datetime | None
     created_at: datetime
     routes: list[RotaRead] = Field(default_factory=list)

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, MapPinOff, Route, Sparkles, Trash2, Truck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, MapPinOff, Route, Sparkles, TrafficCone, Trash2, Truck } from "lucide-react";
 
 import { bases as apiBases, motoristas as apiMotoristas, veiculos as apiVeiculos } from "../../api/cadastros";
 import { mensagemDeErro } from "../../api/client";
@@ -29,7 +29,7 @@ import {
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { useTheme } from "../../hooks/useTheme";
 import { useToast } from "../../hooks/useToast";
-import { distancia, duracao, hoje, peso } from "../../utils/formato";
+import { dataHora, distancia, duracao, hoje, peso } from "../../utils/formato";
 import "./admin.css";
 
 /**
@@ -56,6 +56,8 @@ export function Planner() {
   const [motoristasSel, setMotoristasSel] = useState(new Set());
   const [entregasSel, setEntregasSel] = useState(new Set());
   const [inicioTurno, setInicioTurno] = useState("08:00");
+  const [opcoes, setOpcoes] = useState(null);
+  const [considerarTransito, setConsiderarTransito] = useState(true);
 
   const [carregando, setCarregando] = useState(true);
   const [erroCarga, setErroCarga] = useState("");
@@ -73,11 +75,17 @@ export function Planner() {
     setCarregando(true);
     setErroCarga("");
     try {
-      const [b, v, m] = await Promise.all([
+      const [b, v, m, o] = await Promise.all([
         apiBases.listar({ active: true }),
         apiVeiculos.listar({ active: true }),
         apiMotoristas.listar({ active: true }),
+        // Sem as opções a tela funciona: só não oferece o trânsito.
+        apiPlano.opcoes().catch((e) => {
+          console.error("Falha ao ler as opções do planejador", e);
+          return null;
+        }),
       ]);
+      setOpcoes(o);
       setBases(b);
       setVeiculos(v);
       setMotoristas(m);
@@ -92,9 +100,15 @@ export function Planner() {
     }
   }, []);
 
+  // Trocar a data dispara uma carga nova antes de a anterior voltar, e a
+  // resposta que chega por último não é necessariamente a da data na tela:
+  // a de hoje chegando depois sobrescrevia a lista da data escolhida.
+  const ultimaCarga = useRef(0);
   const carregarPendentes = useCallback(async () => {
+    const carga = ++ultimaCarga.current;
     try {
       const lista = await apiEntregas.listar({ data, status: ["PENDENTE"] });
+      if (carga !== ultimaCarga.current) return;
       setPendentes(lista);
       setEntregasSel(new Set(lista.filter((e) => e.latitude !== null).map((e) => e.id)));
     } catch (e) {
@@ -129,6 +143,7 @@ export function Planner() {
   );
 
   const base = bases.find((b) => String(b.id) === baseId);
+  const comTransito = Boolean(opcoes?.transito_disponivel && considerarTransito);
   const podeCalcular =
     baseId && veiculosSel.size > 0 && selecionadas.length > 0 && !calculando;
 
@@ -169,6 +184,7 @@ export function Planner() {
         driver_ids: [...motoristasSel],
         inicio_turno: inicioTurno,
         limite_tempo_s: 15,
+        considerar_transito: comTransito,
       });
       setEtapa(2);
       setPlano(resultado);
@@ -325,6 +341,32 @@ export function Planner() {
                   disabled={Boolean(plano)}
                 />
               </div>
+
+              {opcoes?.transito_disponivel ? (
+                <label className="item-selecao opcao-transito">
+                  <input
+                    type="checkbox"
+                    checked={considerarTransito}
+                    onChange={(e) => setConsiderarTransito(e.target.checked)}
+                    disabled={Boolean(plano)}
+                  />
+                  <span className="item-selecao__texto">
+                    <span className="item-selecao__nome">Considerar o trânsito</span>
+                    <span className="item-selecao__detalhe">
+                      Tempo de cada trecho previsto pelo Google para este dia, a partir da
+                      hora do turno. Sem isso, os tempos são de rua vazia e saem otimistas.
+                    </span>
+                  </span>
+                  <TrafficCone size={16} strokeWidth={2} aria-hidden="true" />
+                </label>
+              ) : (
+                opcoes && (
+                  <p className="texto-3 opcao-transito__ausente">
+                    Trânsito não configurado neste servidor: os tempos de deslocamento são
+                    de rua vazia.
+                  </p>
+                )
+              )}
 
               {semCoordenada.length > 0 && (
                 <Alert
@@ -545,7 +587,9 @@ export function Planner() {
                   },
                   {
                     id: "servidor",
-                    nome: "Agrupando paradas, medindo distâncias e otimizando",
+                    nome: comTransito
+                      ? "Agrupando paradas, medindo o trânsito e otimizando"
+                      : "Agrupando paradas, medindo distâncias e otimizando",
                     detalhe: "Executado no servidor, em sequência",
                     estado: etapa > 1 ? "concluido" : etapa === 1 ? "executando" : "aguardando",
                   },
@@ -647,6 +691,73 @@ export function Planner() {
   );
 }
 
+/** Por que o trânsito ficou de fora, quando ficou por escolha ou configuração.
+ *  Falha do Google chega como aviso do servidor, com a causa. */
+const SEM_TRANSITO = {
+  "desligado neste calculo": "o trânsito foi desligado neste cálculo",
+  "transito nao configurado": "o servidor não tem trânsito configurado",
+};
+
+/**
+ * Quanto o trânsito pesou no plano — em tempo, não em fator: "38 min a
+ * mais" diz alguma coisa a quem monta o dia; "fator 1,75" não.
+ */
+function ResumoTransito({ transito }) {
+  // Planos calculados antes de o trânsito existir não têm o campo.
+  if (!transito) return null;
+
+  if (!transito.considerado) {
+    const motivo = SEM_TRANSITO[transito.motivo];
+    if (!motivo) return null;
+    return (
+      <p className="transito-resumo transito-resumo--livre">
+        <TrafficCone size={16} strokeWidth={2} aria-hidden="true" />
+        <span>
+          Tempos de rua vazia: {motivo}. Os horários tendem a ser otimistas.
+        </span>
+      </p>
+    );
+  }
+
+  const livre = transito.estrada_livre_s ?? 0;
+  const comTransito = transito.estrada_transito_s ?? 0;
+  const extra = comTransito - livre;
+  const pct = livre > 0 ? Math.round((extra / livre) * 100) : null;
+  const origem = [
+    `${transito.consultas} consulta(s) ao Google`,
+    transito.pares_do_cache > 0 && `${transito.pares_do_cache} trechos reaproveitados`,
+    transito.pares_por_fator > 0 && `${transito.pares_por_fator} estimados pelo fator`,
+  ].filter(Boolean);
+  // O Google não prevê o passado: com o turno já começado, vale o de agora.
+  const turnoJaComecou =
+    transito.partida_do_turno &&
+    new Date(transito.partida) - new Date(transito.partida_do_turno) > 60_000;
+
+  return (
+    <div className="transito-resumo">
+      <TrafficCone size={16} strokeWidth={2} aria-hidden="true" />
+      <div className="transito-resumo__texto">
+        <strong>
+          {turnoJaComecou
+            ? `Com o trânsito de agora (${dataHora(transito.partida)}) — o turno já tinha começado`
+            : `Com o trânsito previsto para ${dataHora(transito.partida)}`}
+        </strong>
+        <span>
+          {duracao(comTransito)} de deslocamento
+          {extra > 0 && (
+            <>
+              {" "}— {duracao(extra)} a mais que com a rua vazia
+              {pct !== null && ` (+${pct}%)`}
+            </>
+          )}
+          .
+        </span>
+        <span className="texto-3">{origem.join(" · ")}</span>
+      </div>
+    </div>
+  );
+}
+
 function ResultadoPlano({
   plano,
   motoristas,
@@ -675,6 +786,8 @@ function ResultadoPlano({
             continua válida, mas quilometragem e duração são aproximadas.
           </Alert>
         )}
+
+        <ResumoTransito transito={plano.transito} />
 
         {plano.avisos?.map((aviso) => (
           <Alert tom="info" key={aviso}>

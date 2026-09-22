@@ -76,6 +76,10 @@ class Settings(BaseSettings):
     #: De quanto em quanto tempo, no máximo, o Google é consultado por rota.
     #: Cada consulta é paga; nos intervalos o fator de trânsito é reusado.
     traffic_refresh_s: int = 300
+    #: Teto de chamadas ao Google por calculo de plano. Cada chamada mede ate
+    #: 26 pares; 20 paradas precisam de ~17. Acima do teto, os pares que
+    #: faltam usam a rua livre x o fator medido nos outros.
+    traffic_max_consultas_plano: int = 40
     matrix_provider: str = "osrm"
     osrm_base_url: str = "https://router.project-osrm.org"
     map_provider_key: str = ""

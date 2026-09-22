@@ -13,7 +13,7 @@ Situação registrada em **21/09/2026**.
 |---|---|---|---|---|---|
 | [Google Places API (New)](#google-places-api-new) | Busca de endereço com sugestões | Sim | Pago por uso | Servidor | **Funcionando** |
 | [Google Geocoding API](#google-geocoding-api) | Dizer se o ponto é o telhado | Sim | Pago por uso | Servidor | Ativada, **recusa por falta de faturamento** |
-| [Google Routes API](#google-routes-api) | Trânsito na previsão de chegada | Sim | Pago por uso | Servidor | **Funcionando** |
+| [Google Routes API](#google-routes-api) | Trânsito no planejamento e na previsão de chegada | Sim | Pago por uso | Servidor | **Funcionando** |
 | [Nominatim](#nominatim-openstreetmap) | Geocodificação gratuita | Não | Grátis, 1 req/s | Servidor | Funcionando |
 | [ViaCEP](#viacep) | Endereço a partir do CEP | Não | Grátis | Servidor | Funcionando |
 | [AwesomeAPI CEP](#awesomeapi-cep) | Coordenada do trecho do CEP | Não | Grátis | Servidor | Funcionando |
@@ -137,13 +137,62 @@ diferente do console.
 
 ## Google Routes API
 
-**O que faz no sistema:** o trânsito na previsão de chegada.
+**O que faz no sistema:** o trânsito no **planejamento** (o tempo de cada trecho que o
+otimizador usa) e na **previsão de chegada** durante a rota.
 
 | | |
 |---|---|
 | Chamada | `POST routes.googleapis.com/directions/v2:computeRoutes`, `routingPreference: TRAFFIC_AWARE` |
-| Código | `backend/app/routing/transito.py` |
+| Código | `backend/app/routing/transito.py` e `matriz_transito.py` |
 | Chave | `GOOGLE_MAPS_API_KEY`, com `TRAFFIC_PROVIDER=google` |
+
+### No planejamento
+
+O otimizador precisa do tempo entre **todos os pares** de pontos. Com 20 paradas são 441 pares.
+
+- **Por que não a matriz do Google** (`computeRouteMatrix`): exige faturamento ativo — conferido
+  em 22/09/2026, responde 403 — e é cobrada por par.
+- **O que o sistema faz:** usa a chamada de rota comum, que mede até 26 trechos de uma vez (25
+  pontos intermediários). Um circuito de Euler passa por todos os pares da matriz exatamente uma
+  vez; cortado em pedaços de 26, a matriz inteira sai no menor número possível de chamadas.
+  **20 paradas: 17 chamadas.**
+- **Hora:** o Google recebe a hora do turno no dia do plano e devolve o trânsito **previsto** para
+  ela. Se o turno já começou, vale o trânsito de agora (a API recusa partida no passado), e a tela
+  diz isso.
+- **Recalcular não custa de novo:** os trechos ficam guardados por hora de partida
+  (`trafego_trechos`) e a limpeza diária apaga os de dias que passaram. Mudar o plano do mesmo dia
+  só consulta os pares novos — uma entrega a mais são 2 chamadas.
+- **Teto:** `TRAFFIC_MAX_CONSULTAS_PLANO` (40). Acima dele, os pares que faltam usam o tempo do
+  OSRM multiplicado pelo fator medido nos consultados, e o plano diz quantos pares vieram de cada
+  jeito.
+- **Quando falha:** o plano sai com a rua livre, com o motivo na tela. Falha parcial: os trechos
+  que faltaram usam o fator, e o aviso diz quantos.
+
+**Medido em 22/09/2026, 13 pontos de Campo Grande, partida às 8h do dia seguinte:** 156 pares em
+6 chamadas, 2,6 s. O Google com trânsito deu **1,75 vez** o tempo do OSRM na média — mas de 1,19 a
+2,69 conforme o par: o trânsito não é uniforme, e um fator só não substituiria a matriz. Recalcular
+o mesmo plano: 0 chamadas, 5 ms.
+
+**Ao longo do dia**, para os mesmos três trechos numa quarta-feira: 3h — 619 s, 1.097 s, 585 s;
+das 7h às 15h — ~925 s, ~1.570 s, ~845 s (variação de ±3%); 18h — 961 s, 1.697 s, 820 s. Em Campo
+Grande o que pesa é rua cheia contra rua vazia, não a hora dentro do expediente.
+
+**No plano real de teste** (8 entregas, 20/09): com a rua vazia, as 6 paradas cabiam num
+caminhão só (7h42, dentro da jornada de 8h). Com o trânsito, o deslocamento subiu de 54 min para
+1h33 (+73%), a rota única passaria da jornada, e o plano usou dois caminhões.
+
+**Limites conhecidos:**
+- O Google calcula para **carro**; caminhão é mais lento. A comparação entre o planejado e o
+  realizado (relatórios) é o que vai dizer quanto.
+- Dentro de cada chamada, a hora avança trecho a trecho **sem as paradas**, que o Google não
+  conhece. Com a variação medida dentro do expediente, o efeito é pequeno.
+- O traçado desenhado no mapa continua sendo o do OSRM; o tempo é o do Google.
+
+**Custo, se o faturamento for ativado:** cobrado por **chamada**, não por par. Confira o preço
+vigente na tabela do Google Maps Platform; o plano registra quantas chamadas fez
+(`transito.consultas`), e o log do servidor também.
+
+### Na previsão de chegada
 
 **Como é usado — e por que assim:** a previsão é recalculada a cada ~45 s por rota. Chamar o
 Google nesse ritmo daria centenas de chamadas pagas por caminhão por dia. Em vez disso, ele é
@@ -155,7 +204,8 @@ dado do que trânsito.
 **Primeira medição, 21/09/2026:** Centro → Rua Bahia, OSRM 4 min, Google com trânsito
 7 min 53 s. O fator também corrige o otimismo do OSRM, não só o trânsito.
 
-**Situação:** ativada, funcionando **sem faturamento**, como a Places. Pode passar a exigir.
+**Situação:** ativada, funcionando **sem faturamento**, como a Places — a `computeRoutes`; a
+`computeRouteMatrix`, não. Pode passar a exigir.
 
 **Quando falha:** a previsão continua, com "rua livre" na tela; a falha fica guardada pelo mesmo
 intervalo, para não repetir a chamada recusada a cada recálculo.
@@ -255,8 +305,9 @@ caminho é um OSRM próprio com o mapa de MS.
 qual fonte veio a matriz, e o mapa desenha a rota tracejada em vez de pela rua.
 
 **Não considera trânsito.** O tempo é o da via livre, com as velocidades do mapa — e, na
-primeira comparação com o Google, metade do tempo real. A previsão ao vivo corrige isso com o
-fator de trânsito; o planejamento, ainda não.
+primeira comparação com o Google, metade do tempo real. Com `TRAFFIC_PROVIDER=google`, o
+planejamento troca os tempos pelos do Google e a previsão ao vivo aplica o fator de trânsito; o
+OSRM continua dando o traçado, a navegação e a base do fator.
 
 **As manobras chegam em inglês e em código** ("turn", "slight left"); a frase em português é
 montada no servidor, para tela e voz dizerem o mesmo.
@@ -376,7 +427,7 @@ Antes de confiar, confira um endereço conhecido na tela.
 | ViaCEP | Pede o endereço digitado por extenso |
 | AwesomeAPI | Mapa abre na cidade em vez da quadra |
 | OSRM | Distância em linha reta, **com aviso na tela** e a fonte registrada no plano; navegação sem manobras |
-| Google Routes | Previsão com "rua livre" em vez de "com trânsito" |
+| Google Routes | Plano e previsão com "rua livre" em vez de "com trânsito", com o motivo na tela |
 | Esri | Mapa sem desenho; cadastro, planejamento e execução continuam |
 | Geolocalização | Evento gravado sem coordenada; painel mostra "aguardando GPS" ou "sem sinal"; a tela do motorista diz por quê |
 

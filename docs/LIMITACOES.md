@@ -195,20 +195,35 @@ pino). Sem nome que bata, usa o pino.
 **Previsão de chegada:** deslocamento pela rua (OSRM) × fator de trânsito do Google + espera
 pela janela do cliente + tempo de serviço, recalculada no máximo a cada 45 s por rota. Na
 primeira medição, no mesmo trajeto, o OSRM previa 4 min e o Google com trânsito 7 min 53 s —
-**o OSRM previa metade do tempo**. O fator corrige isso na previsão ao vivo; **o planejamento
-ainda usa o OSRM puro**, então os horários planejados tendem a ser otimistas no deslocamento
-(o tempo de serviço, que domina o dia, não é afetado). Aplicar trânsito ao planejamento é
-possível pela mesma Routes API, com custo por par de pontos.
+**o OSRM previa metade do tempo**. O fator corrige isso na previsão ao vivo, e o planejamento usa
+o tempo do Google com o trânsito previsto (seção 3.10).
 
 **Volume:** uma posição a cada ~10 s dá ~3.600 linhas por rota de 10 h. As posições com mais de
 90 dias são apagadas pela limpeza automática (ver 3.9).
+
+### 3.10 Trânsito no planejamento
+
+Com `TRAFFIC_PROVIDER=google`, o tempo de cada trecho que o otimizador usa é o do Google, com o
+trânsito previsto para o dia e a hora do turno. Como a matriz sai em poucas chamadas, o custo e o
+que foi medido estão em `docs/SERVICOS_EXTERNOS.md`.
+
+O que ele **não** faz:
+
+- **Não muda o trânsito ao longo do dia dentro do plano.** A matriz é a da hora do turno (com a
+  hora avançando dentro de cada chamada). Medido em Campo Grande: dentro do expediente o tempo
+  varia ±3%, às 18h +7%. Um turno que atravessa o fim da tarde fica um pouco otimista no fim.
+- **Não sabe que é caminhão.** O tempo é de carro.
+- **Não prevê o passado.** Planejar um turno que já começou usa o trânsito de agora — a tela diz.
+- **Sem o Google** (sem chave, fora do ar, cota acabou), o plano sai com a rua livre e diz por quê.
+  Nunca um plano com metade dos trechos medidos apresentado como se todos fossem.
 
 ### 3.9 Limpeza automática
 
 Todo dia, a partir das 3h de Campo Grande (`LIMPEZA_HORA`), o próprio servidor apaga o que passou
 do prazo: posições do GPS (90 dias), tentativas de login (180), eventos de segurança (730),
-endereços que falharam na busca (30 — para serem tentados de novo) e as conferências de lugar do
-Google (30 — só servem na hora de salvar a entrega). **Endereço encontrado não é apagado.**
+endereços que falharam na busca (30 — para serem tentados de novo), as conferências de lugar do
+Google (30 — só servem na hora de salvar a entrega) e os trechos com trânsito de dias que já
+passaram. **Endereço encontrado não é apagado.**
 
 - **"A partir das 3h", não "às 3h":** se o servidor estava desligado na hora, a limpeza roda
   quando ele voltar, no mesmo dia.

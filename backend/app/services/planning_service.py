@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, date, datetime, time, timedelta
+from itertools import pairwise
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -45,7 +46,9 @@ from app.optimization import (
 )
 from app.repositories.company_settings_repository import CompanySettingsRepository
 from app.repositories.delivery_repository import DeliveryRepository
-from app.routing import Ponto, RoutingService
+from app.routing import Ponto, RoutingService, transito
+from app.routing.base import Matriz
+from app.routing.matriz_transito import MatrizComTransito
 from app.schemas.planning import CalcularRequest, ConfirmarRequest
 from app.services import precisao, status_machine
 from app.services.delivery_service import DeliveryService
@@ -67,6 +70,7 @@ class PlanningService:
         self.entregas = DeliveryRepository(session)
         self.config = CompanySettingsRepository(session)
         self.routing = routing or RoutingService()
+        self.matriz_transito = MatrizComTransito(session)
 
     # ------------------------------------------------------------------ #
     # Calcular
@@ -98,15 +102,22 @@ class PlanningService:
         if not paradas:
             raise ValidationError("Nenhuma entrega valida para planejar.")
 
-        # 2. Matriz: base na posicao 0, paradas em seguida.
+        tempo_padrao = self._tempo_padrao_min()
+        inicio_turno_s = self._segundos(payload.inicio_turno)
+        momento_inicio = self._momento_inicio(payload.date, inicio_turno_s)
+
+        # 2. Matriz: base na posicao 0, paradas em seguida. Primeiro a da rua
+        # livre (OSRM, gratis); depois, se houver, a do transito previsto
+        # para o dia e a hora do turno.
         pontos = [Ponto("base", float(base.latitude), float(base.longitude), base.name)]
         pontos += [Ponto(p.chave, p.latitude, p.longitude, p.rotulo) for p in paradas]
-        matriz = self.routing.matriz(pontos)
+        livre = self.routing.matriz(pontos)
+        matriz, info_transito = self._com_transito(
+            livre, momento_inicio, pedido=payload.considerar_transito
+        )
         avisos.extend(matriz.avisos)
 
         # 3. Montar o pedido para o solver.
-        tempo_padrao = self._tempo_padrao_min()
-        inicio_turno_s = self._segundos(payload.inicio_turno)
 
         pedido = OptimizationRequest(
             deposito=ParadaPlanejada(
@@ -177,6 +188,12 @@ class PlanningService:
                 },
             )
 
+        if info_transito["considerado"]:
+            # Quanto o transito pesou nas pernas que o plano de fato usa: e o
+            # numero que responde "o que muda por considerar o transito?".
+            info_transito["estrada_livre_s"] = self._estrada(resultado, livre)
+            info_transito["estrada_transito_s"] = self._estrada(resultado, matriz)
+
         # 5. Persistir como RASCUNHO.
         plano = self._persistir(
             payload=payload,
@@ -187,7 +204,8 @@ class PlanningService:
             matriz=matriz,
             resultado=resultado,
             avisos=avisos,
-            inicio_turno_s=inicio_turno_s,
+            momento_inicio=momento_inicio,
+            info_transito=info_transito,
             actor=actor,
         )
 
@@ -398,6 +416,59 @@ class PlanningService:
         config = self.config.get()
         return config.default_stop_service_minutes if config else 60
 
+    def _com_transito(
+        self, livre: Matriz, partida: datetime, *, pedido: bool
+    ) -> tuple[Matriz, dict]:
+        """A matriz com o transito previsto, ou a livre com o motivo de nao ser.
+
+        Sem transito o plano continua valido — e o que o sistema fazia antes
+        —, mas a tela diz que os tempos sao de rua livre e por que.
+        """
+        if not pedido:
+            return livre, {"considerado": False, "motivo": "desligado neste calculo"}
+        if not transito.disponivel():
+            return livre, {"considerado": False, "motivo": "transito nao configurado"}
+        try:
+            matriz, resumo = self.matriz_transito.aplicar(livre, partida)
+        except transito.TransitoIndisponivel as exc:
+            logger.warning("Planejamento sem transito: %s", exc)
+            livre.avisos.append(
+                f"O transito nao foi considerado ({exc}). Os tempos de deslocamento "
+                "sao de rua livre e tendem a ser otimistas."
+            )
+            return livre, {"considerado": False, "motivo": str(exc)}
+        # `partida` e a hora usada; `partida_do_turno`, a pedida. Diferem quando
+        # o turno ja comecou: o Google nao preve o passado, e vale o de agora.
+        return matriz, {
+            "considerado": True,
+            **resumo.como_dict(),
+            "partida_do_turno": partida.isoformat(),
+        }
+
+    @staticmethod
+    def _estrada(resultado, matriz: Matriz) -> int:
+        """Segundos de deslocamento das rotas montadas, segundo `matriz`."""
+        total = 0
+        for rota in resultado.rotas:
+            sequencia = [0, *(matriz.indice(p.parada_id) for p in rota.paradas), 0]
+            total += sum(
+                matriz.duracoes[a][b] for a, b in pairwise(sequencia)
+            )
+        return total
+
+    @staticmethod
+    def _momento_inicio(dia: date, inicio_turno_s: int) -> datetime:
+        # O turno e digitado em hora de Campo Grande. Ancorado em UTC -- como
+        # estava -- "08:00" virava 04:00 local, e todo horario previsto do
+        # plano saia quatro horas adiantado. Ficou invisivel ate a previsao
+        # ao vivo comparar o plano com a posicao real e acusar 11 h de atraso
+        # numa rota que tinha acabado de sair.
+        return datetime.combine(
+            dia,
+            time(hour=inicio_turno_s // 3600, minute=(inicio_turno_s % 3600) // 60),
+            tzinfo=ZoneInfo(get_settings().default_timezone),
+        )
+
     @staticmethod
     def _segundos(hhmm: str) -> int:
         horas, minutos = hhmm.split(":")
@@ -427,21 +498,12 @@ class PlanningService:
         matriz,
         resultado,
         avisos,
-        inicio_turno_s,
+        momento_inicio,
+        info_transito,
         actor,
     ) -> RoutePlan:
         por_chave = {p.chave: p for p in paradas}
         por_id_veiculo = {str(v.id): v for v in veiculos}
-        # O turno e digitado em hora de Campo Grande. Ancorado em UTC -- como
-        # estava -- "08:00" virava 04:00 local, e todo horario previsto do
-        # plano saia quatro horas adiantado. Ficou invisivel ate a previsao
-        # ao vivo comparar o plano com a posicao real e acusar 11 h de atraso
-        # numa rota que tinha acabado de sair.
-        momento_inicio = datetime.combine(
-            payload.date,
-            time(hour=inicio_turno_s // 3600, minute=(inicio_turno_s % 3600) // 60),
-            tzinfo=ZoneInfo(get_settings().default_timezone),
-        )
 
         plano = RoutePlan(
             base_id=base.id,
@@ -465,6 +527,7 @@ class PlanningService:
                     "estimada": matriz.estimada,
                     "detalhe": matriz.detalhe,
                 },
+                "transito": info_transito,
                 "avisos": avisos,
                 "estatisticas": resultado.estatisticas,
             },

@@ -46,6 +46,7 @@ const APAGADOS = [
   ["eventos_seguranca", "eventos de segurança"],
   ["cache_falhas", "endereços que falharam"],
   ["cache_google", "conferências do Google"],
+  ["cache_transito", "trechos de trânsito"],
 ];
 
 function resumoDaLimpeza(execucao) {

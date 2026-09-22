@@ -16,16 +16,19 @@ O fator compara o tempo com trânsito do Google com o do OSRM para os
 MESMOS pontos, então também corrige o otimismo do OSRM, que costuma prever
 menos tempo do que um caminhão de fato leva na cidade.
 
-AVISO DE HONESTIDADE: escrito e testado contra respostas gravadas. Na data
-em que foi escrito (21/09/2026) a Routes API ainda não estava ativada no
-projeto do Google, então a conversa de rede real não foi exercitada.
+O planejamento usa a mesma chamada, com a hora de partida no futuro — ver
+app/routing/matriz_transito.py. Conferido contra a API real em 22/09/2026:
+com partida futura o Google devolve o trânsito PREVISTO para aquela hora, e
+a chamada funciona sem faturamento ativo no projeto (a computeRouteMatrix,
+não: responde 403 pedindo faturamento).
 """
 
 from __future__ import annotations
 
 import logging
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
@@ -53,6 +56,7 @@ class TransitoIndisponivel(RuntimeError):
 class TempoComTransito:
     duracoes_s: list[int]
     duracoes_livres_s: list[int]
+    distancias_m: list[int] = field(default_factory=list)
 
     @property
     def total_s(self) -> int:
@@ -92,9 +96,13 @@ def _ponto(lat: float, lon: float) -> dict:
 
 def _causa(resposta: httpx.Response) -> str:
     try:
-        erro = resposta.json().get("error", {})
+        corpo = resposta.json()
     except ValueError:
         return f"o Google respondeu {resposta.status_code}"
+    # Alguns métodos da Routes API devolvem o erro dentro de uma lista.
+    if isinstance(corpo, list):
+        corpo = corpo[0] if corpo and isinstance(corpo[0], dict) else {}
+    erro = corpo.get("error", {}) if isinstance(corpo, dict) else {}
     razoes = {d.get("reason") for d in erro.get("details", []) if d.get("reason")}
     mensagem = (erro.get("message") or "").lower()
     if "BILLING_DISABLED" in razoes or "billing" in mensagem:
@@ -110,8 +118,18 @@ def _causa(resposta: httpx.Response) -> str:
     return f"o Google respondeu {resposta.status_code}"
 
 
-def consultar(pontos: list[tuple[float, float]]) -> TempoComTransito:
-    """Tempo com trânsito, por perna, passando pelos pontos em ordem."""
+def _instante(partida: datetime) -> str:
+    return partida.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def consultar(
+    pontos: list[tuple[float, float]], partida: datetime | None = None
+) -> TempoComTransito:
+    """Tempo com trânsito, por perna, passando pelos pontos em ordem.
+
+    `partida` no futuro: trânsito previsto para aquela hora. Nula ou no
+    passado: trânsito de agora — a API recusa partida no passado.
+    """
     if not disponivel():
         raise TransitoIndisponivel("trânsito não configurado")
     if len(pontos) < 2:
@@ -128,6 +146,8 @@ def consultar(pontos: list[tuple[float, float]]) -> TempoComTransito:
         "routingPreference": "TRAFFIC_AWARE",
         "languageCode": "pt-BR",
     }
+    if partida is not None and partida > datetime.now(UTC) + timedelta(minutes=1):
+        corpo["departureTime"] = _instante(partida)
     try:
         resposta = _http().post(
             URL,
@@ -153,6 +173,7 @@ def consultar(pontos: list[tuple[float, float]]) -> TempoComTransito:
     return TempoComTransito(
         duracoes_s=[_segundos(p.get("duration")) for p in pernas],
         duracoes_livres_s=[_segundos(p.get("staticDuration")) for p in pernas],
+        distancias_m=[int(p.get("distanceMeters") or 0) for p in pernas],
     )
 
 

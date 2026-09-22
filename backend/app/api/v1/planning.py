@@ -6,10 +6,13 @@ from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Query, status
+from pydantic import BaseModel
 
 from app.api.deps import AdminUser, DbSession
+from app.core.config import get_settings
 from app.core.enums import MatrixSource, PlanStatus
 from app.models.route import RoutePlan
+from app.routing import transito
 from app.schemas.planning import (
     CalcularRequest,
     ConfirmarRequest,
@@ -26,9 +29,29 @@ def _montar(plano: RoutePlan) -> PlanoRead:
     do dado — informação que não está numa coluna, mas muda como o resultado
     deve ser lido."""
     leitura = PlanoRead.model_validate(plano)
-    leitura.distancias_estimadas = plano.matrix_source == MatrixSource.HAVERSINE.value
-    leitura.avisos = (plano.params or {}).get("avisos", [])
+    params = plano.params or {}
+    leitura.distancias_estimadas = plano.matrix_source == MatrixSource.HAVERSINE.value or bool(
+        params.get("matriz", {}).get("estimada")
+    )
+    leitura.avisos = params.get("avisos", [])
+    leitura.transito = params.get("transito")
     return leitura
+
+
+class OpcoesRead(BaseModel):
+    transito_disponivel: bool
+    #: Teto de chamadas ao Google por calculo.
+    transito_limite_consultas: int
+
+
+@router.get("/opcoes", response_model=OpcoesRead, summary="O que o planejador oferece")
+def opcoes(_: AdminUser) -> OpcoesRead:
+    """Se o servidor tem transito configurado — a tela so mostra a opcao
+    quando tem."""
+    return OpcoesRead(
+        transito_disponivel=transito.disponivel(),
+        transito_limite_consultas=get_settings().traffic_max_consultas_plano,
+    )
 
 
 @router.post(

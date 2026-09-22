@@ -145,3 +145,6 @@ class MatrixSource(StrEnum):
 
     OSRM = "OSRM"
     HAVERSINE = "HAVERSINE"
+    #: Tempo e distancia do Google com o transito previsto para o dia e a
+    #: hora do turno — ver app/routing/matriz_transito.py.
+    GOOGLE_TRANSITO = "GOOGLE_TRANSITO"
