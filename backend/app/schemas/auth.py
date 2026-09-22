@@ -25,6 +25,10 @@ class TokenPair(BaseModel):
 
 class LoginResponse(TokenPair):
     user: UserRead
+    #: A senha usada deixaria de passar na politica de hoje (lista de senhas
+    #: conhecidas, nome no meio...). Ela continua entrando — trancar alguem
+    #: fora por uma regra nova seria pior —, mas a tela pede a troca.
+    senha_fraca: bool = False
 
 
 class RefreshRequest(BaseModel):

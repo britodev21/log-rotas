@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { KeyRound, LogOut } from "lucide-react";
 
 import { Avatar, Button, Logo, PageTransition } from "../components/ui";
+import { AvisoSenhaFraca, MinhaConta } from "../components/domain";
 import { useAuth } from "../hooks/useAuth";
 import "./DriverLayout.css";
 
@@ -15,6 +17,7 @@ import "./DriverLayout.css";
  */
 export function DriverLayout() {
   const { usuario, sair } = useAuth();
+  const [contaAberta, setContaAberta] = useState(false);
 
   return (
     <div className="mot">
@@ -31,6 +34,15 @@ export function DriverLayout() {
         <Button
           variante="sutil"
           tamanho="sm"
+          icone={KeyRound}
+          onClick={() => setContaAberta(true)}
+          aria-label="Minha conta"
+          className="mot__sair"
+        />
+
+        <Button
+          variante="sutil"
+          tamanho="sm"
           icone={LogOut}
           onClick={sair}
           aria-label="Sair"
@@ -39,10 +51,12 @@ export function DriverLayout() {
       </header>
 
       <main className="mot__conteudo">
+        <AvisoSenhaFraca aoAbrir={() => setContaAberta(true)} />
         <PageTransition>
           <Outlet />
         </PageTransition>
       </main>
+      <MinhaConta aberto={contaAberta} onFechar={() => setContaAberta(false)} />
     </div>
   );
 }

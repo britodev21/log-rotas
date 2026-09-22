@@ -18,6 +18,7 @@ from app.core.security import (
     password_needs_rehash,
     verify_password,
 )
+from app.core.senha import exigir_senha_valida
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import TokenPair
@@ -120,6 +121,7 @@ class AuthService:
             raise AuthenticationError("Senha atual incorreta.")
         if verify_password(new_password, user.password_hash):
             raise ValidationError("A nova senha precisa ser diferente da atual.")
+        exigir_senha_valida(new_password, email=user.email, nome=user.name)
 
         user.password_hash = hash_password(new_password)
         # Derruba as outras sessoes: quem trocou a senha continua logado ao

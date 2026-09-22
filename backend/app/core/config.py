@@ -38,6 +38,25 @@ class Settings(BaseSettings):
     # pydantic-settings tentaria interpretar list[str] como JSON.
     cors_origins: str = "http://localhost:5173"
 
+    # --- Politica de acesso (docs/SEGURANCA.md) ---
+    #: Falhas de login da MESMA CONTA dentro da janela que bloqueiam a conta.
+    login_max_falhas_conta: int = 5
+    #: Falhas do MESMO IP (em qualquer conta) que bloqueiam o IP. Maior que o
+    #: da conta: um escritorio inteiro pode sair pelo mesmo IP.
+    login_max_falhas_ip: int = 20
+    login_janela_minutos: int = 15
+    login_bloqueio_minutos: int = 15
+    #: Envia Strict-Transport-Security. So com HTTPS de verdade: ligado em
+    #: HTTP, o navegador guardaria uma promessa que o servidor nao cumpre.
+    hsts: bool = False
+
+    # --- Retencao de dados (limpeza automatica) ---
+    retencao_posicoes_dias: int = 90
+    retencao_tentativas_login_dias: int = 180
+    retencao_eventos_seguranca_dias: int = 730
+    #: Hora local em que a limpeza roda sozinha (0-23). -1 desliga.
+    limpeza_hora: int = 3
+
     # --- Operacao ---
     default_timezone: str = "America/Campo_Grande"
     default_stop_service_minutes: int = 60

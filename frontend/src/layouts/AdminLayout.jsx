@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { LogOut, Menu, PanelLeftClose, User, X } from "lucide-react";
+import { KeyRound, LogOut, Menu, PanelLeftClose, X } from "lucide-react";
 
 import {
   Avatar,
@@ -14,6 +14,7 @@ import {
   ThemeToggle,
   Tooltip,
 } from "../components/ui";
+import { AvisoSenhaFraca, MinhaConta } from "../components/domain";
 import { useAuth } from "../hooks/useAuth";
 import { CONTEXTO_ROTA, GRUPOS } from "./navegacao";
 import "./AdminLayout.css";
@@ -23,6 +24,7 @@ export function AdminLayout() {
   const { pathname } = useLocation();
 
   const [gavetaAberta, setGavetaAberta] = useState(false);
+  const [contaAberta, setContaAberta] = useState(false);
   const [recolhida, setRecolhida] = useState(() => {
     try {
       return localStorage.getItem("logrotas.lateral") === "recolhida";
@@ -166,8 +168,8 @@ export function AdminLayout() {
             >
               <DropdownLabel>{usuario?.email}</DropdownLabel>
               <DropdownSeparator />
-              <DropdownItem icone={User} disabled>
-                Meu perfil
+              <DropdownItem icone={KeyRound} onClick={() => setContaAberta(true)}>
+                Minha conta
               </DropdownItem>
               <DropdownSeparator />
               <DropdownItem icone={LogOut} onClick={sair} perigo>
@@ -178,10 +180,12 @@ export function AdminLayout() {
         </header>
 
         <main className="app__conteudo">
+          <AvisoSenhaFraca aoAbrir={() => setContaAberta(true)} />
           <PageTransition>
             <Outlet />
           </PageTransition>
         </main>
+        <MinhaConta aberto={contaAberta} onFechar={() => setContaAberta(false)} />
       </div>
     </div>
   );

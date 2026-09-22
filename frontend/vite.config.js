@@ -1,6 +1,45 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+/**
+ * Cabeçalhos de segurança da TELA em produção.
+ *
+ * A Content-Security-Policy diz ao navegador de onde a página pode carregar
+ * código e recursos. É a proteção que mais importa aqui: o token de sessão
+ * fica no localStorage (docs/LIMITACOES.md, 1.5), e uma CSP estrita impede
+ * que um script injetado rode para roubá-lo.
+ *
+ * Só o que a tela usa de verdade, conferido no código:
+ *   - fontes do Google (folha de estilo e arquivos de fonte);
+ *   - ladrilhos do mapa da Esri (imagens);
+ *   - a própria API, na mesma origem (/api, pelo proxy).
+ * O link do Google Maps é navegação, não recurso carregado — não entra.
+ *
+ * Aplicados no `vite preview` (o build de produção servido localmente). No
+ * `vite dev` não: o recarregamento a quente do React injeta script embutido
+ * e seria bloqueado. Em produção, o nginx envia os mesmos cabeçalhos — ver
+ * docs/SEGURANCA.md.
+ */
+export const CABECALHOS_PRODUCAO = {
+  "Content-Security-Policy": [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https://services.arcgisonline.com",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join("; "),
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  // GPS e tela acesa só para a própria página; câmera e microfone, ninguém.
+  "Permissions-Policy": "geolocation=(self), screen-wake-lock=(self), camera=(), microphone=()",
+};
+
 export default defineConfig({
   plugins: [react()],
   build: {
@@ -15,6 +54,9 @@ export default defineConfig({
         },
       },
     },
+  },
+  preview: {
+    headers: CABECALHOS_PRODUCAO,
   },
   server: {
     port: 5173,

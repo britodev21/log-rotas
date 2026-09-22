@@ -14,18 +14,15 @@ import "./camadas.css";
  * o tema claro/escuro e não exigem nenhum arquivo de imagem.
  */
 
-/** Cor de cada status, lida dos tokens para nunca divergir das etiquetas. */
-const TOM_CSS = {
-  neutro: "var(--neutro)",
-  info: "var(--info)",
-  sucesso: "var(--sucesso)",
-  atencao: "var(--atencao)",
-  perigo: "var(--perigo)",
-};
-
-function corDoStatus(status) {
-  const tom = STATUS_ENTREGA[status]?.tom ?? "neutro";
-  return TOM_CSS[tom];
+/**
+ * Tom de cada status, o mesmo das etiquetas. Vira uma CLASSE (`pino-tom--x`)
+ * que define a cor no CSS — e não `style="--pino-cor:..."` no HTML do
+ * marcador: a Content-Security-Policy da tela em produção bloqueia estilo
+ * embutido, e os pinos perdiam a cor. Visto no build de produção, não no
+ * de desenvolvimento, onde a política não está ativa.
+ */
+function tomDoStatus(status) {
+  return STATUS_ENTREGA[status]?.tom ?? "neutro";
 }
 
 function iconeBase(rotulo) {
@@ -40,8 +37,9 @@ function iconeBase(rotulo) {
 function iconeEntrega(status, destacado = false) {
   return L.divIcon({
     className: "",
-    html: `<span class="pino pino--entrega ${destacado ? "pino--destacado" : ""}"
-                 style="--pino-cor:${corDoStatus(status)}"></span>`,
+    html: `<span class="pino pino--entrega pino-tom--${tomDoStatus(status)} ${
+      destacado ? "pino--destacado" : ""
+    }"></span>`,
     iconSize: [16, 16],
     iconAnchor: [8, 8],
   });
@@ -50,8 +48,9 @@ function iconeEntrega(status, destacado = false) {
 function iconeParada(ordem, status, destacado) {
   return L.divIcon({
     className: "",
-    html: `<span class="pino-ordem ${destacado ? "pino-ordem--destacado" : ""}"
-                 style="--pino-cor:${corDoStatus(status)}">${ordem}</span>`,
+    html: `<span class="pino-ordem pino-tom--${tomDoStatus(status)} ${
+      destacado ? "pino-ordem--destacado" : ""
+    }">${ordem}</span>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
   });

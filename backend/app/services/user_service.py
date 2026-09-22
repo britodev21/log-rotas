@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 from app.core.enums import Role
 from app.core.errors import ConflictError, NotFoundError, ValidationError
 from app.core.security import hash_password
+from app.core.senha import exigir_senha_valida
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate, UserUpdate
+from app.services.seguranca_service import SegurancaService
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +40,10 @@ class UserService:
         return self.users.list(role=role.value if role else None, active=active, search=search)
 
     # --- escrita --- #
-    def create(self, payload: UserCreate) -> User:
+    def create(self, payload: UserCreate, *, actor: User | None = None) -> User:
         if self.users.email_taken(payload.email):
             raise ConflictError(f"O e-mail {payload.email} ja esta cadastrado.")
+        exigir_senha_valida(payload.password, email=payload.email, nome=payload.name)
 
         user = self.users.add(
             User(
@@ -50,6 +53,9 @@ class UserService:
                 role=payload.role.value,
                 active=payload.active,
             )
+        )
+        SegurancaService(self.session).evento(
+            "USUARIO_CRIADO", actor=actor, target=user, detalhe={"papel": user.role}
         )
         self.session.commit()
         logger.info("Usuario %s criado com papel %s.", user.email, user.role)
@@ -78,10 +84,22 @@ class UserService:
                 "Este e o unico administrador ativo. Promova outro antes de alterar este."
             )
 
-        if novo_papel is not None:
+        eventos = SegurancaService(self.session)
+        if novo_papel is not None and novo_papel.value != user.role:
+            eventos.evento(
+                "PAPEL_ALTERADO",
+                actor=actor,
+                target=user,
+                detalhe={"de": user.role, "para": novo_papel.value},
+            )
             user.role = novo_papel.value
 
-        if novo_ativo is not None:
+        if novo_ativo is not None and novo_ativo != user.active:
+            eventos.evento(
+                "USUARIO_REATIVADO" if novo_ativo else "USUARIO_DESATIVADO",
+                actor=actor,
+                target=user,
+            )
             user.active = novo_ativo
             if not novo_ativo:
                 # Desativar precisa derrubar as sessoes abertas na hora; sem
@@ -94,8 +112,10 @@ class UserService:
 
     def reset_password(self, user_id: int, new_password: str, *, actor: User) -> User:
         user = self.get(user_id)
+        exigir_senha_valida(new_password, email=user.email, nome=user.name)
         user.password_hash = hash_password(new_password)
         user.token_version += 1
+        SegurancaService(self.session).evento("SENHA_REDEFINIDA", actor=actor, target=user)
         self.session.commit()
         logger.info("Senha do usuario %s redefinida pelo admin %s.", user.id, actor.id)
         return user

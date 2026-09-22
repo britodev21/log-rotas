@@ -127,7 +127,7 @@ def test_troca_de_senha_derruba_as_sessoes_antigas(client: TestClient, criar_usu
     troca = client.post(
         "/api/v1/auth/senha",
         headers=cabecalho_antigo,
-        json={"current_password": SENHA_PADRAO, "new_password": "NovaSenha456"},
+        json={"current_password": SENHA_PADRAO, "new_password": "janela verde no morro 7"},
     )
     assert troca.status_code == 200
 
@@ -139,7 +139,7 @@ def test_troca_de_senha_derruba_as_sessoes_antigas(client: TestClient, criar_usu
 
     assert (
         client.post(
-            "/api/v1/auth/login", json={"email": EMAIL, "password": "NovaSenha456"}
+            "/api/v1/auth/login", json={"email": EMAIL, "password": "janela verde no morro 7"}
         ).status_code
         == 200
     )
@@ -152,6 +152,6 @@ def test_troca_de_senha_exige_a_senha_atual(
     resposta = client.post(
         "/api/v1/auth/senha",
         headers=autenticar(EMAIL),
-        json={"current_password": "ChutePuro123", "new_password": "NovaSenha456"},
+        json={"current_password": "ChutePuro123", "new_password": "janela verde no morro 7"},
     )
     assert resposta.status_code == 401

@@ -47,7 +47,9 @@ from app.core.security import hash_password
 from app.main import app
 from app.models import Base, User
 
-SENHA_PADRAO = "SenhaForte123"
+# Frase, nao "Senha123": a politica de senha (app/core/senha.py) recusa
+# as senhas comuns, e o repositorio e publico.
+SENHA_PADRAO = "tijolo azul da serra 42"
 
 engine = create_engine(os.environ["DATABASE_URL"], future=True)
 

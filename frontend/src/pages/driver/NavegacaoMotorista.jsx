@@ -106,9 +106,13 @@ function iconeVeiculo(direcao) {
     const seta =
       chave === "sem"
         ? `<span class="nav-veiculo__ponto"></span>`
-        : `<svg viewBox="0 0 24 24" width="34" height="34" style="transform: rotate(${chave}deg)">
-             <path d="M12 2.5 L19.5 20.5 L12 16.5 L4.5 20.5 Z" fill="currentColor"
-                   stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+        : // Atributo transform, e nao style="": a CSP da tela nao aceita estilo
+          // embutido em HTML gerado.
+          `<svg viewBox="0 0 24 24" width="34" height="34">
+             <g transform="rotate(${chave} 12 12)">
+               <path d="M12 2.5 L19.5 20.5 L12 16.5 L4.5 20.5 Z" fill="currentColor"
+                     stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+             </g>
            </svg>`;
     iconesVeiculo.set(
       chave,

@@ -32,8 +32,8 @@ def list_users(
     status_code=status.HTTP_201_CREATED,
     summary="Cadastrar usuario",
 )
-def create_user(payload: UserCreate, session: DbSession, _: AdminUser) -> UserRead:
-    return UserRead.model_validate(UserService(session).create(payload))
+def create_user(payload: UserCreate, session: DbSession, admin: AdminUser) -> UserRead:
+    return UserRead.model_validate(UserService(session).create(payload, actor=admin))
 
 
 @router.get("/{user_id}", response_model=UserRead, summary="Detalhe do usuario")

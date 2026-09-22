@@ -7,6 +7,7 @@ import {
   Package,
   Route,
   Settings,
+  ShieldCheck,
   Truck,
   UserCog,
   Users,
@@ -46,6 +47,7 @@ export const GRUPOS = [
     itens: [
       { rotulo: "Relatórios", icone: BarChart3, fase: "F8" },
       { para: "/admin/usuarios", rotulo: "Usuários", icone: Building2 },
+      { para: "/admin/seguranca", rotulo: "Segurança", icone: ShieldCheck },
       { para: "/admin/configuracoes", rotulo: "Configurações", icone: Settings },
     ],
   },
@@ -55,6 +57,10 @@ export const GRUPOS = [
 export const CONTEXTO_ROTA = {
   "/admin": { titulo: "Painel", contexto: "Visão geral da operação" },
   "/admin/usuarios": { titulo: "Usuários", contexto: "Quem tem acesso ao sistema" },
+  "/admin/seguranca": {
+    titulo: "Segurança",
+    contexto: "Tentativas de acesso, bloqueios e quem mudou o quê",
+  },
   "/admin/entregas": {
     titulo: "Entregas",
     contexto: "O que precisa sair",

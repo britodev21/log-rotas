@@ -143,7 +143,7 @@ def test_admin_redefine_senha_e_derruba_a_sessao(
     resposta = client.post(
         f"/api/v1/usuarios/{motorista.id}/senha",
         headers=autenticar(ADMIN),
-        json={"new_password": "OutraSenha789"},
+        json={"new_password": "caneca de barro antiga 3"},
     )
     assert resposta.status_code == 200
 
@@ -151,7 +151,7 @@ def test_admin_redefine_senha_e_derruba_a_sessao(
     assert (
         client.post(
             "/api/v1/auth/login",
-            json={"email": MOTORISTA, "password": "OutraSenha789"},
+            json={"email": MOTORISTA, "password": "caneca de barro antiga 3"},
         ).status_code
         == 200
     )

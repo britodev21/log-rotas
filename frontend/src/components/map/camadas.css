@@ -76,3 +76,11 @@
   font-size: var(--t-13);
   line-height: var(--lh-normal);
 }
+
+/* Cor do pino pela situação da entrega. Em classe, e não em style="" no
+   HTML do marcador: a CSP de produção bloqueia estilo embutido. */
+.pino-tom--neutro { --pino-cor: var(--neutro); }
+.pino-tom--info { --pino-cor: var(--info); }
+.pino-tom--sucesso { --pino-cor: var(--sucesso); }
+.pino-tom--atencao { --pino-cor: var(--atencao); }
+.pino-tom--perigo { --pino-cor: var(--perigo); }

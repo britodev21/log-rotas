@@ -7,7 +7,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 
-SENHA_MINIMA = 10
+from app.core.senha import SENHA_MINIMA  # fonte unica da regra
 
 # Placa brasileira: formato antigo AAA1234 e Mercosul AAA1A23.
 _PLACA = re.compile(r"^[A-Z]{3}[0-9][0-9A-Z][0-9]{2}$")

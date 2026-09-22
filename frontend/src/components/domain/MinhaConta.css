@@ -1,0 +1,52 @@
+.minha-conta__quem {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  font-size: var(--t-15);
+}
+
+.minha-conta__dica {
+  display: flex;
+  gap: var(--e-2);
+  margin: 0;
+  font-size: var(--t-13);
+  line-height: 1.5;
+  color: var(--texto-3);
+}
+
+.minha-conta__dica svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--primaria);
+}
+
+.minha-conta__problemas {
+  margin: var(--e-1) 0 0;
+  padding-left: var(--e-5);
+}
+
+/* Faixa de aviso no topo do conteúdo. Discreta o bastante para não
+   atrapalhar o trabalho, visível o bastante para não ser ignorada. */
+.aviso-senha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-2) var(--e-3);
+  margin-bottom: var(--e-4);
+  padding: var(--e-2) var(--e-3);
+  font-size: var(--t-13);
+  color: var(--texto);
+  background: var(--atencao-suave);
+  border: 1px solid var(--atencao-borda);
+  border-radius: var(--r-md);
+}
+
+.aviso-senha svg {
+  flex-shrink: 0;
+  color: var(--atencao);
+}
+
+.aviso-senha span {
+  flex: 1;
+  min-width: 200px;
+}

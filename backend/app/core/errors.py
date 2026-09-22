@@ -19,10 +19,17 @@ class LogRotasError(Exception):
     status_code: int = status.HTTP_400_BAD_REQUEST
     code: str = "erro"
 
-    def __init__(self, message: str, *, details: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        details: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         super().__init__(message)
         self.message = message
         self.details = details or {}
+        self.headers = headers
 
 
 class NotFoundError(LogRotasError):
@@ -64,6 +71,24 @@ class ServiceUnavailableError(LogRotasError):
     code = "servico_indisponivel"
 
 
+class TooManyRequestsError(LogRotasError):
+    """Tentativas demais: a pessoa precisa esperar.
+
+    Leva o `Retry-After` em segundos — o navegador e qualquer cliente de API
+    sabem ler, e a tela diz quanto falta em vez de um "tente mais tarde".
+    """
+
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    code = "tentativas_demais"
+
+    def __init__(self, message: str, *, segundos: int, details: dict[str, Any] | None = None):
+        super().__init__(
+            message,
+            details={**(details or {}), "tente_em_segundos": segundos},
+            headers={"Retry-After": str(segundos)},
+        )
+
+
 class InvalidStateTransitionError(LogRotasError):
     """Transicao de status proibida pela maquina de estados (Fases 3 e 9)."""
 
@@ -73,9 +98,11 @@ class InvalidStateTransitionError(LogRotasError):
 
 async def logrotas_error_handler(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, LogRotasError)
-    headers = {"WWW-Authenticate": "Bearer"} if isinstance(exc, AuthenticationError) else None
+    headers = dict(exc.headers or {})
+    if isinstance(exc, AuthenticationError):
+        headers["WWW-Authenticate"] = "Bearer"
     return JSONResponse(
         status_code=exc.status_code,
         content={"erro": exc.code, "mensagem": exc.message, "detalhes": exc.details},
-        headers=headers,
+        headers=headers or None,
     )

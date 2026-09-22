@@ -18,24 +18,9 @@
 
     <title>Log Rotas</title>
 
-    <script>
-      // Aplica o tema antes do primeiro pixel ser pintado. Sem isso, a tela
-      // pisca claro antes do React montar e trocar para escuro — o defeito
-      // mais visível que um tema escuro pode ter.
-      (function () {
-        try {
-          var salvo = localStorage.getItem("logrotas.tema");
-          var tema =
-            salvo ||
-            (window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "escuro"
-              : "claro");
-          document.documentElement.setAttribute("data-tema", tema);
-        } catch (e) {
-          document.documentElement.setAttribute("data-tema", "claro");
-        }
-      })();
-    </script>
+    <!-- Aplica o tema antes do primeiro pixel (sem piscar claro antes do
+         escuro). Em arquivo, e nao embutido, por causa da CSP. -->
+    <script src="/tema-inicial.js"></script>
   </head>
   <body>
     <div id="root"></div>

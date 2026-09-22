@@ -11,6 +11,9 @@
 const CHAVE_ACCESS = "logrotas.access";
 const CHAVE_REFRESH = "logrotas.refresh";
 const CHAVE_USUARIO = "logrotas.usuario";
+// Aviso de senha fraca: sobrevive a recarregar a página até a senha ser
+// trocada. Sem isso, um F5 apagaria o aviso sem nada ter mudado.
+const CHAVE_SENHA_FRACA = "logrotas.senha-fraca";
 
 export function lerSessao() {
   try {
@@ -39,7 +42,7 @@ export function gravarSessao({ accessToken, refreshToken, usuario }) {
 
 export function limparSessao() {
   try {
-    [CHAVE_ACCESS, CHAVE_REFRESH, CHAVE_USUARIO].forEach((c) =>
+    [CHAVE_ACCESS, CHAVE_REFRESH, CHAVE_USUARIO, CHAVE_SENHA_FRACA].forEach((c) =>
       localStorage.removeItem(c),
     );
   } catch {
@@ -60,5 +63,22 @@ export function lerRefreshToken() {
     return localStorage.getItem(CHAVE_REFRESH);
   } catch {
     return null;
+  }
+}
+
+export function lerAvisoSenhaFraca() {
+  try {
+    return localStorage.getItem(CHAVE_SENHA_FRACA) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function gravarAvisoSenhaFraca(fraca) {
+  try {
+    if (fraca) localStorage.setItem(CHAVE_SENHA_FRACA, "1");
+    else localStorage.removeItem(CHAVE_SENHA_FRACA);
+  } catch {
+    /* só nesta aba */
   }
 }

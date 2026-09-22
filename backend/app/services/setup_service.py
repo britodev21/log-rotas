@@ -16,6 +16,7 @@ from app.core.config import get_settings
 from app.core.enums import Role
 from app.core.errors import ConflictError
 from app.core.security import hash_password
+from app.core.senha import exigir_senha_valida
 from app.models.company_settings import SETTINGS_ID, CompanySettings
 from app.models.user import User
 from app.repositories.company_settings_repository import CompanySettingsRepository
@@ -43,6 +44,9 @@ class SetupService:
             )
 
         env = get_settings()
+        exigir_senha_valida(
+            payload.admin_password, email=payload.admin_email, nome=payload.admin_name
+        )
 
         # Empresa e admin nascem na MESMA transacao: um sistema com usuario e
         # sem configuracao (ou o contrario) seria um estado invalido.

@@ -54,13 +54,13 @@ aberto por HTTPS") em vez de simplesmente não funcionar. Para testar no celular
 
 Resolver com HTTPS na VPS, ou túnel durante o desenvolvimento.
 
-### 1.3 Sem limite de tentativas de login
+### 1.3 Limite de tentativas de login — resolvido
 
-Não há bloqueio por tentativas repetidas nem CAPTCHA. Em rede interna o risco é baixo; ao
-publicar na internet isso precisa entrar — preferencialmente no nginx, não na aplicação.
+Existe desde 22/09/2026: 5 falhas numa conta ou 20 do mesmo IP em 15 min bloqueiam por 15 min,
+inclusive para e-mail que não existe. Regras e decisões em `docs/SEGURANCA.md`.
 
-O login já não revela quais e-mails existem: senha errada e e-mail inexistente devolvem a
-mesma mensagem, no mesmo tempo.
+**O que falta para produção:** o uvicorn atrás do nginx precisa de `--proxy-headers`, senão todo
+login parece vir do IP do nginx e 20 erros de qualquer pessoa bloqueiam todo mundo.
 
 ### 1.4 Verificação de e-mail desligada
 
@@ -72,7 +72,8 @@ para fora da empresa.
 
 Expõe a XSS. A alternativa (cookie `httpOnly`) dificultaria o aplicativo nativo previsto.
 Mitigações: token de 60 min, revogação imediata por `token_version`, nenhum HTML injetado sem
-escape.
+escape — e, desde 22/09/2026, **Content-Security-Policy estrita** no build de produção, que impede
+script de fora de rodar na página (`docs/SEGURANCA.md`). O nginx precisa enviá-la em produção.
 
 ---
 

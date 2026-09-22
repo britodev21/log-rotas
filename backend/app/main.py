@@ -52,6 +52,32 @@ app.add_middleware(
 app.add_exception_handler(LogRotasError, logrotas_error_handler)
 
 
+@app.middleware("http")
+async def cabecalhos_de_seguranca(request: Request, call_next):
+    """Cabecalhos que o navegador obedece, em toda resposta da API.
+
+    - nosniff: o navegador nao "adivinha" que um JSON e HTML e o executa.
+    - DENY: a API e o /docs nao podem ser embutidos em iframe de outro site.
+    - no-store nas respostas da API: token e dado de cliente nao ficam no
+      cache do navegador nem de proxy no caminho.
+    - HSTS so com HTTPS de verdade (HSTS=true no .env): ligado em HTTP, o
+      navegador guardaria uma promessa que o servidor nao cumpre.
+
+    A Content-Security-Policy da TELA nao sai daqui: a tela e servida pelo
+    nginx (producao) e pelo Vite (desenvolvimento). Ver docs/SEGURANCA.md.
+    """
+    resposta = await call_next(request)
+    h = resposta.headers
+    h.setdefault("X-Content-Type-Options", "nosniff")
+    h.setdefault("X-Frame-Options", "DENY")
+    h.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    if request.url.path.startswith("/api/"):
+        h.setdefault("Cache-Control", "no-store")
+    if settings.hsts:
+        h.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return resposta
+
+
 @app.exception_handler(IntegrityError)
 async def integrity_error_handler(_: Request, exc: IntegrityError) -> JSONResponse:
     """Rede de seguranca para constraints do banco.
