@@ -1,0 +1,77 @@
+/* Faixa do aplicativo: sem conexão, versão nova, convite para instalar.
+   No rodapé, acima de tudo, respeitando a área segura do celular (a barra
+   de gestos do Android e o traço do iPhone). */
+.barra-app {
+  position: fixed;
+  right: var(--e-3);
+  bottom: calc(var(--e-3) + env(safe-area-inset-bottom, 0px));
+  left: var(--e-3);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--e-3);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  background: var(--superficie);
+  box-shadow: var(--sombra-lg);
+  font-size: var(--t-13);
+  color: var(--texto-2);
+  animation: surgir var(--tempo-normal) var(--curva);
+}
+
+.barra-app > svg {
+  flex-shrink: 0;
+  color: var(--primaria);
+}
+
+.barra-app span {
+  flex: 1;
+  min-width: 0;
+}
+
+.barra-app strong {
+  color: var(--texto);
+}
+
+.barra-app--atencao {
+  border-color: var(--atencao-borda);
+  background: var(--atencao-suave);
+}
+
+.barra-app--atencao > svg {
+  color: var(--atencao);
+}
+
+.barra-app__fechar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--texto-3);
+  cursor: pointer;
+}
+
+.barra-app__fechar:hover {
+  background: var(--superficie-hover);
+  color: var(--texto);
+}
+
+@media (max-width: 560px) {
+  /* Primeiro o texto ao lado do ícone, o botão na linha de baixo. Botão
+     antes do motivo faz a pessoa clicar sem saber no quê. */
+  .barra-app {
+    flex-wrap: wrap;
+  }
+
+  .barra-app span {
+    flex-basis: calc(100% - 28px);
+  }
+}

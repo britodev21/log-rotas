@@ -52,8 +52,15 @@ export function AuthProvider({ children }) {
         setUsuario(perfil);
         gravarSessao({ usuario: perfil });
       })
-      .catch(() => {
-        if (!cancelado) sair();
+      .catch((erro) => {
+        if (cancelado) return;
+        // Erro SEM resposta do servidor é falta de sinal, não sessão
+        // inválida. Deslogar aqui tirava o motorista do aplicativo
+        // justamente quando ele está sem rede na rua — e, com o app
+        // instalado, era a tela de entrar que aparecia offline. Quem
+        // invalida sessão é o 401 da API, tratado no cliente HTTP.
+        if (!erro?.response) return;
+        sair();
       })
       .finally(() => {
         if (!cancelado) setCarregando(false);

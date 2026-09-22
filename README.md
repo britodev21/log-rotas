@@ -148,6 +148,29 @@ em produção com o segredo de exemplo.
 
 ---
 
+## Instalar no celular
+
+A tela é um **PWA**: no Chrome do Android, o próprio app oferece "Instalar"; no iPhone, é
+**Compartilhar → Adicionar à Tela de Início**. Instalado, abre pelo ícone, em tela cheia, e
+continua abrindo onde o sinal é ruim — a última versão fica guardada no aparelho, junto com os
+ladrilhos do mapa já vistos.
+
+Quando uma versão nova é publicada, o app **avisa e espera**: a troca só acontece quando a
+pessoa aceita, para não trocar o código embaixo de um motorista no meio da entrega.
+
+O que ele **não** faz: GPS com a tela apagada, registro de entrega sem sinal e notificações.
+Isso exige aplicativo empacotado — ver `docs/LIMITACOES.md`, 3.11.
+
+Em produção o `nginx` precisa servir `sw.js` e `manifest.webmanifest` **sem cache longo**,
+senão o aparelho segura a versão antiga:
+
+```nginx
+location = /sw.js                { add_header Cache-Control "no-cache"; }
+location = /manifest.webmanifest { add_header Cache-Control "no-cache"; }
+```
+
+---
+
 ## Testes
 
 ```bash

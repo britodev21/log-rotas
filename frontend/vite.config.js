@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { join, relative } from "node:path";
+
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
@@ -20,14 +24,68 @@ import { defineConfig } from "vite";
  * e seria bloqueado. Em produção, o nginx envia os mesmos cabeçalhos — ver
  * docs/SEGURANCA.md.
  */
+/**
+ * Gera o service worker a partir de `sw-modelo.js`, com a lista real do
+ * build e uma versão tirada do conteúdo.
+ *
+ * Feito aqui, e não com uma biblioteca de PWA, porque o que precisa ser
+ * automático é só isto: os nomes dos arquivos mudam a cada build (têm hash),
+ * e uma lista escrita à mão ficaria velha em silêncio — o app abriria sem
+ * sinal servindo o código do mês passado. As regras de cache continuam
+ * legíveis em `sw-modelo.js`.
+ */
+function servicoWorker() {
+  return {
+    name: "log-rotas-service-worker",
+    apply: "build",
+    closeBundle() {
+      const raiz = "dist";
+      const arquivos = [];
+      const varrer = (pasta) => {
+        for (const nome of readdirSync(pasta)) {
+          const caminho = join(pasta, nome);
+          if (statSync(caminho).isDirectory()) varrer(caminho);
+          else arquivos.push("/" + relative(raiz, caminho).split("\\").join("/"));
+        }
+      };
+      varrer(raiz);
+
+      // Fica de fora o que não faz falta sem sinal: os ícones grandes só
+      // aparecem na instalação, e o mapa guarda os próprios ladrilhos.
+      const precache = arquivos.filter(
+        (a) => !a.startsWith("/icone-") && a !== "/apple-touch-icon.png",
+      );
+      const versao = createHash("sha256")
+        .update(precache.join("|"))
+        .digest("hex")
+        .slice(0, 12);
+
+      const modelo = readFileSync("sw-modelo.js", "utf8");
+      writeFileSync(
+        join(raiz, "sw.js"),
+        modelo
+          .replaceAll("__VERSAO__", versao)
+          .replaceAll("__ARQUIVOS__", JSON.stringify(precache, null, 2)),
+      );
+    },
+  };
+}
+
 export const CABECALHOS_PRODUCAO = {
   "Content-Security-Policy": [
     "default-src 'self'",
     "script-src 'self'",
+    // O service worker é script da própria origem; o manifesto também.
+    "worker-src 'self'",
+    "manifest-src 'self'",
     "style-src 'self' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https://services.arcgisonline.com",
-    "connect-src 'self'",
+    // O service worker busca os ladrilhos e as fontes para guardar offline,
+    // e busca de dentro do worker conta como connect-src — não como img-src.
+    // Sem estes dois domínios aqui, o worker QUEBRA o que devia acelerar:
+    // a imagem do mapa nem chega a ser baixada.
+    "connect-src 'self' https://services.arcgisonline.com https://fonts.gstatic.com https://fonts.googleapis.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -41,7 +99,7 @@ export const CABECALHOS_PRODUCAO = {
 };
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), servicoWorker()],
   build: {
     rollupOptions: {
       output: {

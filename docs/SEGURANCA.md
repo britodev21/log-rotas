@@ -120,6 +120,12 @@ Cada tentativa de login também fica em `login_attempts` (e-mail, IP, navegador,
 permite exatamente o que a tela usa — as fontes do Google, os ladrilhos da Esri e a própria API — e
 nada mais. Sem script embutido, sem estilo embutido, sem iframe.
 
+**`connect-src` inclui a Esri e as fontes por causa do service worker.** Buscar de dentro do
+worker conta como `connect-src`, não como `img-src` ou `font-src`, mesmo que o destino seja uma
+imagem. Sem esses domínios ali, o worker **quebra** o que deveria acelerar: o ladrilho do mapa
+nem chega a ser baixado, e o mapa do motorista fica cinza. Foi o que aconteceu na primeira
+versão do aplicativo instalável, e só apareceu porque o teste roda no build com a política ativa.
+
 Conferido no build de produção, com a política ativa: painel com mapa, página de segurança, troca
 de senha e tela do motorista — **nenhuma violação**. Duas coisas precisaram mudar para isso: o
 script do tema saiu do `index.html` para `public/tema-inicial.js`, e os marcadores do mapa passaram
@@ -135,7 +141,7 @@ bloqueada em produção sem aviso no desenvolvimento. Teste com `npm run build &
 Os mesmos cabeçalhos do `vite.config.js`:
 
 ```nginx
-add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://services.arcgisonline.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; worker-src 'self'; manifest-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://services.arcgisonline.com; connect-src 'self' https://services.arcgisonline.com https://fonts.gstatic.com https://fonts.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header X-Frame-Options "DENY" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;

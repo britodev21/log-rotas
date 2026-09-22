@@ -1,5 +1,6 @@
 import { BrowserRouter } from "react-router-dom";
 
+import { BarraDoAplicativo } from "./components/domain";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ToastProvider } from "./contexts/ToastContext";
@@ -12,6 +13,7 @@ export default function App() {
         <BrowserRouter>
           <AuthProvider>
             <AppRoutes />
+            <BarraDoAplicativo />
           </AuthProvider>
         </BrowserRouter>
       </ToastProvider>

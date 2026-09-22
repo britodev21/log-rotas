@@ -235,6 +235,36 @@ o tempo do Google com o trânsito previsto (seção 3.10).
 **Volume:** uma posição a cada ~10 s dá ~3.600 linhas por rota de 10 h. As posições com mais de
 90 dias são apagadas pela limpeza automática (ver 3.9).
 
+### 3.11 Aplicativo no celular: o que o PWA resolve, e o que não
+
+A tela é instalável: o celular a coloca na tela inicial com ícone, abre sem a barra do
+navegador e continua abrindo sem sinal. Isso é um **PWA**, não um aplicativo nativo — e a
+diferença importa na rua.
+
+| Resolve | Não resolve |
+|---|---|
+| Ícone na tela inicial, sem digitar endereço | **GPS com a tela apagada ou o app fechado** |
+| Abre sem sinal (a última versão fica guardada) | Registrar entrega sem sinal |
+| Mapa já visto continua desenhando sem sinal | Notificação de rota nova |
+| Atualização avisada, aplicada quando a pessoa aceita | Estar na Play Store |
+
+**O GPS em segundo plano é o limite principal, e nenhum navegador o remove.** Com o app
+aberto e a tela acesa, a posição continua indo para o escritório; com a tela apagada, o
+navegador suspende a página e o painel passa a mostrar "sem sinal". A trava de tela acesa
+(`screen-wake-lock`) segura enquanto a navegação está aberta, mas o motorista que guarda o
+celular no bolso interrompe o rastreamento. Sair disso exige empacotar como aplicativo
+(Capacitor, com serviço em primeiro plano) — está no ROADMAP.
+
+**Registrar sem sinal também não.** "Cheguei" e "entregue" vão direto para a API; sem rede, a
+tela mostra o erro e o motorista repete quando o sinal voltar. Fila offline exige banco no
+aparelho e reenvio ordenado, com cuidado para não gravar duas vezes a mesma entrega — é
+trabalho de uma fase própria, não de um service worker.
+
+**O que o service worker NÃO guarda, de propósito:** resposta da API. Rota, entrega e posição
+são dados de operação; mostrar a lista de ontem como se fosse a de hoje é pior do que dizer
+"sem conexão". Por isso, ao abrir sem sinal, o app abre — mas cada tela diz que não conseguiu
+carregar os dados. A sessão, essa sim, continua: perder o sinal não desloga mais ninguém.
+
 ### 3.10 Trânsito no planejamento
 
 Com `TRAFFIC_PROVIDER=google`, o tempo de cada trecho que o otimizador usa é o do Google, com o
