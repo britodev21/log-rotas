@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { Lock, LockOpen, ShieldCheck } from "lucide-react";
+import { Eraser, Lock, LockOpen, ShieldCheck } from "lucide-react";
 
 import { mensagemDeErro } from "../../api/client";
+import { manutencao as apiManutencao } from "../../api/manutencao";
 import { seguranca as api } from "../../api/seguranca";
 import {
   Badge,
@@ -38,6 +39,23 @@ const EVENTOS = {
 
 const PAPEL = { ADMIN: "administrador", MOTORISTA: "motorista" };
 
+/** Nome de cada tipo de dado que a limpeza apaga, na ordem da tela. */
+const APAGADOS = [
+  ["posicoes", "posições do GPS"],
+  ["tentativas_login", "tentativas de login"],
+  ["eventos_seguranca", "eventos de segurança"],
+  ["cache_falhas", "endereços que falharam"],
+  ["cache_google", "conferências do Google"],
+];
+
+function resumoDaLimpeza(execucao) {
+  if (execucao.erro) return `Falhou: ${execucao.erro}`;
+  const partes = APAGADOS.filter(([chave]) => execucao.resultado?.[chave] > 0).map(
+    ([chave, nome]) => `${execucao.resultado[chave].toLocaleString("pt-BR")} ${nome}`
+  );
+  return partes.length ? `Apagou ${partes.join(", ")}.` : "Nada tinha passado do prazo.";
+}
+
 function detalheDoEvento(e) {
   const d = e.detalhe ?? {};
   if (e.tipo === "PAPEL_ALTERADO") return `de ${PAPEL[d.de] ?? d.de} para ${PAPEL[d.para] ?? d.para}`;
@@ -61,14 +79,22 @@ export function Security() {
   const [eventos, setEventos] = useState(null);
   const [erro, setErro] = useState("");
   const [liberando, setLiberando] = useState(null);
+  const [guarda, setGuarda] = useState(null);
+  const [limpando, setLimpando] = useState(false);
 
   const carregar = useCallback(async () => {
     setErro("");
     try {
-      const [p, b, e] = await Promise.all([api.politica(), api.bloqueios(), api.eventos(100)]);
+      const [p, b, e, g] = await Promise.all([
+        api.politica(),
+        api.bloqueios(),
+        api.eventos(100),
+        apiManutencao.ler(),
+      ]);
       setPolitica(p);
       setBloqueios(b);
       setEventos(e);
+      setGuarda(g);
     } catch (e) {
       console.error("Falha ao carregar a segurança", e);
       setErro(mensagemDeErro(e, "Não foi possível carregar."));
@@ -90,6 +116,20 @@ export function Security() {
       toast.erro("Não foi possível desbloquear", mensagemDeErro(e));
     } finally {
       setLiberando(null);
+    }
+  }
+
+  async function limparAgora() {
+    setLimpando(true);
+    try {
+      const g = await apiManutencao.limpar();
+      setGuarda(g);
+      toast.sucesso("Limpeza concluída", resumoDaLimpeza(g.ultimas[0]));
+    } catch (e) {
+      console.error("Falha na limpeza", e);
+      toast.erro("Não foi possível limpar", mensagemDeErro(e));
+    } finally {
+      setLimpando(false);
     }
   }
 
@@ -183,17 +223,77 @@ export function Security() {
                   ? "O navegador só aceita o sistema por HTTPS."
                   : "Liga quando o sistema estiver no ar com HTTPS."}
               </dd>
-              <dt>Guarda dos dados</dt>
-              <dd>
-                Posições do GPS: {politica.retencao_posicoes_dias} dias. Tentativas de login:{" "}
-                {politica.retencao_tentativas_login_dias} dias. Eventos de segurança:{" "}
-                {politica.retencao_eventos_seguranca_dias} dias. Depois disso, apagados
-                automaticamente.
-              </dd>
             </dl>
           )}
         </Card>
       </div>
+
+      <Card
+        titulo="Guarda dos dados"
+        descricao={
+          guarda?.hora_agendada != null
+            ? `O que passa do prazo é apagado sozinho, todo dia a partir das ${guarda.hora_agendada}h.`
+            : "A limpeza automática está desligada neste servidor (LIMPEZA_HORA)."
+        }
+        acoes={
+          <Button
+            variante="secundario"
+            tamanho="sm"
+            icone={Eraser}
+            carregando={limpando}
+            disabled={!guarda}
+            onClick={limparAgora}
+          >
+            Limpar agora
+          </Button>
+        }
+        className="guarda"
+      >
+        {!guarda ? (
+          <SkeletonList itens={3} />
+        ) : (
+          <div className="guarda__grade">
+            <dl className="politica">
+              <dt>Posições do GPS</dt>
+              <dd>
+                {guarda.retencao_posicoes_dias} dias. É o trajeto diário de uma pessoa (LGPD):
+                serve para tirar dúvida sobre uma rota, não para ficar guardado para sempre.
+              </dd>
+              <dt>Tentativas de login</dt>
+              <dd>{guarda.retencao_tentativas_login_dias} dias.</dd>
+              <dt>Eventos de segurança</dt>
+              <dd>
+                {guarda.retencao_eventos_seguranca_dias} dias. Ficam mais porque respondem
+                perguntas que aparecem muito depois.
+              </dd>
+              <dt>Endereço que falhou</dt>
+              <dd>
+                {guarda.retencao_cache_falhas_dias} dias. Depois disso, a busca é tentada de novo
+                — o mapa da rua pode ter sido corrigido. Endereço encontrado fica.
+              </dd>
+            </dl>
+
+            <div>
+              <h4 className="guarda__subtitulo">Últimas execuções</h4>
+              {guarda.ultimas.length === 0 ? (
+                <p className="texto-3">Ainda não rodou nenhuma vez.</p>
+              ) : (
+                <ul className="guarda__execucoes">
+                  {guarda.ultimas.slice(0, 5).map((x) => (
+                    <li key={x.id}>
+                      <span className="numero">{dataHora(x.iniciada_em)}</span>
+                      <Badge tom={x.erro ? "perigo" : x.origem === "MANUAL" ? "info" : "neutro"}>
+                        {x.erro ? "falhou" : x.origem === "MANUAL" ? "manual" : "automática"}
+                      </Badge>
+                      <span className="guarda__resumo">{resumoDaLimpeza(x)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </Card>
 
       <Card titulo="Eventos recentes" descricao="Os últimos 100." semPadding>
         {!eventos && <SkeletonList itens={5} />}

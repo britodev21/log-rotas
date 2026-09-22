@@ -154,9 +154,15 @@ E no backend: `HSTS=true` no `.env` só depois que o HTTPS estiver funcionando.
 | Posições do GPS dos motoristas | 90 dias | `RETENCAO_POSICOES_DIAS` |
 | Tentativas de login | 180 dias | `RETENCAO_TENTATIVAS_LOGIN_DIAS` |
 | Eventos de segurança | 730 dias | `RETENCAO_EVENTOS_SEGURANCA_DIAS` |
+| Endereço que falhou na busca | 30 dias | fixo — depois disso é tentado de novo |
 
 A posição do motorista é dado pessoal (LGPD): só é recebida com a rota em andamento, e não é
-guardada para sempre. A limpeza roda sozinha — ver a seção de manutenção em `docs/LIMITACOES.md`.
+guardada para sempre. Os eventos ficam mais tempo porque respondem perguntas que só aparecem muito
+depois ("quem promoveu este usuário a administrador?").
+
+A limpeza roda sozinha todo dia a partir das 3h (`LIMPEZA_HORA`; `-1` desliga). Cada execução
+fica registrada e aparece na tela de Segurança, em **Guarda dos dados**, com o botão **Limpar
+agora**. Detalhes em `docs/LIMITACOES.md`, seção 3.9.
 
 ---
 

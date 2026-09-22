@@ -15,6 +15,7 @@ from app.api.v1 import (
     deliveries,
     driver,
     geocoding,
+    manutencao,
     planning,
     seguranca,
     setup,
@@ -27,6 +28,7 @@ api_router.include_router(setup.router)
 api_router.include_router(auth.router)
 api_router.include_router(users.router)
 api_router.include_router(seguranca.router)
+api_router.include_router(manutencao.router)
 
 api_router.include_router(dashboard.router)
 api_router.include_router(deliveries.router)

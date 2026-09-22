@@ -1007,7 +1007,60 @@
   color: var(--texto-3);
 }
 
+.guarda {
+  margin-bottom: var(--e-4);
+}
+
+.guarda__grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--e-6);
+}
+
+.guarda__subtitulo {
+  margin: 0 0 var(--e-3);
+  font-size: var(--t-13);
+  font-weight: 650;
+  color: var(--texto);
+}
+
+.guarda__execucoes {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-13);
+}
+
+.guarda__execucoes li {
+  display: grid;
+  grid-template-columns: max-content max-content 1fr;
+  align-items: baseline;
+  justify-items: start;
+  gap: var(--e-2) var(--e-3);
+  padding: var(--e-2) 0;
+  border-bottom: 1px solid var(--borda-suave);
+}
+
+.guarda__execucoes li:last-child {
+  border-bottom: 0;
+}
+
+.guarda__resumo {
+  color: var(--texto-2);
+  min-width: 0;
+}
+
 @media (max-width: 560px) {
+  .guarda__execucoes li {
+    grid-template-columns: max-content 1fr;
+  }
+
+  .guarda__resumo {
+    grid-column: 1 / -1;
+  }
+
   .politica {
     grid-template-columns: 1fr;
     gap: var(--e-1);

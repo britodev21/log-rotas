@@ -7,6 +7,7 @@ Britto Moveis e Corrimao.
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,14 +19,33 @@ from app.api.v1 import api_router
 from app.core.config import get_settings
 from app.core.errors import LogRotasError, logrotas_error_handler
 from app.core.logging import configure_logging
-from app.db.session import engine
+from app.db.session import SessionLocal, engine
+from app.services.manutencao import Agendador
 
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
 configure_logging(debug=settings.debug)
 
+@asynccontextmanager
+async def ciclo_de_vida(_: FastAPI):
+    """Liga o agendador da limpeza automatica junto com o servidor.
+
+    Desligado com LIMPEZA_HORA=-1 (a suite de testes faz isso: ela sobe o
+    app muitas vezes e nao pode apagar dado sozinha no meio de um teste).
+    """
+    agendador = None
+    if settings.limpeza_hora >= 0:
+        agendador = Agendador(SessionLocal)
+        agendador.start()
+        logger.info("Limpeza automatica agendada para %sh.", settings.limpeza_hora)
+    yield
+    if agendador:
+        agendador.parar.set()
+
+
 app = FastAPI(
+    lifespan=ciclo_de_vida,
     title=settings.app_name,
     version="0.1.0",
     description=(

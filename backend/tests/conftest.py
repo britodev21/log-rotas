@@ -33,6 +33,9 @@ os.environ.setdefault("MATRIX_PROVIDER", "haversine")
 # setdefault: precisa vencer o .env.
 os.environ["TRAFFIC_PROVIDER"] = ""
 os.environ["GOOGLE_MAPS_API_KEY"] = ""
+# O agendador da limpeza nao pode rodar dentro da suite: apagaria dado no
+# meio de um teste. Os testes da limpeza chamam a funcao diretamente.
+os.environ["LIMPEZA_HORA"] = "-1"
 
 from collections.abc import Iterator
 

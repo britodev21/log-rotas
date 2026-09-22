@@ -26,6 +26,7 @@ Toda resposta de erro de domínio tem o mesmo formato:
 | `nao_encontrado` | 404 | Registro inexistente |
 | `conflito` | 409 | Unicidade ou estado incompatível |
 | `transicao_invalida` | 409 | Mudança de status proibida (fases futuras) |
+| `tentativas_demais` | 429 | Login bloqueado por tentativas; vem com `Retry-After` e `detalhes.tente_em_segundos` |
 | `banco_indisponivel` | 503 | Falha de banco |
 
 Erros de validação do Pydantic seguem o formato padrão do FastAPI (`detail`), e o frontend
@@ -84,12 +85,17 @@ autenticada.
 Pública.
 
 ```json
-{ "email": "bruno@britto.com.br", "password": "SenhaForte123" }
+{ "email": "bruno@britto.com.br", "password": "pão de queijo quente 7" }
 ```
 
-**200** → `{ access_token, refresh_token, token_type, expires_in, user }`
+**200** → `{ access_token, refresh_token, token_type, expires_in, user, senha_fraca }`
 **401** → `"E-mail ou senha incorretos."` — mesma mensagem e mesmo tempo de resposta para
 senha errada, e-mail inexistente e usuário desativado.
+**429** → bloqueado por tentativas (5 erros na conta ou 20 no IP em 15 min, por padrão). Durante
+o bloqueio nem a senha certa entra. Ver [SEGURANCA.md](SEGURANCA.md).
+
+`senha_fraca: true` quando a senha usada não passaria na política de hoje: o login funciona, e a
+tela pede a troca.
 
 O e-mail não diferencia maiúsculas de minúsculas.
 
@@ -113,12 +119,17 @@ Dados do usuário autenticado.
 Troca a própria senha.
 
 ```json
-{ "current_password": "SenhaAtual1", "new_password": "NovaSenha456" }
+{ "current_password": "a senha de hoje", "new_password": "girafa roxa na janela 5" }
 ```
 
 **200** → um par de tokens novo. A troca encerra todas as sessões anteriores; por isso quem
 trocou recebe tokens novos e não é deslogado do próprio navegador.
 **401** → senha atual incorreta.
+**422** → a senha nova não passa na política. Todos os motivos vêm de uma vez, em
+`detalhes.problemas` (ex.: `["Tem menos de 10 caracteres.", "É uma senha muito usada ..."]`).
+
+A mesma política — e o mesmo 422 — vale na criação de usuário, na redefinição pelo administrador
+e no primeiro acesso.
 
 ---
 
@@ -161,7 +172,7 @@ Redefinição pelo administrador, sem exigir a senha atual. Usado quando o motor
 senha.
 
 ```json
-{ "new_password": "OutraSenha789" }
+{ "new_password": "lanterna de cobre velha 8" }
 ```
 
 Encerra as sessões do usuário. A senha nova não é devolvida em lugar nenhum — o administrador
@@ -482,6 +493,42 @@ atualiza por polling, e quatro requisições por ciclo multiplicariam a carga se
 
 `CHEGOU` conta como "em rota": para quem olha o painel, o motorista parado na porta do cliente
 ainda está na rua. Só rotas confirmadas entram no total — rascunho é cenário, não compromisso.
+
+---
+
+## Segurança — somente `ADMIN`
+
+| Método | Caminho | |
+|---|---|---|
+| `GET` | `/api/v1/seguranca/politica` | Regras em vigor, lidas da configuração |
+| `GET` | `/api/v1/seguranca/bloqueios` | Contas bloqueadas agora, com nome, falhas e `ate` |
+| `POST` | `/api/v1/seguranca/bloqueios/desbloquear` | `{ "email": "..." }` — libera antes do tempo; fica registrado quem liberou |
+| `GET` | `/api/v1/seguranca/eventos?limite=100` | Eventos recentes (`tipo`, `quem`, `sobre`, `ip`, `detalhe`, `quando`) |
+
+Desbloquear devolve a lista de bloqueios atualizada.
+
+---
+
+## Manutenção — somente `ADMIN`
+
+### `GET /api/v1/manutencao`
+
+```json
+{ "hora_agendada": 3, "retencao_posicoes_dias": 90, "retencao_tentativas_login_dias": 180,
+  "retencao_eventos_seguranca_dias": 730, "retencao_cache_falhas_dias": 30,
+  "ultimas": [ { "id": 7, "origem": "AGENDADA", "iniciada_em": "...", "terminada_em": "...",
+                 "resultado": { "posicoes": 3512, "tentativas_login": 0, "eventos_seguranca": 0,
+                                "cache_falhas": 2, "cache_google": 41 },
+                 "erro": null } ] }
+```
+
+`hora_agendada` é nulo quando a limpeza automática está desligada (`LIMPEZA_HORA=-1`).
+
+### `POST /api/v1/manutencao/limpar`
+
+Roda a limpeza agora, sem esperar o horário. Devolve o mesmo corpo do `GET`, com a execução nova
+em primeiro. **409** se outra limpeza estiver em andamento. Pela linha de comando:
+`python -m app.tarefas limpar`.
 
 ---
 

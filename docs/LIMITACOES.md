@@ -200,8 +200,31 @@ ainda usa o OSRM puro**, então os horários planejados tendem a ser otimistas n
 (o tempo de serviço, que domina o dia, não é afetado). Aplicar trânsito ao planejamento é
 possível pela mesma Routes API, com custo por par de pontos.
 
-**Volume:** uma posição a cada ~10 s dá ~3.600 linhas por rota de 10 h. Irrelevante por anos
-para o PostgreSQL, mas não existe limpeza automática ainda.
+**Volume:** uma posição a cada ~10 s dá ~3.600 linhas por rota de 10 h. As posições com mais de
+90 dias são apagadas pela limpeza automática (ver 3.9).
+
+### 3.9 Limpeza automática
+
+Todo dia, a partir das 3h de Campo Grande (`LIMPEZA_HORA`), o próprio servidor apaga o que passou
+do prazo: posições do GPS (90 dias), tentativas de login (180), eventos de segurança (730),
+endereços que falharam na busca (30 — para serem tentados de novo) e as conferências de lugar do
+Google (30 — só servem na hora de salvar a entrega). **Endereço encontrado não é apagado.**
+
+- **"A partir das 3h", não "às 3h":** se o servidor estava desligado na hora, a limpeza roda
+  quando ele voltar, no mesmo dia.
+- **Uma vez por dia, mesmo com vários processos.** Cada processo tem o seu agendador; um
+  bloqueio do PostgreSQL (advisory lock) e o registro em `maintenance_runs` impedem a
+  execução em dobro. Conferido nos testes, com um segundo processo segurando o bloqueio.
+- **Cada execução fica registrada** — quando, o que apagou, se falhou — e aparece em
+  **Sistema → Segurança → Guarda dos dados**, onde também dá para limpar na hora.
+- **Tudo numa transação.** Se falhar no meio, nada é apagado e a falha fica registrada; a
+  execução do dia seguinte tenta de novo.
+
+**Limite conhecido:** é uma thread dentro do servidor, não um agendador do sistema operacional.
+Funciona igual em qualquer máquina sem configuração a mais, mas só roda com o servidor ligado. Se
+o servidor passar dias desligado, a limpeza atrasada roda de uma vez na volta — o volume de
+alguns dias é pequeno. Com a limpeza desligada (`LIMPEZA_HORA=-1`), use
+`python -m app.tarefas limpar` num agendador externo.
 
 ### 3.6 Endereço: CEP é o caminho principal, não o texto livre
 

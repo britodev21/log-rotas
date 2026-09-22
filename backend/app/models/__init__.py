@@ -12,6 +12,7 @@ from app.models.delivery import Delivery
 from app.models.delivery_event import DeliveryEvent
 from app.models.driver import Driver
 from app.models.geocode_cache import GeocodeCache
+from app.models.manutencao import MaintenanceRun
 from app.models.route import Route, RoutePlan, RouteStop, RouteStopDelivery
 from app.models.route_position import RoutePosition
 from app.models.seguranca import LoginAttempt, SecurityEvent
@@ -29,6 +30,7 @@ __all__ = [
     "Driver",
     "GeocodeCache",
     "LoginAttempt",
+    "MaintenanceRun",
     "Route",
     "RoutePlan",
     "RoutePosition",
