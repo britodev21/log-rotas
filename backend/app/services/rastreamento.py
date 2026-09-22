@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -95,6 +95,9 @@ class PosicaoRecebida:
 @dataclass
 class ResultadoEnvio:
     aceitas: int = 0
+    #: Medição já recebida antes, reenviada como sinal de vida. Não vira
+    #: linha nova: só renova a hora de contato. Ver `registrar`.
+    repetidas: int = 0
     descartadas: int = 0
     motivos: dict[str, int] = field(default_factory=dict)
 
@@ -306,6 +309,29 @@ def calcular_previsao(
     )
 
 
+def velocidade_pelo_rastro(rastro: list[RoutePosition]) -> float | None:
+    """Velocidade recente pelo deslocamento, quando o GPS não a informa.
+
+    Muitos celulares não mandam velocidade em baixa velocidade ou parados.
+    Usa o último ponto e o anterior com pelo menos 5 s de diferença, dentro
+    do último minuto; fora disso, não há como saber.
+    """
+    if len(rastro) < 2:
+        return None
+    ultimo = rastro[-1]
+    for anterior in reversed(rastro[:-1]):
+        dt = (ultimo.recorded_at - anterior.recorded_at).total_seconds()
+        if dt > 60:
+            return None
+        if dt >= 5:
+            distancia = metros(
+                (float(anterior.latitude), float(anterior.longitude)),
+                (float(ultimo.latitude), float(ultimo.longitude)),
+            )
+            return distancia / dt
+    return None
+
+
 def _atraso(real: datetime | None, planejado: datetime | None) -> int | None:
     if real is None or planejado is None:
         return None
@@ -365,6 +391,27 @@ class RastreamentoService:
         agora = _agora()
         inicio = (rota.started_at or agora) - timedelta(minutes=1)
 
+        # Sinal de vida. Parado, o GPS de muitos aparelhos não produz leitura
+        # nova (e o de computador, nunca) — então o app reenvia a última
+        # posição, com a hora ORIGINAL da medição. Ela não vira linha nova:
+        # renova só a hora de contato (`received_at`). Assim o painel separa
+        # as duas perguntas que antes misturava: "o app está vivo?" (contato
+        # recente -> não é "sem sinal") e "quão velha é a posição?" (hora da
+        # medição -> "posição de 2 min atrás"). Visto no teste de navegador:
+        # caminhão parado na base aparecia como "sem sinal".
+        horas = [
+            (p.registrada_em if p.registrada_em.tzinfo else p.registrada_em.replace(tzinfo=UTC))
+            for p in posicoes[:MAXIMO_POR_ENVIO]
+        ]
+        ja_recebidas = set(
+            self.session.scalars(
+                select(RoutePosition.recorded_at).where(
+                    RoutePosition.route_id == rota.id, RoutePosition.recorded_at.in_(horas)
+                )
+            )
+        ) if horas else set()
+        renovar: set[datetime] = set()
+
         for p in posicoes[:MAXIMO_POR_ENVIO]:
             if p.precisao_m is not None and p.precisao_m > PRECISAO_MAXIMA_M:
                 resultado.descartar("GPS impreciso")
@@ -378,6 +425,11 @@ class RastreamentoService:
             if quando < inicio:
                 resultado.descartar("anterior ao início da rota")
                 continue
+            if quando in ja_recebidas:
+                renovar.add(quando)
+                resultado.repetidas += 1
+                continue
+            ja_recebidas.add(quando)
             direcao = p.direcao_graus % 360 if p.direcao_graus is not None else None
             self.session.add(
                 RoutePosition(
@@ -397,6 +449,15 @@ class RastreamentoService:
         if len(posicoes) > MAXIMO_POR_ENVIO:
             resultado.descartar("envio grande demais", len(posicoes) - MAXIMO_POR_ENVIO)
 
+        if renovar:
+            self.session.execute(
+                update(RoutePosition)
+                .where(
+                    RoutePosition.route_id == rota.id,
+                    RoutePosition.recorded_at.in_(renovar),
+                )
+                .values(received_at=func.now())
+            )
         self.session.commit()
         return resultado
 
@@ -404,7 +465,7 @@ class RastreamentoService:
         return self.session.scalars(
             select(RoutePosition)
             .where(RoutePosition.route_id == route_id)
-            .order_by(RoutePosition.recorded_at.desc())
+            .order_by(RoutePosition.recorded_at.desc(), RoutePosition.received_at.desc())
             .limit(1)
         ).first()
 
@@ -468,12 +529,18 @@ class RastreamentoService:
         guardada = _previsoes.get(rota.id)
         if guardada and guardada.estado == estado:
             idade = (agora - guardada.quando).total_seconds()
+            # A primeira posicao muda a NATUREZA da previsao (de "horario do
+            # plano" para previsao de verdade), nao so o numero. Esperar os
+            # 45 s de memoria mostrava "horario do plano" com o caminhao ja
+            # visivel no mapa -- visto no teste ponta a ponta.
+            mudou_de_natureza = (posicao is None) != (guardada.posicao is None)
             mexeu = (
                 posicao is not None
                 and guardada.posicao is not None
                 and metros(posicao, guardada.posicao) >= DESLOCAMENTO_RECALCULO_M
-            ) or (posicao is None) != (guardada.posicao is None)
-            if idade < RECALCULO_S or (idade < RECALCULO_FORCADO_S and not mexeu):
+            )
+            recente = idade < RECALCULO_S or (idade < RECALCULO_FORCADO_S and not mexeu)
+            if recente and not mudou_de_natureza:
                 return guardada.previsao
 
         # A rota pela rua e calculada uma vez; o fator de transito, que
@@ -511,14 +578,27 @@ class RastreamentoService:
 
     # ------------------------------------------------------------ painel
     @staticmethod
-    def situacao(rota: Route, ultima: RoutePosition | None, agora: datetime) -> str:
+    def situacao(
+        rota: Route,
+        ultima: RoutePosition | None,
+        agora: datetime,
+        rastro: list[RoutePosition] | None = None,
+    ) -> str:
         if ultima is None:
             return "SEM_POSICAO"
         if (agora - ultima.received_at).total_seconds() > SEM_SINAL_S:
             return "SEM_SINAL"
         if any(s.status == StopStatus.CHEGOU.value for s in rota.stops):
             return "NA_PARADA"
-        if ultima.speed_mps is not None and float(ultima.speed_mps) < PARADO_MPS:
+        velocidade = (
+            float(ultima.speed_mps)
+            if ultima.speed_mps is not None
+            else velocidade_pelo_rastro(rastro or [])
+        )
+        # Sem evidencia de movimento, o caminhao esta parado. A versao
+        # anterior presumia o contrario quando o GPS nao informava
+        # velocidade -- e mostrava "em movimento" com o caminhao na base.
+        if velocidade is None or velocidade < PARADO_MPS:
             return "PARADO"
         return "EM_MOVIMENTO"
 

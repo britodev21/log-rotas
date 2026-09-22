@@ -134,6 +134,34 @@ def test_posicoes_validas_sao_gravadas_e_as_ruins_contadas(client, cenario) -> N
     }
 
 
+def test_posicao_repetida_e_sinal_de_vida_nao_linha_nova(client, cenario, db) -> None:
+    """Parado, o GPS não produz leitura nova e o app reenvia a última.
+
+    Não pode virar linha nova (o rastro encheria de pontos iguais) nem ser
+    descartada (o painel mostraria "sem sinal" num caminhão só parado).
+    """
+    _iniciar(client, cenario)
+    # 30 s: dentro da rota, que acabou de começar.
+    ponto = _ponto(-20.4650, -54.6150, segundos_atras=30)
+    _enviar(client, cenario, ponto)
+    # O contato "envelhece", como se tivessem passado minutos.
+    db.execute(
+        rastreamento.RoutePosition.__table__.update().values(
+            received_at=datetime.now(UTC) - timedelta(minutes=5)
+        )
+    )
+    db.commit()
+
+    corpo = _enviar(client, cenario, ponto).json()
+
+    assert corpo == {"aceitas": 0, "repetidas": 1, "descartadas": 0, "motivos": {}}
+    assert db.query(rastreamento.RoutePosition).count() == 1
+    rota = client.get("/api/v1/painel/ao-vivo", headers=cenario["admin"]).json()["rotas"][0]
+    # Vivo (contato renovado agora), com a idade real da medição.
+    assert rota["situacao"] != "SEM_SINAL"
+    assert rota["idade_s"] >= 25
+
+
 def test_outro_motorista_nao_envia_posicao_para_a_minha_rota(
     client, cenario, criar_usuario, autenticar, db
 ) -> None:
@@ -213,6 +241,48 @@ def test_sinal_perdido_aparece_como_sem_sinal(client, cenario, db) -> None:
     rota = client.get("/api/v1/painel/ao-vivo", headers=cenario["admin"]).json()["rotas"][0]
 
     assert rota["situacao"] == "SEM_SINAL"
+
+
+def test_sem_velocidade_do_gps_e_sem_deslocamento_esta_parado(client, cenario) -> None:
+    """Visto no teste de navegador: GPS sem velocidade, caminhão na base, e o
+    painel dizia "em movimento". Sem evidência de movimento, é parado."""
+    _iniciar(client, cenario)
+    _enviar(
+        client, cenario,
+        _ponto(-20.4650, -54.6150, segundos_atras=20),
+        _ponto(-20.4650, -54.6150, segundos_atras=5),
+    )
+
+    rota = client.get("/api/v1/painel/ao-vivo", headers=cenario["admin"]).json()["rotas"][0]
+
+    assert rota["situacao"] == "PARADO"
+
+
+def test_sem_velocidade_do_gps_o_rastro_mostra_o_movimento(client, cenario) -> None:
+    """~150 m em 15 s: 10 m/s, andando — mesmo sem o GPS informar."""
+    _iniciar(client, cenario)
+    _enviar(
+        client, cenario,
+        _ponto(-20.4650, -54.6150, segundos_atras=20),
+        _ponto(-20.4637, -54.6150, segundos_atras=5),
+    )
+
+    rota = client.get("/api/v1/painel/ao-vivo", headers=cenario["admin"]).json()["rotas"][0]
+
+    assert rota["situacao"] == "EM_MOVIMENTO"
+
+
+def test_primeira_posicao_troca_o_plano_pela_previsao_na_hora(client, cenario) -> None:
+    """A memória de 45 s não pode segurar "horário do plano" depois que a
+    primeira posição chega — o caminhão já aparece no mapa."""
+    _iniciar(client, cenario)
+    antes = client.get("/api/v1/painel/ao-vivo", headers=cenario["admin"]).json()["rotas"][0]
+    assert antes["previsao"]["fonte"] == "PLANEJADO"
+
+    _enviar(client, cenario, _ponto(-20.4650, -54.6150))
+    depois = client.get("/api/v1/painel/ao-vivo", headers=cenario["admin"]).json()["rotas"][0]
+
+    assert depois["previsao"]["fonte"] != "PLANEJADO"
 
 
 def test_motorista_nao_ve_o_painel_ao_vivo(client, cenario) -> None:

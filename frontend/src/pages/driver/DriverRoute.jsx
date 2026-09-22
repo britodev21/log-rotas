@@ -33,9 +33,12 @@ import {
   TextareaField,
 } from "../../components/ui";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
+import { useRastreamento } from "../../hooks/useRastreamento";
+import { useTelaAcesa } from "../../hooks/useTelaAcesa";
 import { useTheme } from "../../hooks/useTheme";
 import { useToast } from "../../hooks/useToast";
 import { MOTIVOS_INSUCESSO, hora } from "../../utils/formato";
+import { NavegacaoMotorista } from "./NavegacaoMotorista";
 import "./driver.css";
 
 const RESOLVIDOS = ["ENTREGUE", "NAO_ENTREGUE", "CANCELADA"];
@@ -70,6 +73,14 @@ export function DriverRoute() {
   const [agindo, setAgindo] = useState(false);
   const [insucesso, setInsucesso] = useState(null);
   const [finalizacaoAberta, setFinalizacaoAberta] = useState(false);
+  const [navegando, setNavegando] = useState(false);
+
+  // Rastreamento e tela acesa durante toda a rota em andamento — não só na
+  // navegação. O escritório precisa ver o caminhão também quando o motorista
+  // está na tela de entregas.
+  const emAndamento = rota?.status === "INICIADA";
+  const rastreio = useRastreamento(rota?.id, emAndamento);
+  const tela = useTelaAcesa(emAndamento);
 
   useDocumentTitle(rota ? `Rota ${rota.id}` : "Minha rota");
 
@@ -86,6 +97,16 @@ export function DriverRoute() {
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  /** Posição para gravar junto com "cheguei"/"entregue". Com o rastreamento
+   *  ligado ela já existe — e não obriga o motorista a esperar o GPS. */
+  async function posicaoParaRegistro() {
+    const p = rastreio.posicao;
+    if (p && Date.now() - new Date(p.registrada_em).getTime() < 30000) {
+      return { latitude: p.latitude, longitude: p.longitude };
+    }
+    return posicaoAtual();
+  }
 
   async function executar(acao, mensagemOk) {
     setAgindo(true);
@@ -152,6 +173,8 @@ export function DriverRoute() {
         </div>
       </div>
 
+      {iniciada && <StatusRastreio rastreio={rastreio} tela={tela} />}
+
       {/* ----------------------------------------------------------- mapa */}
       <Card semPadding>
         <MapPanel tema={tema} altura={240}>
@@ -181,7 +204,11 @@ export function DriverRoute() {
             larguraTotal
             icone={Play}
             carregando={agindo}
-            onClick={() => executar(() => api.iniciar(rota.id), "Boa viagem!")}
+            onClick={async () => {
+              await executar(() => api.iniciar(rota.id), "Boa viagem!");
+              // Saiu da base: a próxima coisa que o motorista precisa é a rota.
+              setNavegando(true);
+            }}
           >
             INICIAR ROTA
           </Button>
@@ -209,18 +236,28 @@ export function DriverRoute() {
             </Alert>
           )}
 
-          {/* Navegação externa é COMPLEMENTO do mapa interno, não
-              substituto: o sistema continua sendo o lugar onde a operação
-              acontece. */}
-          {proxima.latitude && (
+          {/* A navegação é aqui dentro. Com o Google Maps na frente, esta
+              página ia para segundo plano e o GPS dela parava — o escritório
+              perdia o caminhão enquanto ele andava. O link externo continua
+              como alternativa, com a consequência escrita nele. */}
+          {proxima.status !== "CHEGOU" && (
+            <Button
+              tamanho="lg"
+              larguraTotal
+              icone={Navigation}
+              onClick={() => setNavegando(true)}
+            >
+              NAVEGAR
+            </Button>
+          )}
+          {proxima.latitude && proxima.status !== "CHEGOU" && (
             <a
               className="mot-navegar"
               href={`https://www.google.com/maps/dir/?api=1&destination=${proxima.latitude},${proxima.longitude}`}
               target="_blank"
               rel="noreferrer"
             >
-              <Navigation size={15} strokeWidth={2} aria-hidden="true" />
-              Abrir navegação
+              Abrir no Google Maps (o acompanhamento pelo escritório pausa)
             </a>
           )}
 
@@ -233,7 +270,7 @@ export function DriverRoute() {
                 carregando={agindo}
                 onClick={() =>
                   executar(async () => {
-                    const posicao = await posicaoAtual();
+                    const posicao = await posicaoParaRegistro();
                     await api.cheguei(proxima.id, posicao);
                   }, "Chegada registrada")
                 }
@@ -274,7 +311,7 @@ export function DriverRoute() {
                           carregando={agindo}
                           onClick={() =>
                             executar(async () => {
-                              const posicao = await posicaoAtual();
+                              const posicao = await posicaoParaRegistro();
                               await api.entregue(item.id, posicao);
                             }, "Entrega registrada")
                           }
@@ -306,6 +343,15 @@ export function DriverRoute() {
             <h2>Todas as paradas foram resolvidas</h2>
             <p>Finalize a rota quando voltar para a base.</p>
           </div>
+          <Button
+            tamanho="lg"
+            larguraTotal
+            variante="secundario"
+            icone={Navigation}
+            onClick={() => setNavegando(true)}
+          >
+            NAVEGAR ATÉ A BASE
+          </Button>
           <Button
             tamanho="lg"
             larguraTotal
@@ -355,6 +401,23 @@ export function DriverRoute() {
         >
           Finalizar rota agora
         </Button>
+      )}
+
+      {navegando && iniciada && (
+        <NavegacaoMotorista
+          rota={rota}
+          rastreio={rastreio}
+          tela={tela}
+          agindo={agindo}
+          aoSair={() => setNavegando(false)}
+          aoRegistrarChegada={async (paradaId) => {
+            await executar(async () => {
+              await api.cheguei(paradaId, await posicaoParaRegistro());
+            }, "Chegada registrada");
+            // Chegou: o que falta agora são as entregas, na tela da rota.
+            setNavegando(false);
+          }}
+        />
       )}
 
       <ModalInsucesso
@@ -420,7 +483,7 @@ function ModalInsucesso({ item, onFechar, onRegistrado }) {
     evento.preventDefault();
     setEnviando(true);
     try {
-      const posicao = await posicaoAtual();
+      const posicao = await posicaoParaRegistro();
       await api.naoEntregue(item.id, { motivo, observacao: observacao || null, ...posicao });
       toast.sucesso("Registrado", "A entrega volta para o planejamento.");
       onFechar();
@@ -480,5 +543,54 @@ function ModalInsucesso({ item, onFechar, onRegistrado }) {
         </div>
       </form>
     </Modal>
+  );
+}
+
+/**
+ * O rastreamento está funcionando? O motorista precisa saber — e o que
+ * fazer quando não está —, em vez de descobrir no fim do dia que o
+ * escritório não o viu.
+ */
+function StatusRastreio({ rastreio, tela }) {
+  const [, tique] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => tique((n) => n + 1), 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  const { estado, ultimoEnvio, pendentes } = rastreio;
+  let tom = "sucesso";
+  let texto;
+  if (estado === "inseguro") {
+    tom = "perigo";
+    texto = "GPS bloqueado: o sistema precisa ser aberto por HTTPS.";
+  } else if (estado === "negado") {
+    tom = "perigo";
+    texto = "Localização negada. Libere para este site nas configurações do navegador.";
+  } else if (estado === "indisponivel") {
+    tom = "perigo";
+    texto = "Este aparelho não informa localização.";
+  } else if (estado === "aguardando") {
+    tom = "atencao";
+    texto = "Procurando sinal de GPS...";
+  } else if (pendentes > 20) {
+    tom = "atencao";
+    texto = `Sem internet: ${pendentes} posições guardadas, enviadas quando o sinal voltar.`;
+  } else {
+    const segundos = ultimoEnvio ? Math.round((Date.now() - ultimoEnvio.getTime()) / 1000) : null;
+    texto =
+      segundos == null
+        ? "Localização ativa. O escritório acompanha sua rota."
+        : `Localização ativa · enviada há ${segundos < 60 ? `${segundos} s` : `${Math.round(segundos / 60)} min`}`;
+  }
+
+  return (
+    <div className={`mot-rastreio mot-rastreio--${tom}`} role="status">
+      <span className="mot-rastreio__ponto" aria-hidden="true" />
+      <span>{texto}</span>
+      {tela.suportado && !tela.acesa && estado === "ativo" && (
+        <span className="mot-rastreio__extra">Deixe a tela acesa: com ela apagada o GPS para.</span>
+      )}
+    </div>
   );
 }

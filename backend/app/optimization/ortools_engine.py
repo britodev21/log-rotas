@@ -105,19 +105,34 @@ class OrToolsEngine:
     # Modelo
     # ------------------------------------------------------------------ #
     def _configurar_custo_de_tempo(self, modelo, gestor, pedido) -> None:
-        """O custo do arco e tempo de viagem + tempo de servico no destino.
+        """O custo do arco e o tempo de servico na ORIGEM + a viagem.
 
         Incluir o servico no arco e o que faz o solver entender que uma
         instalacao de duas horas custa mais que dez minutos de deslocamento.
         Sem isso ele otimizaria quilometragem e montaria rotas que nao cabem
         no dia.
+
+        O servico e o da ORIGEM, nao o do destino, e isso muda o significado
+        do tempo acumulado em cada parada. Com o servico do destino -- como
+        estava --, o acumulado era a hora em que o servico TERMINA:
+
+        - a "chegada" gravada no plano saia atrasada exatamente o tempo de
+          servico da parada (entrega a 1 km da base prevista para 66 min
+          depois da saida: 6 de estrada + 60 de instalacao);
+        - a janela do cliente restringia o FIM do servico, nao a chegada: um
+          cliente que recebe das 8h as 10h, com instalacao de 1 h, podia
+          receber o caminhao as 7h.
+
+        Com o servico da origem, o acumulado e a hora de CHEGADA, e a janela
+        vale para a chegada. O custo total da rota nao muda: cada parada
+        visitada e origem de exatamente um arco.
         """
 
         def custo(de_indice, para_indice):
             de = gestor.IndexToNode(de_indice)
             para = gestor.IndexToNode(para_indice)
-            servico = 0 if para == 0 else pedido.paradas[para - 1].tempo_servico_s
-            return pedido.duracoes[de][para] + servico
+            servico = 0 if de == 0 else pedido.paradas[de - 1].tempo_servico_s
+            return servico + pedido.duracoes[de][para]
 
         self._callback_tempo = modelo.RegisterTransitCallback(custo)
         modelo.SetArcCostEvaluatorOfAllVehicles(self._callback_tempo)

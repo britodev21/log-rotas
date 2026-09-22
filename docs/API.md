@@ -494,3 +494,54 @@ ainda está na rua. Só rotas confirmadas entram no total — rascunho é cenár
 | Importação CSV de entregas | — |
 | Foto, assinatura e código de barras | — |
 | GPS contínuo do motorista | Exige HTTPS e troca de polling por SSE |
+
+
+---
+
+## Rastreamento ao vivo
+
+| Método | Caminho | Quem | |
+|---|---|---|---|
+| `POST` | `/api/v1/motorista/rotas/{id}/posicoes` | `MOTORISTA` | GPS em lote |
+| `GET` | `/api/v1/motorista/rotas/{id}/navegacao?latitude=&longitude=` | `MOTORISTA` | Rota até a próxima parada |
+| `GET` | `/api/v1/painel/ao-vivo` | `ADMIN` | Caminhões em rota agora |
+
+### `POST /posicoes`
+
+```json
+{ "posicoes": [ { "latitude": -20.4650, "longitude": -54.6150,
+                  "registrada_em": "2026-09-21T17:30:05.120Z",
+                  "precisao_m": 8, "velocidade_mps": 11.2, "direcao_graus": 90 } ] }
+```
+
+`registrada_em` é a hora **do aparelho**, quando o GPS mediu — o celular pode mandar um trecho
+inteiro de uma vez depois de ficar sem sinal. Resposta:
+
+```json
+{ "aceitas": 1, "repetidas": 0, "descartadas": 0, "motivos": {} }
+```
+
+- **Descartadas**, com o motivo: GPS pior que 150 m, relógio adiantado mais de 2 min, anterior
+  ao início da rota, rota fora de execução. Um ponto ruim não derruba o lote.
+- **Repetidas**: a mesma medição reenviada como sinal de vida. Não vira linha nova; renova a
+  hora de contato. É o que separa "parado" de "sem sinal".
+
+### `GET /navegacao`
+
+Trajeto da posição informada até a próxima parada aberta (a base, quando as entregas acabam),
+com `geometria` (polyline), `manobras` (instrução em português, distância, ponto), `distancia_m`,
+`duracao_s`, `chegada_prevista`, `com_transito`, `estimada` e `aviso`.
+
+`latitude_chegada`/`longitude_chegada` **não é o pino**: é o ponto, na rua do endereço, mais
+próximo dele. Exige a rota iniciada (**422** caso contrário).
+
+### `GET /painel/ao-vivo`
+
+Por rota em andamento: `situacao` (`EM_MOVIMENTO`, `PARADO`, `NA_PARADA`, `SEM_SINAL`,
+`SEM_POSICAO`), `posicao`, `idade_s` (idade da medição), `rastro` (últimos 30 min), `proxima` e
+`previsao` — cada parada com `chegada_prevista`, `chegada_planejada`, `atraso_s` e `espera_s`.
+
+`previsao.fonte` diz de onde veio o tempo: `OSRM+TRANSITO`, `OSRM` (rua livre), `HAVERSINE`
+(linha reta) ou `PLANEJADO` (nenhuma posição ainda — são os horários do plano, não previsão).
+A previsão é recalculada no máximo a cada 45 s por rota, e imediatamente quando chega a
+primeira posição.

@@ -12,7 +12,7 @@ o que ele agrupa, o que recusa, o que deixa de fora e o que grava.
 
 from __future__ import annotations
 
-from datetime import date, time
+from datetime import date, datetime, time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -577,3 +577,24 @@ def test_motorista_nao_planeja(client: TestClient, criar_usuario, autenticar) ->
     criar_usuario(email="mot@britto.com.br", role=Role.MOTORISTA)
     cabecalho = autenticar("mot@britto.com.br")
     assert client.get("/api/v1/planejamento", headers=cabecalho).status_code == 403
+
+
+def test_inicio_do_turno_e_hora_de_campo_grande(
+    client: TestClient, admin, base, frota, motoristas, db
+) -> None:
+    """"08:00" e oito da manha em Campo Grande, nao em Greenwich.
+
+    O plano ancorava o turno em UTC: 08:00 virava 04:00 local e todo horario
+    previsto saia quatro horas adiantado. So apareceu quando a previsao ao
+    vivo comparou o plano com a posicao real do caminhao.
+    """
+    from zoneinfo import ZoneInfo
+
+    criar_entregas(db, 1)
+    plano = calcular(client, admin, base, frota, motoristas, inicio_turno="08:00").json()
+
+    saida = plano["routes"][0]["stops"][0]
+    local = datetime.fromisoformat(saida["estimated_arrival"]).astimezone(
+        ZoneInfo("America/Campo_Grande")
+    )
+    assert (local.hour, local.minute) == (8, 0)

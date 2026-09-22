@@ -51,16 +51,30 @@ const ESRI_ATRIBUICAO = "Ladrilhos &copy; Esri &middot; dados &copy; OpenStreetM
  * resultado certo: base discreta, rótulo nítido, desenhado para o fundo
  * claro ou escuro em vez de invertido por filtro.
  */
+/**
+ * Até onde a base cinza tem desenho de verdade: zoom 16. Medido em
+ * 21/09/2026 no centro e num bairro afastado — do 17 em diante a Esri
+ * devolve, para qualquer lugar, o mesmo ladrilho de 2.521 bytes escrito "Map
+ * data not yet available". Com HTTP 200, como a CARTO: só aparece olhando.
+ *
+ * Com `maxNativeZoom`, o Leaflet amplia os ladrilhos do 16 quando a tela
+ * pede 17, 18 ou 19. Fica menos nítido, mas é o mapa — e não um aviso em
+ * inglês cobrindo a navegação do motorista, que usa zoom 17.
+ */
+const ZOOM_NATIVO_CINZA = 16;
+
 const BASES = {
   claro: {
     url: `${ESRI}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
     rotulos: `${ESRI}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`,
     atribuicao: ESRI_ATRIBUICAO,
+    zoomNativo: ZOOM_NATIVO_CINZA,
   },
   escuro: {
     url: `${ESRI}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
     rotulos: `${ESRI}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`,
     atribuicao: ESRI_ATRIBUICAO,
+    zoomNativo: ZOOM_NATIVO_CINZA,
   },
 };
 
@@ -90,6 +104,7 @@ const SATELITE = {
     "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
   atribuicao: "Imagens &copy; Esri, Maxar, Earthstar Geographics",
   zoomMaximo: 19,
+  zoomNativo: 19,
 };
 
 const URL_CONFIGURADA = import.meta.env.VITE_MAP_TILE_URL;
@@ -130,6 +145,7 @@ export function MapPanel({
     : (BASES[tema] ?? BASES.claro);
   const base = satelite ? SATELITE : cartografia;
   const zoomMaximo = base.zoomMaximo ?? 19;
+  const zoomNativo = base.zoomNativo;
   const camada = satelite ? "satelite" : tema;
 
   return (
@@ -156,6 +172,7 @@ export function MapPanel({
           url={base.url}
           attribution={base.atribuicao}
           maxZoom={zoomMaximo}
+          maxNativeZoom={zoomNativo}
         />
         {/* Rótulos por cima dos marcadores não: `pane="shadowPane"` mantém
             os nomes acima do mapa e abaixo das paradas, que precisam ficar
@@ -165,6 +182,7 @@ export function MapPanel({
             key={`${camada}-rotulos`}
             url={base.rotulos}
             maxZoom={zoomMaximo}
+            maxNativeZoom={zoomNativo}
             pane="shadowPane"
           />
         )}

@@ -8,3 +8,4 @@ export {
   TrajetoRota,
   corDaRota,
 } from "./camadas";
+export { CaminhoesAoVivo } from "./aoVivo";

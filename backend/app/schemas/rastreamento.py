@@ -28,6 +28,8 @@ class EnvioPosicoes(BaseModel):
 
 class ResultadoEnvioRead(BaseModel):
     aceitas: int
+    #: Posição já recebida, reenviada como sinal de vida: renova o contato.
+    repetidas: int = 0
     descartadas: int
     #: Por que cada grupo foi descartado. Descartar em silêncio esconderia um
     #: celular com GPS ruim ou relógio errado.

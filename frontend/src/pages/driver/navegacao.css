@@ -1,0 +1,227 @@
+/* Navegação do motorista: tela cheia, pensada para o celular no suporte do
+   painel do caminhão. Instrução grande e de alto contraste no topo — tem que
+   ser lida de relance, no sol, sem tirar a mão do volante. */
+
+.nav {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo);
+}
+
+/* --- Manobra ------------------------------------------------------------- */
+
+/* Cor fixa nos dois temas: contraste máximo com texto branco, e é a faixa
+   que o olho procura. */
+.nav__manobra {
+  display: flex;
+  align-items: center;
+  gap: var(--e-4);
+  padding: var(--e-4) var(--e-5);
+  padding-top: calc(var(--e-4) + env(safe-area-inset-top));
+  color: #fff;
+  background: #123a8a;
+  min-height: 96px;
+}
+
+.nav__manobra--neutra {
+  background: var(--superficie-inversa);
+}
+
+.nav__icone {
+  flex-shrink: 0;
+}
+
+.nav__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.nav__distancia {
+  margin: 0;
+  font-size: var(--t-30);
+  font-weight: 750;
+  line-height: 1.05;
+}
+
+.nav__instrucao {
+  margin: 0;
+  font-size: var(--t-20);
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.nav__depois {
+  margin: 0;
+  font-size: var(--t-13);
+  opacity: 0.8;
+}
+
+/* --- Mapa ---------------------------------------------------------------- */
+
+.nav__mapa {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+/* O painel de mapa tem altura própria; aqui ele ocupa o que sobrar entre a
+   manobra e o rodapé, sem borda arredondada. */
+.nav__mapa > .mapa {
+  position: absolute;
+  inset: 0;
+  height: auto !important;
+  border-radius: 0;
+}
+
+.nav__centralizar {
+  position: absolute;
+  bottom: var(--e-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-mapa-painel);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+  padding: var(--e-3) var(--e-5);
+  font-size: var(--t-15);
+  font-weight: 650;
+  color: var(--texto);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-total);
+  box-shadow: var(--sombra-lg);
+  cursor: pointer;
+}
+
+/* --- Rodapé -------------------------------------------------------------- */
+
+.nav__rodape {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  padding: var(--e-3) var(--e-4);
+  padding-bottom: calc(var(--e-3) + env(safe-area-inset-bottom));
+  background: var(--superficie);
+  border-top: 1px solid var(--borda);
+}
+
+.nav__alerta {
+  margin: 0;
+  padding: var(--e-2) var(--e-3);
+  font-size: var(--t-13);
+  color: var(--texto-2);
+  background: var(--atencao-suave);
+  border: 1px solid var(--atencao-borda);
+  border-radius: var(--r-md);
+}
+
+.nav__destino {
+  display: flex;
+  gap: var(--e-2);
+  align-items: flex-start;
+  color: var(--texto-2);
+}
+
+.nav__destino svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--primaria);
+}
+
+.nav__destino div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nav__destino strong {
+  font-size: var(--t-15);
+  color: var(--texto);
+}
+
+.nav__destino span {
+  font-size: var(--t-13);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav__numeros {
+  display: flex;
+  align-items: center;
+  gap: var(--e-5);
+  flex-wrap: wrap;
+}
+
+.nav__numeros span {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav__numeros small {
+  font-size: var(--t-11);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--texto-3);
+}
+
+.nav__numeros strong {
+  font-size: var(--t-20);
+  color: var(--texto);
+}
+
+.nav__botoes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--e-2);
+}
+
+/* --- Marcadores ---------------------------------------------------------- */
+
+.nav-veiculo {
+  color: #1a5cff;
+}
+
+.nav-veiculo svg {
+  display: block;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.35));
+  transition: transform var(--tempo-rapido) var(--curva);
+}
+
+.nav-veiculo__ponto {
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: 7px;
+  background: #1a5cff;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 6px rgb(26 92 255 / 0.2);
+}
+
+.nav-destino__pino {
+  display: block;
+  width: 22px;
+  height: 22px;
+  background: #d93025;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.35);
+}
+
+@media (min-width: 720px) {
+  /* No computador (testes e acompanhamento), a instrução não precisa
+     ocupar a largura inteira. */
+  .nav__manobra,
+  .nav__rodape {
+    padding-left: var(--e-6);
+    padding-right: var(--e-6);
+  }
+}

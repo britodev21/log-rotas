@@ -897,3 +897,42 @@
   flex-shrink: 0;
   color: var(--texto-4);
 }
+
+/* --- Rota ao vivo no cartão "Em andamento" -------------------------------- */
+
+.ao-vivo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin-top: var(--e-2);
+}
+
+.ao-vivo__linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-1) var(--e-2);
+}
+
+.ao-vivo__proxima {
+  font-size: var(--t-13);
+  color: var(--texto-2);
+}
+
+.ao-vivo__proxima strong {
+  color: var(--texto);
+  font-weight: 650;
+}
+
+.ao-vivo__idade,
+.ao-vivo__rodape {
+  font-size: var(--t-12);
+  color: var(--texto-3);
+}
+
+.ao-vivo__fonte {
+  padding: 0 var(--e-1);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-xs);
+  cursor: help;
+}

@@ -13,13 +13,15 @@ Situação registrada em **21/09/2026**.
 |---|---|---|---|---|---|
 | [Google Places API (New)](#google-places-api-new) | Busca de endereço com sugestões | Sim | Pago por uso | Servidor | **Funcionando** |
 | [Google Geocoding API](#google-geocoding-api) | Dizer se o ponto é o telhado | Sim | Pago por uso | Servidor | Ativada, **recusa por falta de faturamento** |
+| [Google Routes API](#google-routes-api) | Trânsito na previsão de chegada | Sim | Pago por uso | Servidor | **Funcionando** |
 | [Nominatim](#nominatim-openstreetmap) | Geocodificação gratuita | Não | Grátis, 1 req/s | Servidor | Funcionando |
 | [ViaCEP](#viacep) | Endereço a partir do CEP | Não | Grátis | Servidor | Funcionando |
 | [AwesomeAPI CEP](#awesomeapi-cep) | Coordenada do trecho do CEP | Não | Grátis | Servidor | Funcionando |
-| [OSRM](#osrm) | Distância e tempo pela rua | Não | Grátis | Servidor | Funcionando (servidor de demonstração) |
+| [OSRM](#osrm) | Distância, tempo, traçado e manobras da navegação | Não | Grátis | Servidor | Funcionando (servidor de demonstração) |
 | [Esri](#esri-ladrilhos-do-mapa) | Desenho do mapa e satélite | Não | Grátis sem conta | Navegador | Funcionando |
-| [Google Maps (link)](#google-maps-link-de-navegação) | Navegação do motorista | Não | Grátis | Navegador | Funcionando |
-| [Geolocalização do navegador](#geolocalização-do-navegador) | Posição no momento do registro | Não | Grátis | Navegador | Exige HTTPS fora do `localhost` |
+| [Google Maps (link)](#google-maps-link-de-navegação) | Alternativa à navegação do app | Não | Grátis | Navegador | Secundário |
+| [Geolocalização do navegador](#geolocalização-do-navegador) | Rastreamento durante a rota | Não | Grátis | Navegador | Exige HTTPS fora do `localhost` |
+| [Síntese de voz e tela acesa](#síntese-de-voz-e-tela-acesa) | Voz da navegação; GPS não parar | Não | Grátis | Navegador | Depende do aparelho |
 | [HERE](#here) | Alternativa ao Google | Sim | Cota gratuita diária | Servidor | **Escrito, nunca testado** |
 
 ---
@@ -37,8 +39,8 @@ O repositório é **público**.
    `git add -A` distraído com a chave num arquivo errado passaria. Um gancho de pre-commit
    que recuse esse padrão resolveria.
 
-No console do Google, a chave deve estar restrita às APIs que usa (Places API (New) e
-Geocoding API), com **cota diária** e **alerta de orçamento** configurados. A cota é o que
+No console do Google, a chave deve estar restrita às APIs que usa (Places API (New),
+Geocoding API e Routes API), com **cota diária** e **alerta de orçamento** configurados. A cota é o que
 impede a conta de crescer sozinha; o alerta só avisa.
 
 | Variável | Serviço |
@@ -48,6 +50,8 @@ impede a conta de crescer sozinha; o alerta só avisa.
 | `GEOCODING_PROVIDER_KEY` | Chave do provedor acima, quando não é o Nominatim |
 | `NOMINATIM_BASE_URL`, `NOMINATIM_USER_AGENT` | Nominatim |
 | `OSRM_BASE_URL` | OSRM |
+| `TRAFFIC_PROVIDER` | `google` liga o trânsito na previsão; vazio, rua livre |
+| `TRAFFIC_REFRESH_S` | Intervalo mínimo entre consultas de trânsito por rota (padrão 300 s) |
 | `VITE_MAP_TILE_URL`, `VITE_MAP_ATTRIBUTION` | Troca a base do mapa (frontend) |
 
 ---
@@ -131,6 +135,33 @@ diferente do console.
 
 ---
 
+## Google Routes API
+
+**O que faz no sistema:** o trânsito na previsão de chegada.
+
+| | |
+|---|---|
+| Chamada | `POST routes.googleapis.com/directions/v2:computeRoutes`, `routingPreference: TRAFFIC_AWARE` |
+| Código | `backend/app/routing/transito.py` |
+| Chave | `GOOGLE_MAPS_API_KEY`, com `TRAFFIC_PROVIDER=google` |
+
+**Como é usado — e por que assim:** a previsão é recalculada a cada ~45 s por rota. Chamar o
+Google nesse ritmo daria centenas de chamadas pagas por caminhão por dia. Em vez disso, ele é
+consultado **no máximo a cada 5 minutos por rota** e devolve um **fator**: quanto o tempo com
+trânsito difere do tempo do OSRM para os mesmos pontos. Nos intervalos, o fator é aplicado
+sobre o OSRM, que é grátis. O fator fica entre 0,6 e 3,0 — fora disso é mais provável erro de
+dado do que trânsito.
+
+**Primeira medição, 21/09/2026:** Centro → Rua Bahia, OSRM 4 min, Google com trânsito
+7 min 53 s. O fator também corrige o otimismo do OSRM, não só o trânsito.
+
+**Situação:** ativada, funcionando **sem faturamento**, como a Places. Pode passar a exigir.
+
+**Quando falha:** a previsão continua, com "rua livre" na tela; a falha fica guardada pelo mesmo
+intervalo, para não repetir a chamada recusada a cada recálculo.
+
+---
+
 ## Nominatim (OpenStreetMap)
 
 **O que faz no sistema:** geocodificação gratuita. É o padrão da geocodificação em lote, da
@@ -206,13 +237,15 @@ silêncio de propósito; o mapa abre na cidade em vez da quadra e o resto funcio
 ## OSRM
 
 **O que faz no sistema:** distância e tempo **pela malha viária** entre as paradas (a matriz
-que o otimizador usa) e o traçado da rota que aparece no mapa.
+que o otimizador usa), o traçado da rota que aparece no mapa e **a navegação do motorista**:
+rota até a próxima parada com as manobras, recálculo quando ele sai do caminho, e a previsão
+de chegada ao vivo.
 
 | | |
 |---|---|
-| Chamadas | `GET /table/v1/driving/...` (matriz)<br>`GET /route/v1/driving/...` (traçado, `overview=full`) |
+| Chamadas | `GET /table/v1/driving/...` (matriz)<br>`GET /route/v1/driving/...` (traçado; com `steps=true` na navegação)<br>`GET /nearest/v1/driving/...` (ponto de chegada na rua do endereço) |
 | Servidor | `router.project-osrm.org` (configurável em `OSRM_BASE_URL`) |
-| Código | `backend/app/routing/osrm.py` e `service.py` |
+| Código | `backend/app/routing/osrm.py`, `service.py` e `navegacao.py` |
 | Tempo limite | 20 s |
 
 **Limite:** é o **servidor público de demonstração**, sem garantia. Para operação de verdade o
@@ -221,7 +254,15 @@ caminho é um OSRM próprio com o mapa de MS.
 **Quando falha:** cai para estimativa em **linha reta** e **avisa na tela**; o plano registra de
 qual fonte veio a matriz, e o mapa desenha a rota tracejada em vez de pela rua.
 
-**Não considera trânsito.** O tempo é o da via livre, com as velocidades do mapa.
+**Não considera trânsito.** O tempo é o da via livre, com as velocidades do mapa — e, na
+primeira comparação com o Google, metade do tempo real. A previsão ao vivo corrige isso com o
+fator de trânsito; o planejamento, ainda não.
+
+**As manobras chegam em inglês e em código** ("turn", "slight left"); a frase em português é
+montada no servidor, para tela e voz dizerem o mesmo.
+
+**Na navegação, quando cai:** o trajeto vira linha reta, tracejada, sem manobras — e a tela diz
+isso. Com `MATRIX_PROVIDER=haversine`, a navegação também não chama o OSRM.
 
 ---
 
@@ -257,8 +298,10 @@ código de resposta pega isso. Troca de provedor de mapa é conferida **olhando 
 
 ## Google Maps (link de navegação)
 
-**O que faz no sistema:** o botão **Navegar** do app do motorista abre o Google Maps (ou o app
-instalado) com o destino na próxima parada, para a navegação curva a curva.
+**O que faz no sistema:** alternativa, não caminho principal. O botão **NAVEGAR** abre a
+navegação do próprio Log Rotas; abaixo dele, um link discreto abre o Google Maps, com o aviso
+"o acompanhamento pelo escritório pausa" — com o Google Maps na frente, a página do Log Rotas
+vai para segundo plano e o navegador para o GPS dela.
 
 | | |
 |---|---|
@@ -266,27 +309,44 @@ instalado) com o destino na próxima parada, para a navegação curva a curva.
 | Código | `frontend/src/pages/driver/DriverRoute.jsx` |
 | Chave / custo | Não / grátis — é um link, não uma chamada de API |
 
-O Log Rotas não faz navegação curva a curva; delega a quem faz, com trânsito.
+Até 21/09/2026 este link era a navegação. Deixou de ser por causa do rastreamento.
 
 ---
 
 ## Geolocalização do navegador
 
-**O que faz no sistema:** quando o motorista registra "cheguei", "entregue" ou "não
-entregue", o app pega a posição do aparelho **naquele momento** e grava junto com o evento.
+**O que faz no sistema:** o rastreamento durante a rota. Com a rota iniciada, o app lê o GPS
+continuamente, envia em lote a cada 10 s e usa a mesma leitura na navegação. A posição também
+vai junto dos registros "cheguei", "entregue" e "não entregue".
 
 | | |
 |---|---|
-| API | `navigator.geolocation.getCurrentPosition` |
-| Código | `frontend/src/pages/driver/DriverRoute.jsx` |
-| Parâmetros | tempo limite 5 s, posição aceita com até 30 s de idade |
+| API | `navigator.geolocation.watchPosition` (+ `getCurrentPosition` quando o GPS fica calado) |
+| Código | `frontend/src/hooks/useRastreamento.js` |
+| Envio | `POST /motorista/rotas/{id}/posicoes`, em lote, com fila guardada no aparelho |
 
-**Não é rastreamento contínuo.** O sistema não sabe onde o caminhão está entre um registro e
-outro.
+**Só com a rota iniciada.** Antes de sair da base e depois de finalizar, o servidor descarta —
+a posição do motorista fora da rota não é assunto do sistema.
+
+**Os limites de uma página web** (tela precisa ficar acesa, troca de app pausa, aparelho parado
+pode parar de dar leitura) estão em `docs/LIMITACOES.md`, seção 3.8, com o que o sistema faz
+sobre cada um.
 
 **Nunca trava o motorista:** sem sinal, sem permissão ou sem HTTPS, o registro é gravado sem
 coordenada. **O navegador só libera a localização em HTTPS** (ou em `localhost`) — em produção,
 sem certificado, nenhum evento terá posição.
+
+---
+
+## Síntese de voz e tela acesa
+
+| API | Uso | Código |
+|---|---|---|
+| `speechSynthesis` (voz `pt-BR`) | Fala a manobra a ~400 m e de novo a ~80 m; "Recalculando a rota" | `NavegacaoMotorista.jsx` |
+| `navigator.wakeLock` | Mantém a tela acesa durante a rota — com ela apagada o GPS para | `useTelaAcesa.js` |
+
+As duas dependem do aparelho. Sem voz em português instalada, o navegador usa a que tiver.
+Sem Wake Lock, a tela avisa o motorista. Nenhuma das duas custa nada nem sai da máquina.
 
 ---
 
@@ -315,9 +375,10 @@ Antes de confiar, confira um endereço conhecido na tela.
 | Nominatim | Marca erro de provedor (não "endereço errado") e permite tentar de novo |
 | ViaCEP | Pede o endereço digitado por extenso |
 | AwesomeAPI | Mapa abre na cidade em vez da quadra |
-| OSRM | Distância em linha reta, **com aviso na tela** e a fonte registrada no plano |
+| OSRM | Distância em linha reta, **com aviso na tela** e a fonte registrada no plano; navegação sem manobras |
+| Google Routes | Previsão com "rua livre" em vez de "com trânsito" |
 | Esri | Mapa sem desenho; cadastro, planejamento e execução continuam |
-| Geolocalização | Evento gravado sem coordenada |
+| Geolocalização | Evento gravado sem coordenada; painel mostra "aguardando GPS" ou "sem sinal"; a tela do motorista diz por quê |
 
 Nenhum deles impede de cadastrar, planejar ou executar uma rota. O que muda é a precisão — e
 o sistema sempre diz quando a precisão caiu.

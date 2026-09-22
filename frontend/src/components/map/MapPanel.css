@@ -166,15 +166,15 @@
   align-items: center;
   gap: var(--e-2);
   padding: var(--e-2) var(--e-3);
-  font-size: var(--t-xs);
+  font-size: var(--t-12);
   font-weight: 600;
   color: var(--texto-2);
   background: var(--superficie);
   border: 1px solid var(--borda);
   border-radius: var(--r-md);
-  box-shadow: var(--sombra-1);
+  box-shadow: var(--sombra-sm);
   cursor: pointer;
-  transition: background var(--dur-1) var(--curva), color var(--dur-1) var(--curva);
+  transition: background var(--tempo-rapido) var(--curva), color var(--tempo-rapido) var(--curva);
 }
 
 .mapa__vista:hover {
@@ -183,7 +183,7 @@
 }
 
 .mapa__vista:focus-visible {
-  outline: 2px solid var(--marca);
+  outline: 2px solid var(--primaria);
   outline-offset: 2px;
 }
 
@@ -191,4 +191,29 @@
    cinza sobre telhado não se lê. */
 .mapa__creditos {
   background: color-mix(in srgb, var(--superficie) 92%, transparent);
+}
+
+/* --- Caminhões ao vivo ---------------------------------------------------- */
+
+.caminhao-ao-vivo svg {
+  display: block;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.3));
+}
+
+/* Rótulo com o nome do motorista, sob o caminhão. O padrão do Leaflet é um
+   balão branco com seta; aqui ele é uma etiqueta discreta. */
+.mapa .caminhao-rotulo {
+  padding: 1px var(--e-2);
+  font-size: var(--t-11);
+  font-weight: 650;
+  color: var(--texto);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sombra-sm);
+  white-space: nowrap;
+}
+
+.mapa .caminhao-rotulo::before {
+  display: none;
 }

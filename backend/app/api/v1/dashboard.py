@@ -230,6 +230,7 @@ def ao_vivo(session: DbSession, _: AdminUser) -> AoVivoRead:
     rotas = []
     for rota in servico.rotas_em_andamento():
         ultima = servico.ultima(rota.id)
+        rastro = servico.rastro(rota.id)
         previsao = servico.previsao(rota, ultima)
         andamento = progresso(rota)
         proxima = previsao.proxima
@@ -239,7 +240,7 @@ def ao_vivo(session: DbSession, _: AdminUser) -> AoVivoRead:
                 motorista=rota.driver.name if rota.driver else None,
                 veiculo=rota.vehicle.name if rota.vehicle else None,
                 placa=rota.vehicle.plate if rota.vehicle else None,
-                situacao=servico.situacao(rota, ultima, agora),
+                situacao=servico.situacao(rota, ultima, agora, rastro),
                 posicao=PosicaoRead(
                     latitude=float(ultima.latitude),
                     longitude=float(ultima.longitude),
@@ -252,9 +253,7 @@ def ao_vivo(session: DbSession, _: AdminUser) -> AoVivoRead:
                 if ultima
                 else None,
                 idade_s=int((agora - ultima.recorded_at).total_seconds()) if ultima else None,
-                rastro=[
-                    [float(p.latitude), float(p.longitude)] for p in servico.rastro(rota.id)
-                ],
+                rastro=[[float(p.latitude), float(p.longitude)] for p in rastro],
                 proxima=PrevisaoParadaRead.model_validate(proxima, from_attributes=True)
                 if proxima
                 else None,

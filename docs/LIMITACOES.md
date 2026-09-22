@@ -47,6 +47,11 @@ acesso à localização.
 O sistema não trava por isso — a coordenada é opcional em todo registro, e o motorista
 consegue trabalhar sem ela. Mas o registro fica sem a prova de onde ele estava.
 
+**Com o rastreamento ao vivo, isto deixou de ser detalhe:** sem HTTPS não há caminhão no
+painel nem navegação. A tela do motorista diz isso ("GPS bloqueado: o sistema precisa ser
+aberto por HTTPS") em vez de simplesmente não funcionar. Para testar no celular antes da VPS,
+é preciso um túnel com HTTPS.
+
 Resolver com HTTPS na VPS, ou túnel durante o desenvolvimento.
 
 ### 1.3 Sem limite de tentativas de login
@@ -120,6 +125,17 @@ Implementar é trabalho no solver, não migração destrutiva na tabela que mais
 Respeitada pelo solver quando preenchida. Não é obrigatória, e a maioria das entregas não vai
 ter — o que é o comportamento certo enquanto não se sabe se a Britto agenda horário.
 
+**A janela vale para a CHEGADA do caminhão.** Até 21/09/2026 ela valia, por engano, para o
+fim do serviço: o otimizador somava o tempo de serviço do destino em cada trecho, e o número
+gravado como "chegada" era a hora em que a instalação terminava. Um cliente que recebe das 8h
+às 10h, com instalação de 1 h, podia receber o caminhão às 7h; e toda chegada planejada saía
+atrasada exatamente o tempo de serviço (entrega a 1 km da base prevista para 66 min depois da
+saída). Corrigido e coberto por teste que falha no modelo antigo.
+
+**O início do turno é hora de Campo Grande.** Até a mesma data, "08:00" era gravado como 08:00
+UTC — 04:00 local —, e todo horário previsto saía quatro horas adiantado. **Planos calculados
+antes da correção continuam com os horários errados**; recalcule os que ainda forem usados.
+
 ### 3.3 Prioridade influencia, não determina
 
 A prioridade vira penalidade de dispensa: o solver sacrifica uma entrega `BAIXA` antes de uma
@@ -132,8 +148,59 @@ criar índices, ajustar repositórios) — um a dois dias.
 
 ### 3.5 Polling, não WebSocket
 
-O painel atualiza a cada 15 segundos. Suficiente para poucos motoristas; vira SSE quando
-houver GPS contínuo.
+Os indicadores do painel atualizam a cada 15 s; a posição dos caminhões, a cada 5 s. O celular
+envia as posições a cada 10 s. Somando, **o caminhão no painel está de 10 a 15 s atrás da
+realidade** — a tela mostra a idade ("posição de 12 s atrás"). O marcador desliza entre as
+posições no ritmo em que o GPS as mediu, o que dá o movimento contínuo sem encurtar o atraso.
+
+Para poucos caminhões, polling basta. SSE reduziria o atraso para ~10 s (o do envio do
+celular) e é o próximo passo se isso importar.
+
+### 3.8 Rastreamento e navegação numa página web
+
+O GPS vem do navegador do celular, e o navegador **só entrega posição com a página na frente
+e a tela acesa**. Consequências, todas assumidas:
+
+- **A navegação é dentro do app.** Com o Google Maps na frente, a página ia para segundo plano
+  e o GPS dela parava — o escritório perdia o caminhão justamente enquanto ele andava. O link
+  do Google Maps continua, secundário, com o aviso "o acompanhamento pelo escritório pausa".
+- **A tela fica acesa durante a rota** (Wake Lock). O motorista deve deixar o celular no
+  carregador. Navegador que não suporta isso é avisado na tela.
+- **Ligação, troca de app ou tela bloqueada pausam o rastreamento.** O que foi medido nesse
+  tempo não existe; o que ficou na fila (sem internet) é enviado quando o sinal volta, até
+  ~50 min de pontos.
+- **Parado, muitos aparelhos param de dar leitura** — e computador sem GPS nunca dá. O app
+  pede leitura nova a cada 15 s e, se nada novo entrar, reenvia a última posição a cada 20 s
+  como **sinal de vida**, com a hora original. O servidor não grava repetido: só renova o
+  contato. Assim o painel mostra "parado · posição de 2 min atrás", e não "sem sinal", num
+  caminhão só parado. "Sem sinal" é reservado para 90 s sem contato nenhum.
+
+Um aplicativo nativo com localização em segundo plano resolveria os três últimos. É outro
+projeto, e só vale se as pausas incomodarem na prática.
+
+**A navegação não tem** faixa de rolamento, radar nem desvio de congestionamento em tempo
+real. O trajeto é o do OSRM (rua livre); o trânsito do Google corrige o **tempo** da previsão,
+não o caminho.
+
+**O ponto de chegada não é o pino.** O pino fica no lote, e a rua mais próxima dele pode ser a
+de trás — medido: para "Rua Bahia, 500" a rota chegava pela Rua Piratininga, dando a volta no
+quarteirão. Entre as ruas próximas, o sistema escolhe a do próprio endereço (até 80 m do
+pino). Sem nome que bata, usa o pino.
+
+**O mapa cinza da Esri só tem desenho até o zoom 16.** Acima disso a Esri devolve um ladrilho
+"Map data not yet available" — com HTTP 200. O Leaflet amplia os ladrilhos do 16 para os zooms
+17 a 19 (a navegação usa 17): menos nítido, mas é o mapa. O satélite tem imagem real até 19.
+
+**Previsão de chegada:** deslocamento pela rua (OSRM) × fator de trânsito do Google + espera
+pela janela do cliente + tempo de serviço, recalculada no máximo a cada 45 s por rota. Na
+primeira medição, no mesmo trajeto, o OSRM previa 4 min e o Google com trânsito 7 min 53 s —
+**o OSRM previa metade do tempo**. O fator corrige isso na previsão ao vivo; **o planejamento
+ainda usa o OSRM puro**, então os horários planejados tendem a ser otimistas no deslocamento
+(o tempo de serviço, que domina o dia, não é afetado). Aplicar trânsito ao planejamento é
+possível pela mesma Routes API, com custo por par de pontos.
+
+**Volume:** uma posição a cada ~10 s dá ~3.600 linhas por rota de 10 h. Irrelevante por anos
+para o PostgreSQL, mas não existe limpeza automática ainda.
 
 ### 3.6 Endereço: CEP é o caminho principal, não o texto livre
 

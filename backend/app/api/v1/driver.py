@@ -206,6 +206,7 @@ def enviar_posicoes(
     )
     return ResultadoEnvioRead(
         aceitas=resultado.aceitas,
+        repetidas=resultado.repetidas,
         descartadas=resultado.descartadas,
         motivos=resultado.motivos,
     )

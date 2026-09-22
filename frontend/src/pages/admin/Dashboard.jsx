@@ -15,6 +15,7 @@ import { mensagemDeErro } from "../../api/client";
 import { painel as api } from "../../api/operacao";
 import {
   AjustarLimites,
+  CaminhoesAoVivo,
   MapPanel,
   MarcadorBase,
   MarcadoresEntregas,
@@ -44,6 +45,70 @@ import "./admin.css";
  *  poucos motoristas, sem transformar o painel aberto num gerador de carga. */
 const INTERVALO_MS = 15000;
 
+/** Posição dos caminhões. Ritmo próprio, mais curto que o dos indicadores:
+ *  o caminhão muda a cada poucos segundos, o resto do painel não. */
+const INTERVALO_AO_VIVO_MS = 5000;
+
+const SITUACAO = {
+  EM_MOVIMENTO: { texto: "em movimento", tom: "sucesso" },
+  PARADO: { texto: "parado", tom: "atencao" },
+  NA_PARADA: { texto: "na entrega", tom: "info" },
+  SEM_SINAL: { texto: "sem sinal", tom: "perigo" },
+  SEM_POSICAO: { texto: "aguardando GPS", tom: "neutro" },
+};
+
+const FONTE = {
+  "OSRM+TRANSITO": "com trânsito",
+  OSRM: "rua livre",
+  HAVERSINE: "estimativa",
+  PLANEJADO: "horário do plano",
+};
+
+/** "+12 min", "no horário", "8 min adiantado". Tolerância de 5 min: menos
+ *  que isso é ruído do próprio cálculo, não atraso. */
+function atrasoTexto(segundos) {
+  if (segundos == null) return null;
+  const minutos = Math.round(segundos / 60);
+  if (Math.abs(minutos) <= 5) return { texto: "no horário", tom: "sucesso" };
+  if (minutos > 0) return { texto: `+${minutos} min`, tom: minutos > 20 ? "perigo" : "atencao" };
+  return { texto: `${-minutos} min adiantado`, tom: "info" };
+}
+
+/** Consulta os caminhões em rota enquanto houver algum e a aba estiver à
+ *  vista. Aba escondida não precisa de caminhão andando. */
+function useAoVivo(ativo) {
+  const [dados, setDados] = useState(null);
+
+  useEffect(() => {
+    if (!ativo) {
+      setDados(null);
+      return undefined;
+    }
+    let vivo = true;
+    const carregar = async () => {
+      if (document.visibilityState === "hidden") return;
+      try {
+        const resposta = await api.aoVivo();
+        if (vivo) setDados(resposta);
+      } catch (e) {
+        // Mantém a última posição conhecida; o rótulo "sem sinal" e a idade
+        // da posição já dizem que ela está envelhecendo.
+        console.warn("Falha ao atualizar os caminhões", e?.message);
+      }
+    };
+    carregar();
+    const id = setInterval(carregar, INTERVALO_AO_VIVO_MS);
+    document.addEventListener("visibilitychange", carregar);
+    return () => {
+      vivo = false;
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", carregar);
+    };
+  }, [ativo]);
+
+  return dados;
+}
+
 function saudacao() {
   const h = new Date().getHours();
   if (h < 12) return "Bom dia";
@@ -61,6 +126,7 @@ export function Dashboard() {
   const [atualizadoEm, setAtualizadoEm] = useState(null);
   const [rotaSelecionada, setRotaSelecionada] = useState(null);
   const primeiraCarga = useRef(true);
+  const aoVivo = useAoVivo((dados?.rotas_ativas?.length ?? 0) > 0);
 
   const carregar = useCallback(async () => {
     try {
@@ -113,6 +179,11 @@ export function Dashboard() {
   }
 
   const { entregas, rotas, rotas_ativas: ativas } = dados;
+  const corDe = (rotaId) => {
+    const i = ativas.findIndex((r) => r.id === rotaId);
+    return corDaRota(i >= 0 ? i : 0);
+  };
+  const vivoDe = (rotaId) => aoVivo?.rotas.find((r) => r.rota_id === rotaId) ?? null;
   const semOperacao = entregas.total === 0 && rotas.total === 0;
 
   const pontosMapa = [
@@ -262,6 +333,14 @@ export function Dashboard() {
               />
             ))}
 
+            {aoVivo && (
+              <CaminhoesAoVivo
+                rotas={aoVivo.rotas}
+                corDe={corDe}
+                destacada={rotaSelecionada}
+              />
+            )}
+
             <AjustarLimites pontos={pontosMapa} ativo={pontosMapa.length > 0} />
           </MapPanel>
         </Card>
@@ -352,6 +431,7 @@ export function Dashboard() {
                         <span className="rota-ativa__detalhe">
                           {rota.vehicle?.name} · saiu às {hora(rota.started_at)}
                         </span>
+                        <InfoAoVivo vivo={vivoDe(rota.id)} />
                         <div className="progresso">
                           <div
                             className="progresso__barra"
@@ -374,5 +454,65 @@ export function Dashboard() {
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * O que o escritório precisa saber de um caminhão em rota: se está andando,
+ * quando chega na próxima parada, se está atrasado e quando termina. E de
+ * onde veio o tempo — "rua livre" e "com trânsito" não merecem a mesma
+ * confiança, e a tela não pode tratá-los igual.
+ */
+function InfoAoVivo({ vivo }) {
+  if (!vivo) return null;
+  const situacao = SITUACAO[vivo.situacao] ?? SITUACAO.SEM_POSICAO;
+  const proxima = vivo.proxima;
+  const atraso = atrasoTexto(proxima?.atraso_s);
+  const previsao = vivo.previsao;
+  const idade =
+    vivo.idade_s == null
+      ? null
+      : vivo.idade_s < 90
+        ? `${vivo.idade_s} s`
+        : `${Math.round(vivo.idade_s / 60)} min`;
+
+  return (
+    <div className="ao-vivo">
+      <div className="ao-vivo__linha">
+        <Badge tom={situacao.tom} ponto>
+          {situacao.texto}
+          {vivo.situacao === "SEM_SINAL" && idade ? ` há ${idade}` : ""}
+        </Badge>
+        {idade && vivo.situacao !== "SEM_SINAL" && (
+          <span className="ao-vivo__idade">posição de {idade} atrás</span>
+        )}
+      </div>
+
+      {proxima && (
+        <div className="ao-vivo__linha">
+          <span className="ao-vivo__proxima">
+            {proxima.tipo === "BASE_RETORNO" ? "Volta à base" : `Próxima: ${proxima.rotulo ?? "entrega"}`}
+            {proxima.chegada_prevista && (
+              <>
+                {" "}
+                · chega <strong className="numero">{hora(proxima.chegada_prevista)}</strong>
+              </>
+            )}
+          </span>
+          {atraso && <Badge tom={atraso.tom}>{atraso.texto}</Badge>}
+        </div>
+      )}
+
+      <div className="ao-vivo__linha ao-vivo__rodape">
+        {previsao.termino_previsto && (
+          <span>
+            termina às <span className="numero">{hora(previsao.termino_previsto)}</span>
+          </span>
+        )}
+        <span className="ao-vivo__fonte" title={previsao.aviso ?? undefined}>
+          {FONTE[previsao.fonte] ?? previsao.fonte}
+        </span>
+      </div>
+    </div>
   );
 }

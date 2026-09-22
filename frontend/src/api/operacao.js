@@ -31,6 +31,8 @@ export const planejamento = {
 // --- Painel ----------------------------------------------------------------
 export const painel = {
   hoje: (data) => api.get("/painel", { params: { data } }).then((r) => r.data),
+  // Caminhões em rota agora: posição, rastro e previsão de chegada.
+  aoVivo: () => api.get("/painel/ao-vivo").then((r) => r.data),
 };
 
 // --- Geocodificacao --------------------------------------------------------
@@ -84,6 +86,13 @@ export const geocodificacao = {
 // --- Motorista -------------------------------------------------------------
 export const motorista = {
   rotas: (data) => api.get("/motorista/rotas", { params: { data } }).then((r) => r.data),
+  // GPS em lote: o celular guarda o que não mandou num trecho sem sinal.
+  posicoes: (rotaId, posicoes) =>
+    api.post(`/motorista/rotas/${rotaId}/posicoes`, { posicoes }).then((r) => r.data),
+  navegacao: (rotaId, latitude, longitude) =>
+    api
+      .get(`/motorista/rotas/${rotaId}/navegacao`, { params: { latitude, longitude } })
+      .then((r) => r.data),
   rota: (id) => api.get(`/motorista/rotas/${id}`).then((r) => r.data),
   iniciar: (id) => api.post(`/motorista/rotas/${id}/iniciar`).then((r) => r.data),
   finalizar: (id) => api.post(`/motorista/rotas/${id}/finalizar`).then((r) => r.data),

@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.enums import (
     DeliveryStatus,
     MatrixSource,
@@ -430,10 +432,16 @@ class PlanningService:
     ) -> RoutePlan:
         por_chave = {p.chave: p for p in paradas}
         por_id_veiculo = {str(v.id): v for v in veiculos}
+        # O turno e digitado em hora de Campo Grande. Ancorado em UTC -- como
+        # estava -- "08:00" virava 04:00 local, e todo horario previsto do
+        # plano saia quatro horas adiantado. Ficou invisivel ate a previsao
+        # ao vivo comparar o plano com a posicao real e acusar 11 h de atraso
+        # numa rota que tinha acabado de sair.
         momento_inicio = datetime.combine(
             payload.date,
             time(hour=inicio_turno_s // 3600, minute=(inicio_turno_s % 3600) // 60),
-        ).replace(tzinfo=UTC)
+            tzinfo=ZoneInfo(get_settings().default_timezone),
+        )
 
         plano = RoutePlan(
             base_id=base.id,
