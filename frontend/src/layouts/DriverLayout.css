@@ -55,22 +55,88 @@
   padding-bottom: max(var(--e-6), env(safe-area-inset-bottom));
 }
 
-/* Em tela grande a interface do motorista nao se espalha: manter a coluna
-   estreita preserva o desenho pensado para o celular, em vez de esticar
-   botoes ate a largura do monitor. */
+/* Tablet: a coluna cresce, mas continua uma coluna — é a largura em que o
+   desenho de celular ainda funciona. */
 @media (min-width: 640px) {
   .mot__conteudo {
     width: 100%;
-    max-width: 520px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+}
+
+/* Computador: duas colunas.
+   À esquerda o que o motorista RESOLVE (a parada de agora, os botões); à
+   direita o que ele CONSULTA (mapa, sinal do GPS, lista de paradas). A
+   coluna única de celular, esticada num monitor, deixava o botão de ação
+   embaixo do mapa — longe do olho e a uma rolagem de distância. */
+@media (min-width: 1024px) {
+  .mot__conteudo {
+    width: 100%;
+    max-width: 1180px;
     margin: 0 auto;
   }
 
+  /* O grid vai no invólucro da transição entre telas, e não no <main>: é
+     ele que contém os blocos. No <main> o grid pegaria dois filhos só — o
+     aviso de senha e o invólucro — e tudo ficaria numa coluna. */
+  .mot__conteudo > .transicao {
+    display: grid;
+    gap: var(--e-4);
+    grid-template-columns: minmax(380px, 1.05fr) minmax(340px, 0.95fr);
+    /* O mapa ocupa duas linhas: sem isso ele empurra o bloco de ação para
+       baixo da própria altura, e a coluna da esquerda abre um vazio do
+       tamanho do mapa antes do botão que o motorista precisa apertar. */
+    grid-template-areas:
+      "progresso mapa"
+      "acao      mapa"
+      "acao      status"
+      "acao      lista"
+      "encerrar  lista";
+    align-content: start;
+    align-items: start;
+  }
+
+  .mot-bloco--progresso {
+    grid-area: progresso;
+  }
+
+  .mot-bloco--status {
+    grid-area: status;
+  }
+
+  .mot-bloco--mapa {
+    grid-area: mapa;
+  }
+
+  .mot-bloco--acao {
+    grid-area: acao;
+  }
+
+  .mot-bloco--lista {
+    grid-area: lista;
+  }
+
+  .mot-bloco--encerrar {
+    grid-area: encerrar;
+  }
+
+  /* O mapa ganha altura de monitor: no celular ele é um cartão; aqui é a
+     referência de onde o caminhão está. */
+  .mot-bloco--mapa .mapa {
+    height: 460px !important;
+  }
+}
+
+/* A partir do tablet o topo deixa de ser centralizado: o nome do motorista
+   fica à esquerda, como em qualquer cabeçalho. */
+@media (min-width: 640px) {
   .mot__topo {
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .mot__identificacao {
-    flex: 0 1 auto;
+    flex: 1;
   }
 }
 

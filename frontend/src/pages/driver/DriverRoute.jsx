@@ -167,7 +167,7 @@ export function DriverRoute() {
   return (
     <>
       {/* ------------------------------------------------------ progresso */}
-      <div className="mot-progresso">
+      <div className="mot-progresso mot-bloco--progresso">
         <div className="mot-progresso__texto">
           <span className="numero">{progresso.concluidas}</span> de{" "}
           <span className="numero">{progresso.total}</span> entregas
@@ -181,10 +181,14 @@ export function DriverRoute() {
         </div>
       </div>
 
-      {iniciada && <StatusRastreio rastreio={rastreio} tela={tela} />}
+      {iniciada && (
+        <div className="mot-bloco--status">
+          <StatusRastreio rastreio={rastreio} tela={tela} />
+        </div>
+      )}
 
       {/* ----------------------------------------------------------- mapa */}
-      <Card semPadding>
+      <Card semPadding className="mot-bloco--mapa">
         <MapPanel tema={tema} altura={240}>
           {rota.base?.latitude && (
             <MarcadorBase
@@ -203,7 +207,7 @@ export function DriverRoute() {
 
       {/* ------------------------------------------------ ação principal */}
       {!iniciada && !finalizada && (
-        <Card>
+        <Card className="mot-bloco--acao">
           <p className="mot-aviso">
             Sua rota está pronta. Inicie quando sair da base.
           </p>
@@ -224,7 +228,7 @@ export function DriverRoute() {
       )}
 
       {iniciada && naRecarga && (
-        <Card>
+        <Card className="mot-bloco--acao">
           <span className="rotulo-secao">
             Viagem {proxima.trip_number - 1} de {viagens} concluída
           </span>
@@ -290,7 +294,7 @@ export function DriverRoute() {
       )}
 
       {iniciada && proxima && !naRecarga && (
-        <Card>
+        <Card className="mot-bloco--acao">
           <span className="rotulo-secao">
             Próxima parada{viagens > 1 ? ` · viagem ${proxima.trip_number} de ${viagens}` : ""}
           </span>
@@ -413,7 +417,7 @@ export function DriverRoute() {
       )}
 
       {iniciada && !proxima && (
-        <Card>
+        <Card className="mot-bloco--acao">
           <div className="mot-concluido">
             <CheckCircle2 size={36} strokeWidth={1.8} aria-hidden="true" />
             <h2>Todas as paradas foram resolvidas</h2>
@@ -440,7 +444,7 @@ export function DriverRoute() {
       )}
 
       {/* --------------------------------------------- lista das paradas */}
-      <Card titulo="Todas as paradas">
+      <Card titulo="Todas as paradas" className="mot-bloco--lista">
         <ol className="mot-lista">
           {fila.map((parada) => {
             const concluida = parada.status === "CONCLUIDA";
@@ -482,6 +486,7 @@ export function DriverRoute() {
           variante="secundario"
           larguraTotal
           icone={Flag}
+          className="mot-bloco--encerrar"
           onClick={() => setFinalizacaoAberta(true)}
         >
           Finalizar rota agora

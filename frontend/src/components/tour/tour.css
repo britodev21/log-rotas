@@ -125,12 +125,21 @@
 
 @media (max-width: 560px) {
   /* No celular o balão vai para o rodapé: em tela estreita, seguir o alvo
-     tapa justamente o que ele deveria mostrar. */
-  .tour__balao {
+     tapa justamente o que ele deveria mostrar.
+
+     O `transform: none` é o que conserta o passo sem alvo: ele usava
+     translate(-50%, -50%) para se centralizar, e com o balão já preso às
+     bordas esse deslocamento o empurrava para fora da tela — aparecia
+     cortado. Sem alvo ou com alvo, aqui a posição é a mesma. */
+  .tour__balao,
+  .tour__balao--centro {
     top: auto !important;
-    right: 12px;
+    right: 12px !important;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
     left: 12px !important;
     width: auto !important;
+    max-height: 72dvh;
+    overflow-y: auto;
+    transform: none !important;
   }
 }
