@@ -9,3 +9,4 @@ export {
   corDaRota,
 } from "./camadas";
 export { CaminhoesAoVivo } from "./aoVivo";
+export { MarcadorSuave } from "./MarcadorSuave";

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Marker, Polyline, useMap, useMapEvents } from "react-leaflet";
+import { Marker, Polyline } from "react-leaflet";
 import L from "leaflet";
 import {
   ArrowUp,
@@ -20,7 +20,7 @@ import {
 
 import { mensagemDeErro } from "../../api/client";
 import { motorista as api } from "../../api/operacao";
-import { MapPanel } from "../../components/map";
+import { MapPanel, MarcadorSuave } from "../../components/map";
 import { Badge, Button, Spinner } from "../../components/ui";
 import { useTheme } from "../../hooks/useTheme";
 import { hora } from "../../utils/formato";
@@ -97,29 +97,23 @@ function rumo(de, para) {
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
 
-const iconesVeiculo = new Map();
-function iconeVeiculo(direcao) {
-  // Arredonda para não criar um ícone novo a cada grau: o Leaflet troca o
-  // elemento inteiro quando o ícone muda.
-  const chave = direcao == null ? "sem" : Math.round(direcao / 5) * 5;
-  if (!iconesVeiculo.has(chave)) {
-    const seta =
-      chave === "sem"
-        ? `<span class="nav-veiculo__ponto"></span>`
-        : // Atributo transform, e nao style="": a CSP da tela nao aceita estilo
-          // embutido em HTML gerado.
-          `<svg viewBox="0 0 24 24" width="34" height="34">
-             <g transform="rotate(${chave} 12 12)">
-               <path d="M12 2.5 L19.5 20.5 L12 16.5 L4.5 20.5 Z" fill="currentColor"
-                     stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-             </g>
-           </svg>`;
-    iconesVeiculo.set(
-      chave,
-      L.divIcon({ className: "nav-veiculo", html: seta, iconSize: [34, 34], iconAnchor: [17, 17] }),
-    );
-  }
-  return iconesVeiculo.get(chave);
+/**
+ * A seta do veículo. UM ícone, criado uma vez.
+ *
+ * O `js-girar` é o que o marcador suave gira, quadro a quadro, pelo CSSOM.
+ * Antes havia um ícone por faixa de 5°, e o Leaflet trocava o elemento
+ * inteiro a cada virada de volante — o que já dava um solavanco visível.
+ */
+function criarIconeVeiculo() {
+  return L.divIcon({
+    className: "nav-veiculo",
+    html: `<svg viewBox="0 0 24 24" width="34" height="34" class="js-girar">
+             <path d="M12 2.5 L19.5 20.5 L12 16.5 L4.5 20.5 Z" fill="currentColor"
+                   stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+           </svg>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+  });
 }
 
 const iconeDestino = L.divIcon({
@@ -128,18 +122,6 @@ const iconeDestino = L.divIcon({
   iconSize: [22, 22],
   iconAnchor: [11, 11],
 });
-
-/** Mantém o caminhão no centro até a pessoa arrastar o mapa. */
-function Seguir({ posicao, ativo, aoSoltar }) {
-  const mapa = useMap();
-  useMapEvents({ dragstart: aoSoltar });
-  useEffect(() => {
-    if (!ativo || !posicao) return;
-    const zoom = mapa.getZoom() < 16 ? 17 : mapa.getZoom();
-    mapa.setView(posicao, zoom, { animate: true });
-  }, [mapa, posicao, ativo]);
-  return null;
-}
 
 function falar(texto) {
   if (!("speechSynthesis" in window) || !texto) return;
@@ -389,9 +371,15 @@ export function NavegacaoMotorista({ rota, rastreio, tela, agindo, aoSair, aoReg
           )}
           {destino && <Marker position={destino} icon={iconeDestino} />}
           {ponto && (
-            <Marker position={ponto} icon={iconeVeiculo(direcao)} zIndexOffset={1000} />
+            <MarcadorSuave
+              alvo={ponto}
+              direcao={direcao}
+              criarIcone={criarIconeVeiculo}
+              seguir={seguir}
+              zoomAoSeguir={17}
+              aoArrastar={() => setSeguir(false)}
+            />
           )}
-          <Seguir posicao={ponto} ativo={seguir} aoSoltar={() => setSeguir(false)} />
         </MapPanel>
 
         {!seguir && ponto && (
