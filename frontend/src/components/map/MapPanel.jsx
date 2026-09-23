@@ -169,6 +169,7 @@ export function MapPanel({
             interface escura. */}
         <TileLayer
           key={camada}
+          className="mapa-base"
           url={base.url}
           attribution={base.atribuicao}
           maxZoom={zoomMaximo}

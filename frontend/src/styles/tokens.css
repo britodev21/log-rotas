@@ -40,6 +40,22 @@
   --cinza-900: #161b28;
   --cinza-950: #0d111b;
 
+  /* Neutros do tema escuro: cinza sem viés de cor. A rampa fria acima
+     continua no tema claro, onde o azulado dá frescor ao branco; no escuro
+     ele virava um azul-marinho que tingia a tela inteira. */
+  --neutro-950: #0b0b0c;
+  --neutro-900: #141416;
+  --neutro-850: #191a1c;
+  --neutro-800: #202124;
+  --neutro-750: #26272a;
+  --neutro-700: #2f3033;
+  --neutro-600: #3c3e42;
+  --neutro-500: #6c6e73;
+  --neutro-400: #8a8c92;
+  --neutro-300: #a6a8ad;
+  --neutro-200: #c8cacd;
+  --neutro-100: #ededee;
+
   /* Marca: azul-violeta. Lê como tecnologia e precisão, e não é o azul
      genérico de painel administrativo. */
   --marca-50: #eff0ff;
@@ -71,6 +87,20 @@
      validador de paleta, no tema claro e no escuro. */
   --serie-1: var(--marca-600);
   --serie-2: var(--ambar-600);
+
+  /* Rotas no mapa. Cada uma precisa se separar DAS OUTRAS e do mapa por
+     baixo — por isso variam em matiz E em claridade: matiz sozinho não
+     separa nada para quem tem daltonismo (o par verde/vermelho tem
+     diferença 1,9 de 100 em deuteranopia). As quatro primeiras passam nas
+     seis conferências do validador de paleta, par a par; da quinta em
+     diante a tela conta também com o número da parada e a legenda.
+     No claro elas escurecem, para não sumirem no mapa claro. */
+  --rota-1: #6b57e8;
+  --rota-2: #8a4205;
+  --rota-3: #0fa374;
+  --rota-4: #14549f;
+  --rota-5: #d1487f;
+  --rota-6: #4d7c0f;
 
   /* ======================================================================
      2. PAPÉIS — tema claro
@@ -181,37 +211,37 @@
 :root[data-tema="escuro"] {
   color-scheme: dark;
 
-  --fundo: var(--cinza-950);
-  --superficie: #141926;
-  --superficie-2: #191f2e;
-  --superficie-3: #202737;
-  --superficie-hover: #1c2231;
-  --superficie-ativa: #232b3c;
+  --fundo: var(--neutro-950);
+  --superficie: var(--neutro-900);
+  --superficie-2: var(--neutro-850);
+  --superficie-3: var(--neutro-800);
+  --superficie-hover: #1b1c1f;
+  --superficie-ativa: var(--neutro-750);
   --superficie-inversa: var(--cinza-100);
 
   /* Mesma ordem do tema claro: a lateral recua, o cartão avança.
-     lateral #090d15  <  página #0d111b  <  cartão #141926 */
-  --lateral-fundo: #090d15;
-  --lateral-hover: #151b28;
-  --lateral-borda: #1d2432;
-  --topo-fundo: color-mix(in srgb, #090d15 84%, transparent);
+     lateral #08080a  <  página #0b0b0c  <  cartão #141416 */
+  --lateral-fundo: #08080a;
+  --lateral-hover: #161618;
+  --lateral-borda: #1d1e21;
+  --topo-fundo: color-mix(in srgb, #08080a 84%, transparent);
 
-  --borda: #262f41;
-  --borda-suave: #1e2533;
-  --borda-forte: #36415a;
+  --borda: #2a2b2e;
+  --borda-suave: #1f2023;
+  --borda-forte: var(--neutro-600);
 
   /* Branco puro sobre fundo escuro cansa a vista; o topo da escala é um
-     cinza muito claro, não #fff. */
-  --texto: #e9ecf3; /* 14.8:1 sobre a superficie */
-  --texto-2: #c4cbd8; /* 10.8:1 */
-  --texto-3: #a8b0c2; /*  8.1:1 */
-  --texto-4: #8991a1; /*  5.5:1 — 4.7:1 na superficie mais alta */
-  --texto-inverso: var(--cinza-900);
+     cinza muito claro, não #fff. Contrastes medidos sobre a superfície. */
+  --texto: var(--neutro-100); /* 15.7:1 sobre a superficie */
+  --texto-2: var(--neutro-200); /* 11.2:1 */
+  --texto-3: var(--neutro-300); /*  7.7:1 */
+  --texto-4: var(--neutro-400); /*  5.5:1 — 4.4:1 na superficie mais alta */
+  --texto-inverso: var(--neutro-950);
 
   --primaria: var(--marca-400);
   --primaria-hover: var(--marca-300);
   --primaria-ativa: var(--marca-200);
-  --primaria-texto: #0d111b;
+  --primaria-texto: var(--neutro-950);
   --primaria-suave: color-mix(in srgb, var(--marca-400) 16%, var(--superficie));
   --primaria-borda: color-mix(in srgb, var(--marca-400) 34%, var(--superficie));
   --primaria-realce: var(--marca-400);
@@ -228,13 +258,21 @@
   --perigo-suave: color-mix(in srgb, #f07070 16%, var(--superficie));
   --perigo-borda: color-mix(in srgb, #f07070 32%, var(--superficie));
 
-  --info: #6a9ef5;
+  --info: #7aa7e8;
+
+  /* No escuro as rotas clareiam: o mapa por baixo fica quase preto. */
+  --rota-1: #b5a8ff;
+  --rota-2: #c2600d;
+  --rota-3: #34d399;
+  --rota-4: #1f6fd0;
+  --rota-5: #ff8fb1;
+  --rota-6: #9aa800;
 
   /* No escuro as séries clareiam para a faixa de luminosidade do tema. */
   --serie-1: var(--marca-400);
   --serie-2: #bd8626;
-  --info-suave: color-mix(in srgb, #6a9ef5 16%, var(--superficie));
-  --info-borda: color-mix(in srgb, #6a9ef5 32%, var(--superficie));
+  --info-suave: color-mix(in srgb, #7aa7e8 16%, var(--superficie));
+  --info-borda: color-mix(in srgb, #7aa7e8 32%, var(--superficie));
 
   --neutro: var(--texto-2);
   --neutro-suave: var(--superficie-3);

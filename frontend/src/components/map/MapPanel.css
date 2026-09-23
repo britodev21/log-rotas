@@ -217,3 +217,28 @@
 .mapa .caminhao-rotulo::before {
   display: none;
 }
+
+/* ------------------------------------------------------------------ */
+/* Contraste do mapa                                                    */
+/* ------------------------------------------------------------------ */
+/* A base cinza da Esri é feita para dados por cima: ela recua tanto que,
+   sozinha, vira uma mancha — ruas e quadras quase não se separam. O filtro
+   devolve a separação. Vai só na BASE: os nomes de rua vêm em camada
+   própria e ficam nítidos como estão. */
+.mapa-base {
+  /* No claro o problema é o inverso do escuro: quadra cinza-clara e rua
+     branca quase no mesmo tom, tudo lavado. Escurecer a base e abrir o
+     contraste devolve o desenho da cidade sem escurecer as ruas. */
+  filter: brightness(0.88) contrast(1.25);
+}
+
+:root[data-tema="escuro"] .mapa-base {
+  /* No escuro a base é quase toda cinza-médio sobre cinza-escuro, e é aí
+     que a falta de contraste aparece: as ruas somem e as rotas coloridas
+     ficam parecidas entre si.
+
+     Contraste alto e brilho quase neutro: é o contraste que afasta rua e
+     quadra um do outro. Subir o brilho junto clarearia o mapa inteiro, e
+     ele viraria um retângulo cinza no meio de uma tela preta. */
+  filter: contrast(1.75) brightness(1.04) saturate(0.85);
+}

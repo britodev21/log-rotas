@@ -191,15 +191,21 @@ export function AjustarLimites({ pontos, ativo = true, zoomUnico = 15 }) {
   return null;
 }
 
-/** Paleta das rotas no mapa. Repete a partir da sétima, que é mais do que
- *  a operação vai ter em rua ao mesmo tempo. */
+/**
+ * Paleta das rotas no mapa. Repete a partir da sétima, que é mais do que a
+ * operação vai ter em rua ao mesmo tempo.
+ *
+ * São variáveis do tema, e não cores fixas: o mapa claro e o escuro pedem
+ * claridades opostas, e as cores de antes — escolhidas para fundo claro —
+ * ficavam todas parecidas sobre o mapa escuro. Ver tokens.css.
+ */
 export const CORES_ROTA = [
-  "#5d49e6",
-  "#0e7a4a",
-  "#a35f06",
-  "#2159bd",
-  "#b82d2d",
-  "#7c3aed",
+  "var(--rota-1)",
+  "var(--rota-2)",
+  "var(--rota-3)",
+  "var(--rota-4)",
+  "var(--rota-5)",
+  "var(--rota-6)",
 ];
 
 export function corDaRota(indice) {
