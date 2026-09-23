@@ -4,6 +4,11 @@
 # HTTPS e encaminha o domínio para o contêiner da tela. Banco e API ficam
 # numa rede fechada, sem porta publicada: não há como alcançá-los de fora.
 #
+# O Traefik do template da Hostinger roda em modo `host` (escuta 80 e 443 na
+# própria máquina) e descobre os contêineres pelo socket do Docker. Por isso
+# aqui não existe rede externa: basta a rede do projeto, com nome fixo, e a
+# etiqueta `traefik.docker.network` dizendo por onde falar com a tela.
+#
 # Tudo que muda de uma instalação para outra (domínio, senha do banco,
 # chave do Google) está no arquivo `.env`, que NUNCA vai para o repositório.
 # Veja `.env.example` e `docs/DEPLOY.md`.
@@ -56,12 +61,10 @@ services:
       - api
     networks:
       - interna
-      - traefik
     labels:
       - traefik.enable=true
-      # Com o contêiner em duas redes, o Traefik precisa saber por qual
-      # delas falar com ele.
-      - traefik.docker.network=${REDE_TRAEFIK:-traefik}
+      # Por qual rede o Traefik alcança este contêiner.
+      - traefik.docker.network=${REDE_TRAEFIK:-log-rotas-interna}
       - traefik.http.routers.logrotas.rule=Host(`${DOMINIO:?defina DOMINIO no .env}`)
       - traefik.http.routers.logrotas.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
       - traefik.http.routers.logrotas.tls=true
@@ -73,6 +76,6 @@ volumes:
 
 networks:
   interna:
-  traefik:
-    external: true
-    name: ${REDE_TRAEFIK:-traefik}
+    # Nome fixo: é ele que vai na etiqueta acima, e o padrão do compose
+    # (prefixo do projeto) mudaria se a pasta fosse renomeada.
+    name: log-rotas-interna
