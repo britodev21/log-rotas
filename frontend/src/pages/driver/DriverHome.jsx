@@ -101,6 +101,7 @@ export function DriverHome() {
               className="cartao-rota"
               key={rota.id}
               onClick={() => navegar(`/motorista/rota/${rota.id}`)}
+              data-tour="rota-do-dia"
             >
               <div className="cartao-rota__topo">
                 <span className="cartao-rota__titulo">

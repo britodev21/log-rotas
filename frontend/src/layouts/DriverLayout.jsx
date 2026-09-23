@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import { KeyRound, LogOut } from "lucide-react";
+import { GraduationCap, KeyRound, LogOut } from "lucide-react";
 
 import { Avatar, Button, Logo, PageTransition } from "../components/ui";
 import { AvisoSenhaFraca, MinhaConta } from "../components/domain";
+import { PASSOS_MOTORISTA, Tour } from "../components/tour";
 import { useAuth } from "../hooks/useAuth";
+import { useTutorial } from "../hooks/useTutorial";
 import "./DriverLayout.css";
 
 /**
@@ -18,6 +20,7 @@ import "./DriverLayout.css";
 export function DriverLayout() {
   const { usuario, sair } = useAuth();
   const [contaAberta, setContaAberta] = useState(false);
+  const tutorial = useTutorial("motorista");
 
   return (
     <div className="mot">
@@ -30,6 +33,15 @@ export function DriverLayout() {
         </div>
 
         <Avatar nome={usuario?.name} tamanho={32} />
+
+        <Button
+          variante="sutil"
+          tamanho="sm"
+          icone={GraduationCap}
+          onClick={tutorial.iniciar}
+          aria-label="Ver tutorial"
+          className="mot__sair"
+        />
 
         <Button
           variante="sutil"
@@ -57,6 +69,7 @@ export function DriverLayout() {
         </PageTransition>
       </main>
       <MinhaConta aberto={contaAberta} onFechar={() => setContaAberta(false)} />
+      <Tour passos={PASSOS_MOTORISTA} aberto={tutorial.aberto} aoFechar={tutorial.fechar} />
     </div>
   );
 }

@@ -314,7 +314,7 @@ export function Planner() {
       <div className="planejador">
         {/* ---------------------------------------------------- seleção */}
         <div className="planejador__coluna">
-          <Card titulo="1. O que vai sair">
+          <Card titulo="1. O que vai sair" data-tour="opcoes-plano">
             <div className="pilha">
               <div className="form-grade">
                 <InputField
@@ -695,6 +695,7 @@ export function Planner() {
                   larguraTotal
                   onClick={calcular}
                   disabled={!podeCalcular}
+                  data-tour="calcular"
                 >
                   Calcular rotas
                 </Button>

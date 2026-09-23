@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { KeyRound, LogOut, Menu, PanelLeftClose, X } from "lucide-react";
+import { GraduationCap, KeyRound, LogOut, Menu, PanelLeftClose, X } from "lucide-react";
 
 import {
   Avatar,
@@ -15,7 +15,9 @@ import {
   Tooltip,
 } from "../components/ui";
 import { AvisoSenhaFraca, MinhaConta } from "../components/domain";
+import { PASSOS_ADMIN, Tour } from "../components/tour";
 import { useAuth } from "../hooks/useAuth";
+import { useTutorial } from "../hooks/useTutorial";
 import { CONTEXTO_ROTA, GRUPOS } from "./navegacao";
 import "./AdminLayout.css";
 
@@ -25,6 +27,7 @@ export function AdminLayout() {
 
   const [gavetaAberta, setGavetaAberta] = useState(false);
   const [contaAberta, setContaAberta] = useState(false);
+  const tutorial = useTutorial("admin");
   const [recolhida, setRecolhida] = useState(() => {
     try {
       return localStorage.getItem("logrotas.lateral") === "recolhida";
@@ -160,7 +163,12 @@ export function AdminLayout() {
 
             <Dropdown
               gatilho={
-                <button type="button" className="topo__usuario" aria-label="Menu do usuário">
+                <button
+                  type="button"
+                  className="topo__usuario"
+                  aria-label="Menu do usuário"
+                  data-tour="menu-usuario"
+                >
                   <Avatar nome={usuario?.name} tamanho={28} />
                   <span className="topo__usuario-nome">{usuario?.name}</span>
                 </button>
@@ -170,6 +178,9 @@ export function AdminLayout() {
               <DropdownSeparator />
               <DropdownItem icone={KeyRound} onClick={() => setContaAberta(true)}>
                 Minha conta
+              </DropdownItem>
+              <DropdownItem icone={GraduationCap} onClick={tutorial.iniciar}>
+                Ver tutorial
               </DropdownItem>
               <DropdownSeparator />
               <DropdownItem icone={LogOut} onClick={sair} perigo>
@@ -186,6 +197,7 @@ export function AdminLayout() {
           </PageTransition>
         </main>
         <MinhaConta aberto={contaAberta} onFechar={() => setContaAberta(false)} />
+      <Tour passos={PASSOS_ADMIN} aberto={tutorial.aberto} aoFechar={tutorial.fechar} />
       </div>
     </div>
   );

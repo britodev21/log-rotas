@@ -271,6 +271,7 @@ export function Dashboard() {
               : "Nenhuma rota em andamento"
           }
           semPadding
+          data-tour="painel-mapa"
         >
           <MapPanel
             tema={tema}

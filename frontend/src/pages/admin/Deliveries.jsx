@@ -112,7 +112,7 @@ export function Deliveries() {
         titulo="Entregas"
         descricao="O que precisa sair. Só entrega com coordenada entra no planejamento."
         acoes={
-          <Button icone={Plus} onClick={() => setModal("nova")}>
+          <Button icone={Plus} onClick={() => setModal("nova")} data-tour="nova-entrega">
             Nova entrega
           </Button>
         }

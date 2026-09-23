@@ -1,0 +1,136 @@
+/* Tutorial guiado: escurece a tela, abre um buraco no ponto que interessa e
+   explica ao lado. */
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+}
+
+/* O "buraco": a sombra gigante em volta é o que escurece o resto da tela.
+   Um retângulo transparente com sombra custa menos que quatro divs, e
+   acompanha o alvo com uma propriedade só. */
+.tour__recorte {
+  position: fixed;
+  border-radius: var(--r-md);
+  box-shadow:
+    0 0 0 9999px rgba(8, 11, 18, 0.72),
+    0 0 0 2px var(--primaria);
+  transition:
+    top var(--tempo-normal) var(--curva),
+    left var(--tempo-normal) var(--curva),
+    width var(--tempo-normal) var(--curva),
+    height var(--tempo-normal) var(--curva);
+  pointer-events: none;
+}
+
+.tour__fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 11, 18, 0.72);
+}
+
+.tour__balao {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  padding: var(--e-4);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  background: var(--superficie);
+  box-shadow: var(--sombra-lg);
+  pointer-events: auto;
+  animation: surgir var(--tempo-normal) var(--curva);
+}
+
+.tour__balao--centro {
+  top: 50%;
+  left: 50%;
+  width: min(420px, calc(100vw - 32px));
+  transform: translate(-50%, -50%);
+}
+
+.tour__contador {
+  font-size: var(--t-11);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primaria);
+}
+
+.tour__titulo {
+  margin: 0;
+  font-size: var(--t-16);
+  font-weight: 650;
+  color: var(--texto);
+}
+
+.tour__texto {
+  margin: 0;
+  font-size: var(--t-14);
+  line-height: 1.5;
+  color: var(--texto-2);
+}
+
+.tour__acoes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+  margin-top: var(--e-2);
+}
+
+.tour__navegacao {
+  display: flex;
+  gap: var(--e-2);
+  margin-left: auto;
+}
+
+.tour__pular {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--t-13);
+  color: var(--texto-3);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.tour__pular:hover {
+  color: var(--texto-2);
+}
+
+.tour__fechar {
+  position: absolute;
+  top: var(--e-2);
+  right: var(--e-2);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--texto-3);
+  cursor: pointer;
+}
+
+.tour__fechar:hover {
+  background: var(--superficie-hover);
+  color: var(--texto);
+}
+
+@media (max-width: 560px) {
+  /* No celular o balão vai para o rodapé: em tela estreita, seguir o alvo
+     tapa justamente o que ele deveria mostrar. */
+  .tour__balao {
+    top: auto !important;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 12px !important;
+    width: auto !important;
+  }
+}
