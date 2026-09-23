@@ -31,7 +31,9 @@ def hash_password(plain_password: str) -> str:
 def verify_password(plain_password: str, password_hash: str) -> bool:
     try:
         _hasher.verify(password_hash, plain_password)
-    except VerifyMismatchError, VerificationError, InvalidHashError:
+    # Com parenteses: sem eles a sintaxe so vale no Python 3.14+, e o
+    # servidor roda 3.13 — o modulo nem importava.
+    except (VerifyMismatchError, VerificationError, InvalidHashError):
         return False
     return True
 

@@ -24,6 +24,12 @@ COPY app ./app
 COPY docker-entrada.sh /usr/local/bin/docker-entrada.sh
 RUN chmod +x /usr/local/bin/docker-entrada.sh
 
+# Compila tudo aqui: se alguma sintaxe não existir nesta versão do Python, o
+# BUILD falha com o arquivo e a linha. Sem isto, o erro só aparece quando o
+# contêiner sobe em produção e reinicia em laço — foi o que aconteceu na
+# primeira subida, com uma sintaxe que só existe no Python 3.14.
+RUN python -m compileall -q app
+
 # Não roda como root: se um dia alguém escapar da aplicação, escapa para um
 # usuário sem poder nenhum.
 RUN useradd --create-home --uid 10001 logrotas && chown -R logrotas /app
